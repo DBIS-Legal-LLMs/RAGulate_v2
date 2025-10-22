@@ -1,4 +1,4 @@
-# RAGulate - LegalQA Chatbot
+# RAGulate_v2 - LegalQA Chatbot
 
 ## Overview  
 RAGulate is a Masters project implementing a Legal Question-Answering chatbot using Retrieval-Augmented Generation (RAG) technology. This system combines the [LightRAG framework](https://github.com/HKUDS/LightRAG) with the Mistral LLMs to provide accurate, context-aware answers to legal questions.
