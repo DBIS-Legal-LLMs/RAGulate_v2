@@ -1,6 +1,7 @@
 # Backend/api_v2/app/services/user_services.py
 
 from datetime import datetime
+from datetime import timezone
 from typing import Optional
 
 from bson import ObjectId
@@ -24,12 +25,14 @@ class UserService:
         doc = await self.collection.find_one({"email": email})
         if not doc:
             return None
+        doc["_id"] = str(doc["_id"])
         return UserInDB(**doc)
 
     async def get_by_id(self, user_id: str) -> Optional[UserInDB]:
         doc = await self.collection.find_one({"_id": ObjectId(user_id)})
         if not doc:
             return None
+        doc["_id"] = str(doc["_id"])
         return UserInDB(**doc)
 
     async def create_user(self, user_in: UserCreate) -> UserInDB:
@@ -45,11 +48,11 @@ class UserService:
             "role": "user",
             "preferred_llm_provider": None,
             "preferred_model": None,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         }
 
         result = await self.collection.insert_one(doc)
-        doc["_id"] = result.inserted_id
+        doc["_id"] = str(result.inserted_id)
         return UserInDB(**doc)
 
     async def verify_user(self, email: str, password: str) -> Optional[UserInDB]:

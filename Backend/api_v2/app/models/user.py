@@ -3,19 +3,6 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Literal
 from datetime import datetime
-from bson import ObjectId
-
-# Helper, um ObjectId als str in/out zu bekommen
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v):
-        if isinstance(v, ObjectId):
-            return v
-        return ObjectId(str(v))
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -25,7 +12,8 @@ class UserCreate(UserBase):
     password: str = Field(min_length=8)
 
 class UserInDB(UserBase):
-    id: PyObjectId | None = Field(default=None, alias="_id")
+    # speichern MongoDB-ID als String; benutzen _id als Feldalias
+    id: str | None = Field(default=None, alias="_id")
     password_hash: str
     role: Literal["user", "admin"] = "user"
     preferred_llm_provider: str | None = None      # "huggingface" | "openrouter" | "ollama"
@@ -33,9 +21,7 @@ class UserInDB(UserBase):
     created_at: datetime
 
     class Config:
-        populate_by_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
+        populate_by_name = True # erlaubt Nutzung von 'id' <-> '_id'
 
 class UserPublic(UserBase):
     id: str
