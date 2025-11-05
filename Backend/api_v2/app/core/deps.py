@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 from pymongo.asynchronous.database import AsyncDatabase
 
 from ..db.mongo import get_database
-from ..services.user_service import UserService
+from ..services.user_services import UserService
 from ..core.security import decode_access_token
 from ..models.user import UserInDB
 
