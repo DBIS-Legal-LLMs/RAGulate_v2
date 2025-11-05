@@ -9,7 +9,7 @@ from ..services.user_services import UserService
 from ..core.security import decode_access_token
 from ..models.user import UserInDB
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v2/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 def get_db() -> AsyncDatabase:
