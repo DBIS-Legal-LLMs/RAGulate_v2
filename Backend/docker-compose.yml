@@ -1,0 +1,35 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: ragulate_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ragulate_backend_v2
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    ports:
+      - "8000:8000"
+    environment:
+      # Backend liest das in app/config.py
+      - APP_ENV=docker
+      - MONGO_URL=mongodb://mongodb:27017
+      - MONGO_DB_NAME=gdpr_chatbot
+      - JWT_SECRET=change-me-in-prod
+      - JWT_ALGORITHM=HS256
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+      # Platzhalter für spätere LLM-Keys:
+      - OPENROUTER_API_KEY=
+      - HUGGINGFACE_API_KEY=
+      - OLLAMA_BASE_URL=
+
+volumes:
+  mongo_data:
