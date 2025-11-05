@@ -12,7 +12,7 @@ from ..models.user import UserInDB
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
-def get_db() -> AsyncDatabase:
+def get_db():
     return get_database()
 
 
