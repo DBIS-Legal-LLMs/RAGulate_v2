@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from ...models.user import UserCreate, UserPublic
-from ...services.user_services import UserService
+from ...services.user_service import UserService
 from ...core.security import create_access_token
 from ...core.deps import get_user_service
 from ...config import get_settings
