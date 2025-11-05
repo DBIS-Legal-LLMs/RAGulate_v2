@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field
 class ChatSessionCreate(BaseModel):
     title: str | None = None
 
-
 class ChatSessionInDB(BaseModel):
     # MongoDB-ID as String, alias "_id"
     id: str | None = Field(default=None, alias="_id")
@@ -22,7 +21,6 @@ class ChatSessionInDB(BaseModel):
 
     class Config:
         populate_by_name = True # erlaubt Nutzung von "id" <-> "_id"
-
 
 class ChatSessionPublic(BaseModel):
     id: str
@@ -36,7 +34,6 @@ class ChatSessionPublic(BaseModel):
 class MessageCreate(BaseModel):
     content: str
 
-
 class MessageInDB(BaseModel):
     id: str | None = Field(default=None, alias="_id")
     session_id: str
@@ -47,7 +44,6 @@ class MessageInDB(BaseModel):
 
     class Config:
         populate_by_name = True
-
 
 class MessagePublic(BaseModel):
     id: str
