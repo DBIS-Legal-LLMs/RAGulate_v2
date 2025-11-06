@@ -22,6 +22,7 @@ class Settings(BaseModel):
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL")
 
 
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
