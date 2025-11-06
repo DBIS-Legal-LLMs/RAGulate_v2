@@ -15,8 +15,13 @@ class Settings(BaseModel):
 
     # LLM Provider Settings
     openrouter_api_key: str | None = os.getenv("OPENROUTER_API_KEY")
-    huggingface_api_key: str | None = os.getenv("HUGGINGFACE_API_KEY")
+    openrouter_baseurl: str | None = os.getenv("OPENROUTER_BASEURL", "https://openrouter.ai/api/v1")
+
+    huggingface_api_key: str | None = os.getenv("HF_API_KEY")
+    
+
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
 
 @lru_cache
 def get_settings() -> Settings:
