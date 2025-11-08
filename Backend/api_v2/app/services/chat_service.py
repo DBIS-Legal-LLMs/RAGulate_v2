@@ -15,7 +15,9 @@ from ..models.chat import (
     MessageInDB,
     MessagePublic,
     ChatSessionWithMessages,
+    ChatTurnPublic,
     )
+from .rag_service import run_rag_query, LLMProviderName, DEFAULT_MODEL
 
 SESSIONS_COLLECTION = "chat_sessions"
 MESSAGES_COLLECTION = "chat_messages"
@@ -171,4 +173,89 @@ class ChatService:
         return ChatSessionWithMessages(
             session= session_public,
             messages= messages_public,
+        )
+    
+
+    # ----- Chat + LightRAG -----
+
+    async def chat_with_rag(
+            self,
+            user: UserInDB,
+            session_id: str,
+            data: MessageCreate,
+    ) -> ChatTurnPublic:
+        """
+        Was passiert hier grob ?
+        1. User-Nachricht speichern
+        2. Historie laden und für LightRAG aufbereiten
+        3. RAG-Query ausführen (Provider + Modell aus User-Settings)
+        4. Assistant-Nachricht speichern
+        5. Beide Nachrichten als ChatTurnPublic zurückgeben
+        """
+        # 1) Session checken
+        session = await self.get_session_for_user(user, session_id)
+        if not session:
+            raise ValueError("Session not found or not owned by user")
+        
+        now = datetime.now(timezone.utc)
+
+        # 2) User-Message speichern
+        user_doc = {
+            "session_id": session_id,
+            "user_id": user.id,
+            "role": "user",
+            "content": data.content,
+            "created_at": now,
+        }
+        result_user = await self.messages.insert_one(user_doc)
+        user_doc["_id"] = str(result_user.inserted_id)
+        user_msg = MessageInDB(**user_doc)
+
+        # 3) Historie laden (inkl. gerade gespeicherter User-Message)
+        history = await self.list_messages_for_session(user, session_id)
+
+        lightrag_history = [
+            {"role": m.role, "content": m.content}
+            for m in history
+            if m.role in {"user", "assitant"}
+        ]
+
+        # 4) Provider & Modell aus User-Settings oder Defaults bestimmen
+        provider: LLMProviderName = (
+            user.preferred_llm_provider or "huggingface"
+        )
+        model_name: str = user.preferred_model or DEFAULT_MODEL[provider]
+
+        rag_answer = await run_rag_query(
+            question= data.content,
+            provider= provider,
+            model= model_name,
+            mode= "hybrid",
+            response_type= "Multiple Paragraphs",
+            user_prompt= None,
+            history_messages= lightrag_history,
+        )
+
+        # 5) Assitant-Message speichern
+        now_assistant = datetime.now(timezone.utc)
+        assistant_doc = {
+            "session_id": session_id,
+            "user_id": user.id,
+            "role": "assistant",
+            "content": rag_answer,
+            "created_at": now_assistant,
+        }
+        result_assistant = await self.messages.insert_one(assistant_doc)
+        assistant_doc["_id"] = str(result_assistant.inserted_id)
+        assistant_msg = MessageInDB(**assistant_doc)
+
+        # Session-Updated Timestamt aktualisieren
+        await self.sessions.update_one(
+            {"id": ObjectId(session_id)},
+            {"$set": {"updated_at": now_assistant}},
+        )
+
+        return ChatTurnPublic(
+            user_message= MessagePublic.from_db(user_msg),
+            assistant_message= MessagePublic.from_db(assistant_msg),
         )
