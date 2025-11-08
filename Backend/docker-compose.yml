@@ -18,18 +18,8 @@ services:
       - mongodb
     ports:
       - "8000:8000"
-    environment:
-      # Backend liest das in app/config.py
-      - APP_ENV=docker
-      - MONGO_URL=mongodb://mongodb:27017
-      - MONGO_DB_NAME=gdpr_chatbot
-      - JWT_SECRET=change-me-in-prod
-      - JWT_ALGORITHM=HS256
-      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
-      # Platzhalter für spätere LLM-Keys:
-      - OPENROUTER_API_KEY=
-      - HUGGINGFACE_API_KEY=
-      - OLLAMA_BASE_URL=
+    env_file:
+      - ".env"
 
 volumes:
   mongo_data:
