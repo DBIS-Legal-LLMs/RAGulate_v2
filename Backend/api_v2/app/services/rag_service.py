@@ -17,6 +17,9 @@ from lightrag.utils import EmbeddingFunc
 
 from ..config import get_settings
 
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import torch
+
 settings = get_settings()
 
 # ----------------------------------------------------------------------
@@ -27,6 +30,7 @@ LLMProviderName = Literal["huggingface", "openrouter", "ollama"]
 
 # Hier definierst du, welche Modelle pro Provider zur Verfügung stehen.
 # Werte sind die *internen* IDs, die dann direkt an die APIs gehen.
+# Das erstgenannte Model pro Provider ist der Default
 SUPPORTED_MODELS: Dict[LLMProviderName, List[str]] = {
     "huggingface": [
         # HF Inference-API Modellnamen
@@ -36,12 +40,12 @@ SUPPORTED_MODELS: Dict[LLMProviderName, List[str]] = {
     ],
     "openrouter": [
         # OpenRouter Modell-IDs, Beispiel:
-        "openai/gpt-4o-mini",
-        "meta-llama/llama-3.1-8b-instruct",
+        "mistralai/mistral-nemo",
         # weitere Modelle nach Geschmack
     ],
     "ollama": [
         # Lokale Ollama-Modelle
+        "gwen3:8b",
         "llama3:8b",
         "mistral:7b",
         # weitere, wenn du sie in Ollama geladen hast
@@ -111,22 +115,34 @@ def _get_openrouter_client() -> OpenAI:
         raise RuntimeError("OPENROUTER_API_KEY ist nicht gesetzt.")
     if _openrouter_client is None:
         _openrouter_client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
+            base_url=settings.openrouter_base_url,
             api_key=settings.openrouter_api_key,
         )
     return _openrouter_client
 
 
-def _get_hf_client(model_id: str) -> InferenceClient:
-    if not settings.huggingface_api_key:
-        raise RuntimeError("HUGGINGFACE_API_KEY ist nicht gesetzt.")
-    with _hf_lock:
-        if model_id not in _hf_clients:
-            _hf_clients[model_id] = InferenceClient(
-                model=model_id,
-                token=settings.huggingface_api_key,
-            )
-        return _hf_clients[model_id]
+_hf_local_models: Dict[str, Dict[str, object]] = {} # Cache pro Model
+_hf_local_lock = threading.Lock()
+
+
+def _load_hf_model(model_id: str):
+    """
+    Lädt Tokenizer & Modell lokal (Transformers/PyTorch).
+    Wird gecacht, um wiederholtes Laden zu vermeiden.
+    """
+    with _hf_local_lock:
+        if model_id in _hf_local_models:
+            return _hf_local_models[model_id]
+        
+        print(f"[LightRAG] Lade lokales HF-Modell: {model_id} ...")
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_id,
+            torch_dtype= torch.float16 if torch.coda.is_available() else torch.float32,
+            device_map= "auto",
+        )
+        _hf_local_models[model_id] = {"tokenizer": tokenizer, "model": model}
+        return _hf_local_models[model_id]
 
 
 # ----------------------------------------------------------------------
@@ -159,37 +175,32 @@ async def _generate_huggingface(
     max_new_tokens: int = 512,
     **kwargs,
 ) -> str:
-    # Wir nehmen einfach die letzte User-Nachricht + optional System & History
-    # und geben sie als Text-Generation Prompt an HF weiter.
-    # Du kannst das bei Bedarf komplexer machen.
-    prompt_parts = []
-    for m in messages:
-        role = m.get("role", "user")
-        content = m.get("content", "")
-        if role == "system":
-            prompt_parts.append(f"[System] {content}\n")
-        elif role == "assistant":
-            prompt_parts.append(f"[Assistant] {content}\n")
-        else:
-            prompt_parts.append(f"[User] {content}\n")
-    prompt = "\n".join(prompt_parts) + "\n[Assistant] "
+    """
+    Führt eine lokale Textgenerierung mit Transformers durch.
+    """
+    model_bundle = _load_hf_model(model)
+    tokenizer = model_bundle["tokenizer"]
+    model_obj = model_bundle["model"]
 
-    client = _get_hf_client(model)
-    loop = asyncio.get_running_loop()
-    resp = await loop.run_in_executor(
-        None,
-        lambda: client.text_generation(
-            prompt,
-            max_new_tokens=max_new_tokens,
-            **kwargs,
-        ),
+    # Nachrichten ins Chat-Template einbetten
+    inputs = tokenizer.apply_chat_template(
+        messages,
+        add_generation_prompt= True,
+        tokenizer= True,
+        return_dict= True,
+        return_tensors= "pt",
+    ).to(model_obj.device)
+
+    # Text generieren
+    with torch.no_grad():
+        outputs = model_obj.generate(**inputs, max_new_tokens=max_new_tokens)
+
+    # Nur den generierten Teil dekodieren
+    output_text = tokenizer.decode(
+        outputs[0][inputs["input_ids"].shape[-1]:], skip_special_tokens=True
     )
-    # HF-Response ist einfach ein String (kompletter Text)
-    # Wir wollen nur den generierten Teil nach dem Prompt
-    # (ganz grob, du kannst das später feiner machen).
-    if isinstance(resp, str) and resp.startswith(prompt):
-        return resp[len(prompt):].strip()
-    return resp.strip() if isinstance(resp, str) else str(resp)
+
+    return output_text.strip()
 
 
 async def _generate_ollama(
@@ -201,7 +212,7 @@ async def _generate_ollama(
     Nutzt die Ollama /api/chat-API.
     Erwartet, dass Ollama unter settings.ollama_base_url läuft.
     """
-    base_url = settings.ollama_base_url or "http://localhost:11434"
+    base_url = settings.ollama_base_url
     url = f"{base_url.rstrip('/')}/api/chat"
 
     payload = {
@@ -228,7 +239,7 @@ async def _llm_model_func(
     prompt: str,
     system_prompt: Optional[str] = None,
     history_messages: Optional[List[Dict[str, str]]] = None,
-    llm_provider: LLMProviderName = "openrouter",
+    llm_provider: LLMProviderName = "huggingface",
     llm_model: Optional[str] = None,
     **kwargs,
 ) -> str:
