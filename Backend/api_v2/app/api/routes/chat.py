@@ -10,6 +10,7 @@ from ...models.chat import (
     ChatSessionWithMessages,
     MessageCreate,
     MessagePublic,
+    ChatTurnPublic
 )
 from ...services.chat_service import ChatService
 
@@ -85,7 +86,7 @@ async def get_session(
 
 @router.post(
     "/sessions/{session_id}/messages",
-    response_model= MessagePublic,
+    response_model= ChatTurnPublic,
     status_code= status.HTTP_201_CREATED,
 )
 async def post_messages(
@@ -97,11 +98,10 @@ async def post_messages(
     # aktuell nur User-Nachrichten speichern
     # TODO: LLM Nachrichten speichern
     try:
-        msg = await chat_service.add_message(
-            user=current_user,
-            session_id=session_id,
-            role="user",
-            data=data
+        turn = await chat_service.chat_with_rag(
+            user= current_user,
+            session_id= session_id,
+            data= data,
         )
     except ValueError:
         raise HTTPException(
@@ -109,10 +109,4 @@ async def post_messages(
             detail= "Session not found",
         )
     
-    return MessagePublic(
-        id= msg.id,
-        session_id= msg.session_id,
-        role= msg.role,
-        content= msg.content,
-        created_at= msg.created_at,
-    )
+    return turn
