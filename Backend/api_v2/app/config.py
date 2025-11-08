@@ -5,22 +5,21 @@ from functools import lru_cache
 import os
 
 class Settings(BaseModel):
-    env: str = os.getenv("APP_ENV", "local")
-    mongo_url: str = os.getenv("MONGO_URL", "mongodb://localhost:27017")
-    mongo_db_name: str = os.getenv("MONGO_DB_NAME", "gdpr_chatbot")
+    env: str = os.getenv("APP_ENV")
+    mongo_url: str = os.getenv("MONGO_URL")
+    mongo_db_name: str = os.getenv("MONGO_DB_NAME")
 
     jwt_secret: str = os.getenv("JWT_SECRET")
-    jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
-    jwt_access_token_expire_minutes: int = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+    jwt_algorithm: str = os.getenv("JWT_ALGORITHM")
+    jwt_access_token_expire_minutes: int = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES"))
 
     # LLM Provider Settings
     openrouter_api_key: str | None = os.getenv("OPENROUTER_API_KEY")
-    openrouter_baseurl: str | None = os.getenv("OPENROUTER_BASEURL", "https://openrouter.ai/api/v1")
+    openrouter_base_url: str | None = os.getenv("OPENROUTER_BASE_URL")
 
-    huggingface_api_key: str | None = os.getenv("HF_API_KEY")
+    huggingface_api_key: str | None = os.getenv("HUGGINGFACE_API_KEY")
     
-
-    ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    ollama_base_url: str = os.getenv("OLLAMA_BASE_URL")
 
 
 @lru_cache
