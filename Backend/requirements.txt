@@ -10,7 +10,6 @@ attrs==25.4.0
 bcrypt==4.0.1
 beautifulsoup4==4.8.2
 blinker==1.9.0
-bson==0.5.10
 certifi==2025.10.5
 cffi==2.0.0
 chardet==3.0.4
@@ -21,7 +20,6 @@ configparser==7.2.0
 cryptography==46.0.3
 dnspython==2.8.0
 docx2txt==0.9
-dotenv==0.9.9
 ebcdic==1.1.1
 ecdsa==0.19.1
 email-validator==2.3.0
@@ -30,8 +28,6 @@ fastapi==0.121.0
 fastapi-cli==0.0.14
 fastapi-cloud-cli==0.3.1
 filelock==3.20.0
-Flask==3.1.2
-flask-cors==6.0.1
 frozenlist==1.8.0
 fsspec==2025.9.0
 future==1.0.0
@@ -52,7 +48,6 @@ lxml==6.0.2
 markdown-it-py==4.0.0
 MarkupSafe==3.0.3
 mdurl==0.1.2
-motor==3.7.1
 mpmath==1.3.0
 multidict==6.7.0
 nano-vectordb==0.0.4.3
@@ -135,7 +130,6 @@ watchfiles==1.1.1
 wcwidth==0.2.14
 websockets==15.0.1
 Werkzeug==3.1.3
-wheel==0.45.1
 xlrd==1.2.0
 xlsxwriter==3.2.9
 yarl==1.22.0

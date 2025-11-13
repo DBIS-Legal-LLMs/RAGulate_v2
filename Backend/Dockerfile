@@ -12,7 +12,7 @@ WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 
 # Requirements installieren
-RUN pip install pip==24.0
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Backend-Code in den Container kopieren
