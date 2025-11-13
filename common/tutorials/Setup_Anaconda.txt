@@ -1,0 +1,21 @@
+Setup Anaconda:
+
+1. Download Anaconda (Linux)
+$ curl -O https://repo.anaconda.com/archive/Anaconda3-2025.06-0-Linux-x86_64.sh
+
+2. Install Anaconda (Linux)
+$ bash ~/Anaconda3-2025.06-0-Linux-x86_64.sh
+-> Press return to continue
+-> Enter yes to agree to the TOS
+-> Press return to continue
+-> Enter no (you have to activate conda manually every time, but rather do this than screwing your system)
+
+3. Refresh terminal (Linux)
+$ source ~/.bashrc
+
+Optional: 
+Activate conda to run automatically
+$ conda config --set auto_activate_base True
+
+Deactivate conda to run manually
+$ conda config --set auto_activate_base False
