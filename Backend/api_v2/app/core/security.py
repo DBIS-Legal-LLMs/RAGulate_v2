@@ -1,6 +1,6 @@
 # Backend/api_v2/app/core/security.py
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from jose import jwt, JWTError
@@ -29,7 +29,7 @@ def create_access_token(
 
     payload: dict[str, Any] = {
         "sub": subject,
-        "exp": datetime.utcnow() + expires_delta,
+        "exp": datetime.now(timezone.utc) + expires_delta,
     }
     if extra_claims:
         payload.update(extra_claims)
