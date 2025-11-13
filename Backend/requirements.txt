@@ -19,8 +19,10 @@ click==8.3.0
 compressed-rtf==1.0.7
 configparser==7.2.0
 cryptography==46.0.3
+distro==1.9.0
 dnspython==2.8.0
 docx2txt==0.9
+dotenv==0.9.9
 ebcdic==1.1.1
 ecdsa==0.19.1
 email-validator==2.3.0
@@ -127,6 +129,7 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 tzdata==2025.2
 tzlocal==5.3.1
+urllib3==2.5.0
 uvicorn==0.38.0
 uvloop==0.22.1
 watchfiles==1.1.1
