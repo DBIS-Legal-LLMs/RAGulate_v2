@@ -249,7 +249,7 @@ class ChatService:
         assistant_doc["_id"] = str(result_assistant.inserted_id)
         assistant_msg = MessageInDB(**assistant_doc)
 
-        # Session-Updated Timestamt aktualisieren
+        # Session-Updated Timestamp aktualisieren
         await self.sessions.update_one(
             {"id": ObjectId(session_id)},
             {"$set": {"updated_at": now_assistant}},

@@ -96,7 +96,6 @@ async def post_messages(
     chat_service: ChatService = Depends(get_chat_service),
 ):
     # aktuell nur User-Nachrichten speichern
-    # TODO: LLM Nachrichten speichern
     try:
         turn = await chat_service.chat_with_rag(
             user= current_user,
