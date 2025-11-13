@@ -310,7 +310,7 @@ async def get_rag() -> LightRAG:
 async def run_rag_query(
     question: str,
     *,
-    provider: LLMProviderName = "openrouter",
+    provider: LLMProviderName = "huggingface",
     model: Optional[str] = None,
     mode: Literal["local", "global", "hybrid", "naive", "mix"] = "hybrid",
     response_type: str = "Multiple Paragraphs",
