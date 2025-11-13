@@ -17,7 +17,7 @@ class Settings(BaseModel):
     openrouter_api_key: str | None = os.getenv("OPENROUTER_API_KEY")
     openrouter_base_url: str | None = os.getenv("OPENROUTER_BASE_URL")
 
-    huggingface_api_key: str | None = os.getenv("HUGGINGFACE_API_KEY")
+    huggingface_api_key: str | None = os.getenv("HF_API_KEY")
     
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL")
 
