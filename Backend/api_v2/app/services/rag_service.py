@@ -138,7 +138,7 @@ def _load_hf_model(model_id: str):
         tokenizer = AutoTokenizer.from_pretrained(model_id)
         model = AutoModelForCausalLM.from_pretrained(
             model_id,
-            torch_dtype= torch.float16 if torch.coda.is_available() else torch.float32,
+            torch_dtype= torch.float16 if torch.cuda.is_available() else torch.float32,
             device_map= "auto",
         )
         _hf_local_models[model_id] = {"tokenizer": tokenizer, "model": model}
@@ -186,7 +186,7 @@ async def _generate_huggingface(
     inputs = tokenizer.apply_chat_template(
         messages,
         add_generation_prompt= True,
-        tokenizer= True,
+        tokenize= True,
         return_dict= True,
         return_tensors= "pt",
     ).to(model_obj.device)
@@ -232,76 +232,66 @@ async def _generate_ollama(
         return str(data)
 
 # ----------------------------------------------------------------------
+# LightRAG-Cache pro (provider,model)
 # Multiplex-LLM-Wrapper (wird an LightRAG übergeben)
 # ----------------------------------------------------------------------
 
-async def _llm_model_func(
-    prompt: str,
-    system_prompt: Optional[str] = None,
-    history_messages: Optional[List[Dict[str, str]]] = None,
-    llm_provider: LLMProviderName = "huggingface",
-    llm_model: Optional[str] = None,
-    **kwargs,
-) -> str:
-    """
-    Diese Funktion wird von LightRAG aufgerufen.
-    Über llm_provider & llm_model (aus **kwargs) wählen wir zur Laufzeit:
-      - welchen Provider (HF/OpenRouter/Ollama)
-      - welches Modell
-    """
-    provider: LLMProviderName = llm_provider
-    model_id = llm_model or DEFAULT_MODEL[provider]
-
-    # Chat-Nachrichten zusammenbauen (system + history + aktueller Prompt)
-    messages: List[Dict[str, str]] = []
-    if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    if history_messages:
-        messages.extend(history_messages)
-    messages.append({"role": "user", "content": prompt})
-
-    if provider == "openrouter":
-        return await _generate_openrouter(model=model_id, messages=messages, **kwargs)
-    elif provider == "huggingface":
-        return await _generate_huggingface(model=model_id, messages=messages, **kwargs)
-    elif provider == "ollama":
-        return await _generate_ollama(model=model_id, messages=messages, **kwargs)
-    else:
-        raise ValueError(f"Unsupported provider: {provider}")
-
-# ----------------------------------------------------------------------
-# LightRAG-Instanz (einmalig)
-# ----------------------------------------------------------------------
-
-_rag_instance: Optional[LightRAG] = None
+_rag_instances: Dict[tuple[str, str], LightRAG] = {}
 _rag_lock = asyncio.Lock()
 
-
-async def get_rag() -> LightRAG:
-    """
-    Liefert eine initialisierte LightRAG-Instanz.
-    Wir benutzen EIN RAG mit einem dynamischen llm_model_func, der
-    pro Anfrage den Provider/Model aus kwargs wählt.
-    """
-    global _rag_instance
-    if _rag_instance is not None:
-        return _rag_instance
+async def get_rag(provider: LLMProviderName, model_id: str) -> LightRAG:
+    key = (provider, model_id)
+    if key in _rag_instances:
+        return _rag_instances[key]
 
     async with _rag_lock:
-        if _rag_instance is not None:
-            return _rag_instance
+        if key in _rag_instances:
+            return _rag_instances[key]
+
+        # llm_model_func schließt Provider/Modell ein
+        async def llm_func(prompt: str, system_prompt=None, history_messages=None, **kwargs):
+            msgs = []
+            if system_prompt:
+                msgs.append({"role": "system", "content": system_prompt})
+            if history_messages:
+                msgs.extend(history_messages)
+            msgs.append({"role": "user", "content": prompt})
+
+            if provider == "openrouter":
+                return await _generate_openrouter(model=model_id, messages=msgs, **kwargs)
+            elif provider == "huggingface":
+                return await _generate_huggingface(model=model_id, messages=msgs, **kwargs)
+            elif provider == "ollama":
+                return await _generate_ollama(model=model_id, messages=msgs, **kwargs)
+            else:
+                raise ValueError(f"Unsupported provider: {provider}")
 
         rag = LightRAG(
             working_dir=WORKING_DIR,
-            llm_model_func=_llm_model_func,
+            llm_model_func=llm_func,
             embedding_func=EMBEDDING_WRAPPER,
         )
-
         await rag.initialize_storages()
         await initialize_pipeline_status()
 
-        _rag_instance = rag
+        _rag_instances[key] = rag
         return rag
+    
+
+# ----------------------------------------------------------------------
+# History Builder
+# ----------------------------------------------------------------------
+
+def _render_history_to_system(history_messages: list[dict] | None) -> str:
+    if not history_messages:
+        return ""
+    lines = []
+    for m in history_messages:
+        role = m.get("role", "user")
+        content = m.get("content", "")
+        lines.append(f"{role.upper()}: {content}")
+    return "Chat history (for context):\n" + "\n".join(lines)
+
 
 # ----------------------------------------------------------------------
 # High-Level Helper: run_rag_query
@@ -321,23 +311,23 @@ async def run_rag_query(
     Führt eine LightRAG-Query aus und gibt nur den Antwort-String zurück.
     provider + model bestimmen, welcher LLM benutzt wird.
     """
-    rag = await get_rag()
+    model_id = model or DEFAULT_MODEL[provider]
+    rag = await get_rag(provider=provider, model_id=model_id)
 
-    if model is None:
-        model = DEFAULT_MODEL[provider]
+    # History -> system_prompt mappen
+    hist_block = _render_history_to_system(history_messages=history_messages)
+    system_prompt = "\n\n".join([p for p in [user_prompt, hist_block] if p])
 
     param = QueryParam(
         mode=mode,
         response_type=response_type,
-        user_prompt=user_prompt,
+        user_prompt=None,
     )
 
     result = await rag.aquery(
         question,
         param=param,
-        history_messages=history_messages or [],
-        llm_provider=provider,
-        llm_model=model,
+        system_prompt=system_prompt or None,
     )
 
     # LightRAG gibt meist ein Dict mit 'response' zurück
