@@ -1,7 +1,0 @@
-Start LIGHTRAGENV
-
-1. Activate conda (if not set to start automatically)
-$ source ~/anaconda3/bin/activate
-
-2. Activate LIGHTRAGENV
-$ conda activate LIGHTRAGENV
