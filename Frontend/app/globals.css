@@ -9,7 +9,20 @@
 
   /* Light Theme (default) */
   :root {
-    --background: 0 0% 100%;
+    /* gray scale */
+    --gray-1: 0 0% 96%;
+    --gray-2: 0 0% 92%;
+    --gray-3: 0 0% 88%;
+    --gray-4: 0 0% 84%;
+    --gray-5: 0 0% 17%;
+
+    /* Accent Colors */
+    --green: 158 26% 61%;
+    --red: 10 29% 61%;
+    --yellow: 48 26% 61%;
+    --violett: 250 27% 61%;
+
+    --background: var(--gray-1);
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -53,6 +66,19 @@
      Dark Theme Override
   ------------------------------------------------------------- */
   .dark {
+    /* gray scale */
+    --gray-1: 0 0% 8%;
+    --gray-2: 0 0% 11%;
+    --gray-3: 0 0% 14%;
+    --gray-4: 0 0% 17%;
+    --gray-5: 0 0% 96%;
+
+    /* Accent Colors */
+    --green: 158 55% 79%;
+    --red: 10 79% 80%;
+    --yellow: 53 79% 80%;
+    --violett: 250 75% 81%;
+
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
 
