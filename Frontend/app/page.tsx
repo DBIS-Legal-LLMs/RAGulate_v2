@@ -30,6 +30,7 @@ import { ThemeProvider } from "./components/theme-provider"
 import { AuthModal } from "./components/auth-modal"
 import { GraphOverlay } from "../components/GraphOverlay"
 import { DocumentsModal } from "./components/documents-modal"
+import Sidebar from "./components/SideBar"
 
 /**
  * Backend API endpoint configuration
@@ -428,107 +429,18 @@ export default function GDPRChatbot() {
           - Session management controls
           - Assistant info footer
         */}
-        <div className="w-64 bg-gray-900 text-white flex flex-col">
-          <div className="p-4">
-            <Button
-              onClick={createNewChat}
-              className="w-full bg-gray-800 hover:bg-gray-700 text-white border border-gray-600"
-            >
-              <MessageSquare className="w-4 h-4 mr-2" />
-              New Chat
-            </Button>
-          </div>
-
-          <ScrollArea className="flex-1 px-2">
-            {chatSessions.map((session) => (
-              <div
-                key={session.id}
-                onClick={() => {
-                  setCurrentSessionId(session.id)
-                  setMessages(session.messages)
-                }}
-                className={`group p-3 mb-2 rounded cursor-pointer transition-colors flex items-center justify-between ${
-                  currentSessionId === session.id ? "bg-gray-700" : "hover:bg-gray-800"
-                }`}
-              >
-                <div className="flex-1 min-w-0">
-                  {editingSessionId === session.id ? (
-                    <form
-                      onSubmit={e => {
-                        e.preventDefault()
-                        setChatSessions(prev => prev.map(s =>
-                          s.id === session.id ? { ...s, title: editedTitle } : s
-                        ))
-                        setEditingSessionId(null)
-                      }}
-                    >
-                      <input
-                        className="text-sm font-medium bg-gray-800 text-white rounded px-1 w-full"
-                        value={editedTitle}
-                        onChange={e => setEditedTitle(e.target.value)}
-                        autoFocus
-                        onBlur={() => setEditingSessionId(null)}
-                      />
-                    </form>
-                  ) : (
-                    <div className="flex items-center">
-                      <div
-                        className="text-sm font-medium truncate cursor-pointer"
-                        onClick={e => {
-                          e.stopPropagation()
-                          setEditingSessionId(session.id)
-                          setEditedTitle(session.title)
-                        }}
-                        title="Click to edit title"
-                      >
-                        {session.title}
-                      </div>
-                    </div>
-                  )}
-                  <div className="text-xs text-gray-400">{session.createdAt.toLocaleDateString()}</div>
-                </div>
-                <div className="flex flex-row items-center justify-center">
-                  <button
-                    className="ml-1 mr-1 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700"
-                    onClick={e => {
-                      e.stopPropagation()
-                      setEditingSessionId(session.id)
-                      setEditedTitle(session.title)
-                    }}
-                    tabIndex={0}
-                    aria-label="Edit chat title"
-                    type="button"
-                    style={{marginRight: '0.25rem'}}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4 1a1 1 0 01-1.263-1.263l1-4a4 4 0 01.828-1.414z" /></svg>
-                  </button>
-                  <button
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500 p-1 rounded"
-                    onClick={e => {
-                      e.stopPropagation()
-                      deleteChatSession(session.id)
-                    }}
-                    aria-label="Delete chat"
-                    tabIndex={0}
-                    type="button"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </ScrollArea>
-
-          <div className="p-4 border-t border-gray-700">
-            <div className="flex items-center space-x-2">
-              <Shield className="w-5 h-5 text-blue-400" />
-              <div>
-                <div className="text-sm font-medium">GDPR Assistant</div>
-                <div className="text-xs text-gray-400">Privacy Compliance Expert</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Sidebar
+          chatSessions={chatSessions}
+          currentSessionId={currentSessionId}
+          createNewChat={createNewChat}
+          setCurrentSessionId={setCurrentSessionId}
+          setMessages={setMessages}
+          deleteChatSession={deleteChatSession}
+          editingSessionId={editingSessionId}
+          setEditingSessionId={setEditingSessionId}
+          editedTitle={editedTitle}
+          setEditedTitle={setEditedTitle}
+        />
 
         {/* 
           Main Chat Area
