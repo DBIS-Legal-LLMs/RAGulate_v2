@@ -35,7 +35,7 @@ export default function Sidebar({
 
   return (
     <div
-      className={`bg-gray-900 text-white flex flex-col transition-all duration-300 border-r border-gray-800
+      className={`bg-sidebar flex flex-col transition-all duration-300 border-r border-gray-800
         ${collapsed ? "w-16" : "w-64"}`}
     >
       {/* Collapse / Expand Button */}
@@ -43,11 +43,11 @@ export default function Sidebar({
 
         {!collapsed && (
         <Image
-            src="/logo_dark.png"
+            src="logo_light.png"
             alt="Logo"
             width={32}
             height={32}
-            className="rounded h-8 w-auto object-contain ml-1 mt-1"
+            className="rounded h-8 w-auto object-contain ml-1 mt-1 dark:invert ease-in-out"
         />
         )}
         
@@ -57,7 +57,7 @@ export default function Sidebar({
         <Button
           size="icon"
           variant="ghost"
-          className="text-white hover:bg-gray-700 mr-1"
+          className="hover:bg-gray-700 mr-1"
           onClick={() => setCollapsed(!collapsed)}
         >
           {collapsed ? (
