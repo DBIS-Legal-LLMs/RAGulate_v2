@@ -35,7 +35,7 @@ export default function Sidebar({
 
   return (
     <div
-      className={`bg-sidebar flex flex-col transition-all duration-300 border-r border-gray-800
+      className={`bg-sidebar flex flex-col transition-all duration-300 border-r border-sidebar-border
         ${collapsed ? "w-16" : "w-64"}`}
     >
       {/* Collapse / Expand Button */}
@@ -57,7 +57,7 @@ export default function Sidebar({
         <Button
           size="icon"
           variant="ghost"
-          className="hover:bg-gray-700 mr-1"
+          className="hover:bg-accent mr-1 dark:hover:text-black"
           onClick={() => setCollapsed(!collapsed)}
         >
           {collapsed ? (
@@ -73,7 +73,7 @@ export default function Sidebar({
         <div className="p-4">
           <Button
             onClick={createNewChat}
-            className="w-full bg-gray-800 hover:bg-gray-700 text-white border border-gray-600"
+            className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black "
           >
             <MessageSquare className="w-4 h-4 mr-2" />
             New Chat
@@ -90,8 +90,8 @@ export default function Sidebar({
               setCurrentSessionId(session.id)
               setMessages(session.messages)
             }}
-            className={`group p-3 mb-2 rounded cursor-pointer flex items-center transition-colors
-            ${currentSessionId === session.id ? "bg-gray-700" : "hover:bg-gray-800"}
+            className={`group p-3 mb-2 rounded cursor-pointer flex items-center transition-colors 
+            ${currentSessionId === session.id ? "bg-accent dark:text-black" : "hover:secondary hover:bg-primary"}
             `}
           >
             {!collapsed ? (
@@ -104,7 +104,9 @@ export default function Sidebar({
                     }}
                   >
                     <input
-                      className="text-sm font-medium bg-gray-800 text-white rounded px-1 w-full"
+                      className={`text-sm font-medium rounded px-1 w-ful
+                        ${currentSessionId === session.id ? "text-black bg-accent" : "bg-primary"}
+                        `}
                       value={editedTitle}
                       onChange={(e) => setEditedTitle(e.target.value)}
                       autoFocus
@@ -115,27 +117,32 @@ export default function Sidebar({
                   <div
                     className="text-sm font-medium truncate cursor-pointer"
                     onClick={(e) => {
-                      e.stopPropagation()
-                      setEditingSessionId(session.id)
-                      setEditedTitle(session.title)
+                      // only current session can be edited
+                      if ((currentSessionId === session.id)) {
+                        e.stopPropagation()
+                        setEditingSessionId(session.id)
+                        setEditedTitle(session.title)
+                      }
                     }}
                   >
                     {session.title}
                   </div>
                 )}
 
-                <div className="text-xs text-gray-400">
+                <div className="text-xs">
                   {session.createdAt.toLocaleDateString()}
                 </div>
               </div>
             ) : (
-              <MessageSquare className="w-4 h-4 text-gray-300" />
+              <MessageSquare className="w-4 h-4 ml-1" />
             )}
 
             {/* Delete Button */}
             {!collapsed && (
               <button
-                className="opacity-0 group-hover:opacity-100 ml-2 text-gray-400 hover:text-red-500 p-1"
+                className={`opacity-0 group-hover:opacity-100 ml-2 hover:text-red-500 p-1
+                  ${currentSessionId === session.id ? "text-secondary" : "text-accent"}
+                  `}
                 onClick={(e) => {
                   e.stopPropagation()
                   deleteChatSession(session.id)
@@ -149,7 +156,7 @@ export default function Sidebar({
       </ScrollArea>
 
       {/* Footer */}
-      {!collapsed && (
+      {/* {!collapsed && (
         <div className="p-4 border-t border-gray-700">
           <div className="flex items-center space-x-2">
             <Shield className="w-5 h-5 text-blue-400" />
@@ -159,7 +166,7 @@ export default function Sidebar({
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   )
 }
