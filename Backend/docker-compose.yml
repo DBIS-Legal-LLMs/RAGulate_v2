@@ -22,6 +22,13 @@ services:
       - ".env"
     volumes:
       - hf_cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: ["gpu"]
 
 volumes:
   mongo_data:
