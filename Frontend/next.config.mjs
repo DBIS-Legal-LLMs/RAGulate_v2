@@ -1,3 +1,5 @@
+import packageJson from './package.json' with { type: 'json' };
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -8,6 +10,9 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+  },
+  env: {
+    NEXT_PUBLIC_APP_VERSION: packageJson.version,
   },
 }
 
