@@ -586,6 +586,14 @@ export default function GDPRChatbot() {
       <GraphOverlay open={showGraph} onClose={() => setShowGraph(false)} />
       {/* Documents Modal */}
       <DocumentsModal open={showDocuments} onClose={() => setShowDocuments(false)} />
+
+      {/* Bottom Bar */}
+      <div className="fixed bottom-0 left-0 right-0 py-2 px-4 bg-sidebar
+                      border-t border-sidebar-border text-sm 
+                      text-gray-600 dark:text-gray-300 flex justify-between z-50">
+        <span>RAGulate</span>
+        <span>v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
+      </div>
     </ThemeProvider>
   )
 }
