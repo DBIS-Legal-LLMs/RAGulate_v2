@@ -54,11 +54,11 @@ export function ProfileDropdown({ username, onProfileClick, onSettingsClick }: P
     <div className="relative" ref={dropdownRef}>
       <Button
         variant="ghost"
-        className="flex items-center space-x-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+        className="flex items-center space-x-2 p-2 hover:bg-accent hover:text-black rounded-lg"
         onClick={() => setIsOpen(!isOpen)}
       >
         <Avatar className="w-8 h-8">
-          <AvatarImage src={"/placeholder.svg"} alt={username} />
+          <AvatarImage src={"/Portrait_Placeholder.png"} alt={username} />
           <AvatarFallback className="bg-blue-600 text-white text-sm">{getInitials(username || "U")}</AvatarFallback>
         </Avatar>
         <span className="text-sm">{username}</span>
@@ -66,13 +66,13 @@ export function ProfileDropdown({ username, onProfileClick, onSettingsClick }: P
       </Button>
 
       {isOpen && (
-        <Card className="absolute right-0 top-full mt-2 w-64 shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+        <Card className="absolute bg-toolbar right-0 top-full mt-2 w-64 shadow-lg border border-gray-200 dark:border-gray-700 z-50">
           <CardContent className="p-0">
             {/* User Info */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center space-x-3">
                 <Avatar className="w-10 h-10">
-                  <AvatarImage src={"/placeholder.svg"} alt={username} />
+                  <AvatarImage src={"/Portrait_Placeholder.png"} alt={username} />
                   <AvatarFallback className="bg-blue-600 text-white">{getInitials(username || "U")}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
@@ -82,10 +82,10 @@ export function ProfileDropdown({ username, onProfileClick, onSettingsClick }: P
             </div>
 
             {/* Menu Items */}
-            <div className="py-2">
+            <div className="py-2 ml-1 mr-1">
               <Button
                 variant="ghost"
-                className="w-full justify-start px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="w-full justify-start px-4 py-2 text-sm hover:bg-accent hover:text-black"
                 onClick={() => {
                   onProfileClick()
                   setIsOpen(false)
@@ -97,7 +97,7 @@ export function ProfileDropdown({ username, onProfileClick, onSettingsClick }: P
 
               <Button
                 variant="ghost"
-                className="w-full justify-start px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="w-full justify-start px-4 py-2 text-sm hover:bg-accent hover:text-black"
                 onClick={() => {
                   onSettingsClick()
                   setIsOpen(false)
@@ -109,12 +109,14 @@ export function ProfileDropdown({ username, onProfileClick, onSettingsClick }: P
 
               {/* Theme Selector */}
               <div className="px-4 py-2">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Theme</p>
+                <p className="text-xs font-medium mb-2">Theme</p>
                 <div className="flex space-x-1">
                   <Button
                     variant={theme === "light" ? "default" : "ghost"}
                     size="sm"
-                    className="flex-1"
+                    className={`flex-1 hover:text-black
+                      ${theme === "dark" ? "text-white" : "text-black"}
+                    `}
                     onClick={() => setTheme("light")}
                   >
                     <Sun className="w-3 h-3 mr-1" />
@@ -123,7 +125,9 @@ export function ProfileDropdown({ username, onProfileClick, onSettingsClick }: P
                   <Button
                     variant={theme === "dark" ? "default" : "ghost"}
                     size="sm"
-                    className="flex-1"
+                    className={`flex-1
+                      ${theme === "dark" ? "text-white" : "text-black"}
+                    `}
                     onClick={() => setTheme("dark")}
                   >
                     <Moon className="w-3 h-3 mr-1" />

@@ -420,6 +420,7 @@ export default function GDPRChatbot() {
   return (
     <ThemeProvider>
       {showAuthModal && <AuthModal onLoginSuccess={handleLoginSuccess} />}
+      {/* Main Background */}
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
         {/* 
           Sidebar Component
@@ -458,26 +459,21 @@ export default function GDPRChatbot() {
             - Document management
             - Profile settings
           */}
-          <div className="bg-white border-b border-gray-200 p-4">
+          <div className="bg-toolbar border-b border-sidebar-border p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Avatar className="bg-blue-600">
-                  <AvatarFallback className="text-white">
-                    <Shield className="w-5 h-5" />
-                  </AvatarFallback>
-                </Avatar>
                 <div>
                   <h1 className="text-lg font-semibold">GDPR Compliance Assistant</h1>
                   <p className="text-sm text-gray-600">Ask me anything about GDPR regulations and compliance</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <Button variant="outline" onClick={() => setShowGraph(true)}>
+                {/* <Button variant="outline" onClick={() => setShowGraph(true)}>
                   Graph
                 </Button>
                 <Button variant="outline" onClick={() => setShowDocuments(true)}>
                   Documents
-                </Button>
+                </Button> */}
                 <ProfileDropdown
                   username={username}
                   onProfileClick={() => setShowProfileModal(true)}

@@ -59,6 +59,11 @@
     --sidebar-border: var(--secondary);
     --sidebar-ring: 217.2 91.2% 59.8%;
 
+    --toolbar-background: var(--gray-1);
+    --toolbar-primary: 240 5.9% 10%;
+    --toolbar-accent: 240 4.8% 95.9%;
+    --toolbar-border: var(--secondary);
+
     --radius: 0.5rem;
   }
 
@@ -116,6 +121,11 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: var(--secondary);
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --toolbar-background: var(--gray-1);
+    --toolbar-primary: 224.3 76.3% 48%;
+    --toolbar-accent: 240 3.7% 15.9%;
+    --toolbar-border: var(--secondary);
   }
 
   /* Base Element Styling */
