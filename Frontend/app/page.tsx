@@ -1,36 +1,36 @@
 /**
  * GDPR Chatbot - Main Application Component
- * 
+ *
  * This is the root component of the GDPR compliance chatbot application.
  * It provides an interactive interface for users to:
  * - Ask questions about GDPR compliance
  * - Upload and review documents
  * - Manage chat sessions
  * - View knowledge graphs
- * 
+ *
  * @module GDPRChatbot
  */
 
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Send, MessageSquare, Shield, X } from "lucide-react"
-import { ChatMessage } from "./components/chat-message"
-import { ProfileDropdown } from "./components/profile-dropdown"
-import { ProfileModal } from "./components/profile-modal"
-import { SettingsModal } from "./components/settings-modal"
-import { ThemeProvider } from "./components/theme-provider"
-import { AuthModal } from "./components/auth-modal"
-import { GraphOverlay } from "../components/GraphOverlay"
-import { DocumentsModal } from "./components/documents-modal"
-import Sidebar from "./components/SideBar"
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Send, MessageSquare, Shield, X } from "lucide-react";
+import { ChatMessage } from "./components/chat-message";
+import { ProfileDropdown } from "./components/profile-dropdown";
+import { ProfileModal } from "./components/profile-modal";
+import { SettingsModal } from "./components/settings-modal";
+import { ThemeProvider } from "./components/theme-provider";
+import { AuthModal } from "./components/auth-modal";
+import { GraphOverlay } from "../components/GraphOverlay";
+import { DocumentsModal } from "./components/documents-modal";
+import Sidebar from "./components/SideBar";
 
 /**
  * Backend API endpoint configuration
@@ -48,11 +48,11 @@ const BACKEND_URL = "http://134.60.71.197:8000";
  * @property {string} [userName] - Optional username of the sender
  */
 interface Message {
-  id: string
-  role: "user" | "assistant"
-  content: string
-  timestamp: Date
-  userName?: string
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+  userName?: string;
 }
 
 /**
@@ -65,11 +65,11 @@ interface Message {
  * @property {string} sessionID - Backend reference ID for the session
  */
 interface ChatSession {
-  id: string
-  title: string
-  messages: Message[]
-  createdAt: Date
-  sessionID: string
+  id: string;
+  title: string;
+  messages: Message[];
+  createdAt: Date;
+  sessionID: string;
 }
 
 /**
@@ -78,41 +78,41 @@ interface ChatSession {
  */
 export default function GDPRChatbot() {
   // Chat state management
-  const [messages, setMessages] = useState<Message[]>([])              // Current conversation messages
-  const [input, setInput] = useState("")                              // User input field
-  const [isLoading, setIsLoading] = useState(false)                   // Loading state for API calls
-  
+  const [messages, setMessages] = useState<Message[]>([]); // Current conversation messages
+  const [input, setInput] = useState(""); // User input field
+  const [isLoading, setIsLoading] = useState(false); // Loading state for API calls
+
   // Session management
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]) // All user's chat sessions
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null) // Active session ID
-  
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]); // All user's chat sessions
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null); // Active session ID
+
   // UI References and state
-  const messagesEndRef = useRef<HTMLDivElement>(null)                 // For auto-scrolling
-  const [showProfileModal, setShowProfileModal] = useState(false)     // Profile modal visibility
-  const [showSettingsModal, setShowSettingsModal] = useState(false)   // Settings modal visibility
-  const [editingSessionId, setEditingSessionId] = useState<string | null>(null) // Session being edited
-  const [editedTitle, setEditedTitle] = useState<string>("")          // New title for edited session
-  const [showAuthModal, setShowAuthModal] = useState(true)            // Auth modal visibility
+  const messagesEndRef = useRef<HTMLDivElement>(null); // For auto-scrolling
+  const [showProfileModal, setShowProfileModal] = useState(false); // Profile modal visibility
+  const [showSettingsModal, setShowSettingsModal] = useState(false); // Settings modal visibility
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null); // Session being edited
+  const [editedTitle, setEditedTitle] = useState<string>(""); // New title for edited session
+  const [showAuthModal, setShowAuthModal] = useState(true); // Auth modal visibility
 
   // User and session state
-  const [userSessions, setUserSessions] = useState<any[]>([])         // Raw session data from backend
-  const [username, setUsername] = useState<string>("")                 // Current user's username
+  const [userSessions, setUserSessions] = useState<any[]>([]); // Raw session data from backend
+  const [username, setUsername] = useState<string>(""); // Current user's username
 
   // Modal and overlay state
-  const [showGraph, setShowGraph] = useState(false)                   // Knowledge graph visibility
-  const [showDocuments, setShowDocuments] = useState(false)           // Documents modal visibility
+  const [showGraph, setShowGraph] = useState(false); // Knowledge graph visibility
+  const [showDocuments, setShowDocuments] = useState(false); // Documents modal visibility
 
   /**
    * Scrolls the chat window to the most recent message
    * Used after new messages are added or on viewport changes
    */
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    scrollToBottom();
+  }, [messages]);
 
   /**
    * Generates a unique session identifier
@@ -120,8 +120,8 @@ export default function GDPRChatbot() {
    * @returns {string} Unique session identifier
    */
   const generateSessionID = () => {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-  }
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  };
 
   /**
    * Creates a new chat session and sets it as active
@@ -129,116 +129,119 @@ export default function GDPRChatbot() {
    * Clears current messages to start fresh conversation
    */
   const createNewChat = () => {
-    const newSessionId = generateSessionID()
+    const newSessionId = generateSessionID();
     const newSession: ChatSession = {
       id: Date.now().toString(),
       title: "New GDPR Consultation",
       messages: [],
       createdAt: new Date(),
-      sessionID: newSessionId
-    }
-    setChatSessions((prev) => [newSession, ...prev])
-    setCurrentSessionId(newSession.id)
-    setMessages([])
-  }
+      sessionID: newSessionId,
+    };
+    setChatSessions((prev) => [newSession, ...prev]);
+    setCurrentSessionId(newSession.id);
+    setMessages([]);
+  };
 
   /**
    * Handles the submission of new chat messages
    * Sends message to backend API and updates UI with response
-   * 
+   *
    * @param {React.FormEvent} e - Form submission event
    * @returns {Promise<void>}
    */
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim()) return
+    e.preventDefault();
+    if (!input.trim()) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
       content: input,
       timestamp: new Date(),
-      userName: username
-    }
+      userName: username,
+    };
 
-    setMessages((prev) => [...prev, userMessage])
-    setInput("")
-    setIsLoading(true)
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
 
     try {
-      const currentSession = chatSessions.find(s => s.id === currentSessionId)
-      
+      const currentSession = chatSessions.find(
+        (s) => s.id === currentSessionId
+      );
+
       const response = await fetch(BACKEND_URL + "/api/chat", {
         method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           message: input,
           sessionId: currentSession?.sessionID || "",
-          userName: username
+          userName: username,
         }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to send message")
+        throw new Error("Failed to send message");
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content: data.answer,
         timestamp: new Date(),
-      }
+      };
 
-      setMessages((prev) => [...prev, assistantMessage])
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      console.error("Error sending message:", error)
+      console.error("Error sending message:", error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "Sorry, I encountered an error processing your request. Please try again.",
+        content:
+          "Sorry, I encountered an error processing your request. Please try again.",
         timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, errorMessage])
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
-
-
+  };
 
   /**
    * Deletes a chat session and handles session switching
    * If deleted session is current, switches to another session or creates new one
-   * 
+   *
    * @param {string} sessionId - ID of session to delete
-   * 
+   *
    * @example
    * deleteChatSession("session123")
-   * 
+   *
    * @sideEffects
    * - Updates chatSessions state
    * - May update currentSessionId and messages
    * - May create new chat if last session deleted
    */
   const deleteChatSession = (sessionId: string) => {
-    setChatSessions((prev) => prev.filter((session) => session.id !== sessionId))
+    setChatSessions((prev) =>
+      prev.filter((session) => session.id !== sessionId)
+    );
     if (currentSessionId === sessionId) {
       // If the deleted session is current, switch to another or create new
       if (chatSessions.length > 1) {
-        const nextSession = chatSessions.find((s) => s.id !== sessionId)
+        const nextSession = chatSessions.find((s) => s.id !== sessionId);
         if (nextSession) {
-          setCurrentSessionId(nextSession.id)
-          setMessages(nextSession.messages)
+          setCurrentSessionId(nextSession.id);
+          setMessages(nextSession.messages);
         }
       } else {
-        createNewChat()
+        createNewChat();
       }
     }
-  }
+  };
 
   /**
    * Ensures initial chat session exists
@@ -251,7 +254,7 @@ export default function GDPRChatbot() {
       createNewChat();
       hasCreatedChat.current = true;
     }
-  }, [])
+  }, []);
 
   /**
    * Monitors current session changes and logs session ID
@@ -259,7 +262,7 @@ export default function GDPRChatbot() {
    */
   useEffect(() => {
     if (currentSessionId) {
-      const session = chatSessions.find(s => s.id === currentSessionId);
+      const session = chatSessions.find((s) => s.id === currentSessionId);
       if (session) {
         console.log("Current sessionID:", session.sessionID);
       }
@@ -285,13 +288,13 @@ export default function GDPRChatbot() {
                 title: "GDPR Consultation", // Default title #TODO: not default name handling also needs to be sent to backend for saving of names
                 messages: details ? details.map(transformMessage) : [],
                 createdAt: new Date(),
-                sessionID: sessionId
+                sessionID: sessionId,
               };
             })
           );
-          
+
           setChatSessions(sessionsWithDetails);
-          
+
           // Set the most recent session as current
           if (sessionsWithDetails.length > 0) {
             var lastIndex = sessionsWithDetails.length - 1;
@@ -307,10 +310,10 @@ export default function GDPRChatbot() {
 
   /**
    * Retrieves all chat sessions for a given user from the backend
-   * 
+   *
    * @param {string} username - Username to fetch sessions for
    * @returns {Promise<{sessions: string[]}>} Array of session IDs
-   * 
+   *
    * @throws Will return empty array on fetch failure
    * @example
    * const sessions = await fetchSessions("john_doe");
@@ -318,14 +321,16 @@ export default function GDPRChatbot() {
    */
   const fetchSessions = async (username: string) => {
     try {
-      const url = `${BACKEND_URL}/api/sessions?username=${encodeURIComponent(username)}`;
-      console.log('Fetching sessions from:', url);
+      const url = `${BACKEND_URL}/api/sessions?username=${encodeURIComponent(
+        username
+      )}`;
+      console.log("Fetching sessions from:", url);
       const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch sessions');
+      if (!response.ok) throw new Error("Failed to fetch sessions");
       const sessions = await response.json();
       return sessions;
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      console.error("Error fetching sessions:", error);
       return [];
     }
   };
@@ -333,10 +338,10 @@ export default function GDPRChatbot() {
   /**
    * Fetches detailed information for a specific chat session
    * Including all messages and metadata
-   * 
+   *
    * @param {string} sessionId - ID of the session to fetch
    * @returns {Promise<any>} Session details including messages
-   * 
+   *
    * @throws Will return null on fetch failure
    * @example
    * const details = await fetchSessionDetails("session123");
@@ -345,11 +350,11 @@ export default function GDPRChatbot() {
   const fetchSessionDetails = async (sessionId: string) => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/sessions/${sessionId}`);
-      if (!response.ok) throw new Error('Failed to fetch session details');
+      if (!response.ok) throw new Error("Failed to fetch session details");
       const sessionDetails = await response.json();
       return sessionDetails;
     } catch (error) {
-      console.error('Error fetching session details:', error);
+      console.error("Error fetching session details:", error);
       return null;
     }
   };
@@ -357,17 +362,20 @@ export default function GDPRChatbot() {
   /**
    * Handles successful user login
    * Loads user's existing chat sessions and sets up the interface
-   * 
+   *
    * @param {any} sessions - Initial sessions data from auth
    * @param {string} usernameFromAuth - Authenticated username
-   * 
+   *
    * @example
    * handleLoginSuccess(userSessions, "john_doe")
    */
-  const handleLoginSuccess = async (sessions: any, usernameFromAuth: string) => {
+  const handleLoginSuccess = async (
+    sessions: any,
+    usernameFromAuth: string
+  ) => {
     setUsername(usernameFromAuth);
     setShowAuthModal(false);
-    
+
     const userSessions = await fetchSessions(usernameFromAuth);
     if (userSessions.sessions.length > 0) {
       const sessionsWithDetails = await Promise.all(
@@ -378,26 +386,26 @@ export default function GDPRChatbot() {
             title: "GDPR Consultation",
             messages: details ? details.map(transformMessage) : [],
             createdAt: new Date(),
-            sessionID: sessionId
+            sessionID: sessionId,
           };
         })
       );
-      
+
       setChatSessions(sessionsWithDetails);
-      
+
       if (sessionsWithDetails.length > 0) {
         setCurrentSessionId(sessionsWithDetails[0].id);
         setMessages(sessionsWithDetails[0].messages || []);
       }
     }
-  }
+  };
 
   /**
    * Transforms a raw message object from the API into the frontend Message format
-   * 
+   *
    * @param {any} msg - Raw message object from backend
    * @returns {Message} Formatted message for frontend use
-   * 
+   *
    * @example
    * const formatted = transformMessage({
    *   _id: "123",
@@ -413,7 +421,7 @@ export default function GDPRChatbot() {
       role: msg.role as "user" | "assistant",
       content: msg.content,
       timestamp: new Date(msg.timestamp),
-      userName: msg.user_name
+      userName: msg.user_name,
     };
   };
 
@@ -451,7 +459,7 @@ export default function GDPRChatbot() {
           - Input area for user messages
           - Loading indicators and status messages
         */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col bg-chat">
           {/* 
             Header Section
             Shows assistant identity and provides access to:
@@ -463,8 +471,12 @@ export default function GDPRChatbot() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div>
-                  <h1 className="text-lg font-semibold">GDPR Compliance Assistant</h1>
-                  <p className="text-sm text-gray-600">Ask me anything about GDPR regulations and compliance</p>
+                  <h1 className="text-lg font-semibold">
+                    GDPR Compliance Assistant
+                  </h1>
+                  <p className="text-sm text-gray-600">
+                    Ask me anything about GDPR regulations and compliance
+                  </p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -492,14 +504,17 @@ export default function GDPRChatbot() {
             - Loading indicators
             - Auto-scroll behavior
           */}
-          <ScrollArea className="flex-1 p-4">
+          <ScrollArea className="flex-1 p-4 bg-chat">
             <div className="max-w-4xl mx-auto space-y-4">
               {messages.length === 0 && (
                 <div className="text-center py-12">
-                  <Shield className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-                  <h2 className="text-xl font-semibold mb-2">Welcome to the RAGulate GDPR Assistant</h2>
+                  <Shield className="w-12 h-12 text-accent mx-auto mb-4" />
+                  <h2 className="text-xl font-semibold mb-2">
+                    Welcome to the RAGulate GDPR Assistant
+                  </h2>
                   <p className="text-gray-600 mb-4">
-                    I'm here to help you understand and comply with GDPR regulations.
+                    I'm here to help you understand and comply with GDPR
+                    regulations.
                   </p>
                 </div>
               )}
@@ -529,8 +544,6 @@ export default function GDPRChatbot() {
             </div>
           </ScrollArea>
 
-
-
           {/* 
             Input Area
             Features:
@@ -540,28 +553,41 @@ export default function GDPRChatbot() {
             - Responsive layout with max width
             - Submit handling with error prevention
           */}
-          <div className="border-t border-gray-200 p-4">
+          <div className="bg-chat p-4 mb-10">
             <div className="max-w-4xl mx-auto">
-              <form onSubmit={handleSubmit} className="flex items-end space-x-2">
+              <form onSubmit={handleSubmit} className="flex items-end">
                 <div className="flex-1 relative">
                   <Input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Ask about GDPR compliance, data protection, or upload documents for review..."
-                    className="pr-12 min-h-[44px] resize-none"
+                    className="pr-12 min-h-[44px] resize-none bg-primary border-sidebar-border     focus-visible:ring-0
+                      focus-visible:ring-offset-0
+                      focus:outline-none
+                      focus:ring-0
+                      focus:ring-offset-0"
                     disabled={isLoading}
                   />
+
+                  {/* Button inside input */}
+                  <button
+                    type="submit"
+                    disabled={isLoading || !input.trim()}
+                    className="
+                      absolute right-2 top-1/2 -translate-y-1/2 
+                      p-2 rounded-md 
+                      bg-white dark:bg-sidebar hover:bg-accent dark:hover:bg-accent dark:hover:text-black
+                      text-invert
+                    "
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
                 </div>
-                <Button
-                  type="submit"
-                  disabled={isLoading || !input.trim()}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
               </form>
+
               <p className="text-xs text-gray-500 mt-2 text-center">
-                Upload documents for GDPR compliance review or ask questions about data protection regulations
+                Upload documents for GDPR compliance review or ask questions
+                about data protection regulations
               </p>
             </div>
           </div>
@@ -575,21 +601,30 @@ export default function GDPRChatbot() {
           />
         )}
 
-        {showSettingsModal && <SettingsModal onClose={() => setShowSettingsModal(false)} username={username} />}
-
+        {showSettingsModal && (
+          <SettingsModal
+            onClose={() => setShowSettingsModal(false)}
+            username={username}
+          />
+        )}
       </div>
       {/* Graph Overlay */}
       <GraphOverlay open={showGraph} onClose={() => setShowGraph(false)} />
       {/* Documents Modal */}
-      <DocumentsModal open={showDocuments} onClose={() => setShowDocuments(false)} />
+      <DocumentsModal
+        open={showDocuments}
+        onClose={() => setShowDocuments(false)}
+      />
 
       {/* Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 py-2 px-4 bg-sidebar
+      <div
+        className="fixed bottom-0 left-0 right-0 py-2 px-4 bg-sidebar
                       border-t border-sidebar-border text-sm 
-                      text-gray-600 dark:text-gray-300 flex justify-between z-50">
+                      text-gray-600 dark:text-gray-300 flex justify-between z-50"
+      >
         <span>RAGulate</span>
         <span>v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
       </div>
     </ThemeProvider>
-  )
+  );
 }

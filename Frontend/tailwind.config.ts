@@ -80,7 +80,12 @@ const config: Config = {
           primary: "hsl(var(--toolbar-primary))",
           accent: "hsl(var(--toolbar-accent))",
           border: "hsl(var(--toolbar-border))",
-        }
+        },
+
+        //chat
+        chat: {
+          DEFAULT: "hsl(var(--chat-background))",
+        },
       },
 
       // Radii
