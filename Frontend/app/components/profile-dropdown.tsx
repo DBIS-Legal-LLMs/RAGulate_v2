@@ -1,45 +1,52 @@
-"use client"
+"use client";
 
-import { useState, useRef, useEffect } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { User, Settings, Moon, Sun, Monitor, ChevronDown } from "lucide-react"
-import { useTheme } from "./theme-provider"
+import { useState, useRef, useEffect } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { User, Settings, Moon, Sun, Monitor, ChevronDown } from "lucide-react";
+import { useTheme } from "./theme-provider";
 
 interface ProfileDropdownProps {
-  username: string
-  onProfileClick: () => void
-  onSettingsClick: () => void
+  username: string;
+  onProfileClick: () => void;
+  onSettingsClick: () => void;
 }
 
-export function ProfileDropdown({ username, onProfileClick, onSettingsClick }: ProfileDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const { theme, setTheme } = useTheme()
-  const dropdownRef = useRef<HTMLDivElement>(null)
+export function ProfileDropdown({
+  username,
+  onProfileClick,
+  onSettingsClick,
+}: ProfileDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const getThemeIcon = () => {
     switch (theme) {
       case "light":
-        return <Sun className="w-4 h-4" />
+        return <Sun className="w-4 h-4" />;
       case "dark":
-        return <Moon className="w-4 h-4" />
+        return <Moon className="w-4 h-4" />;
       default:
-        return <Monitor className="w-4 h-4" />
+        return <Monitor className="w-4 h-4" />;
     }
-  }
+  };
 
   const getInitials = (name: string) => {
     return name
@@ -47,8 +54,8 @@ export function ProfileDropdown({ username, onProfileClick, onSettingsClick }: P
       .map((n) => n[0])
       .join("")
       .toUpperCase()
-      .slice(0, 2)
-  }
+      .slice(0, 2);
+  };
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -59,24 +66,37 @@ export function ProfileDropdown({ username, onProfileClick, onSettingsClick }: P
       >
         <Avatar className="w-8 h-8">
           <AvatarImage src={"/Portrait_Placeholder.png"} alt={username} />
-          <AvatarFallback className="bg-blue-600 text-white text-sm">{getInitials(username || "U")}</AvatarFallback>
+          <AvatarFallback className="bg-blue-600 text-white text-sm">
+            {getInitials(username || "U")}
+          </AvatarFallback>
         </Avatar>
         <span className="text-sm">{username}</span>
-        <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown
+          className={`w-4 h-4 transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
       </Button>
 
       {isOpen && (
-        <Card className="absolute bg-toolbar right-0 top-full mt-2 w-64 shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+        <Card className="absolute bg-toolbar right-0 top-full mt-2 w-64 shadow-lg border border-sidebar-border z-50">
           <CardContent className="p-0">
             {/* User Info */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-b border-sidebar-border">
               <div className="flex items-center space-x-3">
                 <Avatar className="w-10 h-10">
-                  <AvatarImage src={"/Portrait_Placeholder.png"} alt={username} />
-                  <AvatarFallback className="bg-blue-600 text-white">{getInitials(username || "U")}</AvatarFallback>
+                  <AvatarImage
+                    src={"/Portrait_Placeholder.png"}
+                    alt={username}
+                  />
+                  <AvatarFallback className="bg-blue-600 text-white">
+                    {getInitials(username || "U")}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{username}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                    {username}
+                  </p>
                 </div>
               </div>
             </div>
@@ -87,8 +107,8 @@ export function ProfileDropdown({ username, onProfileClick, onSettingsClick }: P
                 variant="ghost"
                 className="w-full justify-start px-4 py-2 text-sm hover:bg-accent hover:text-black"
                 onClick={() => {
-                  onProfileClick()
-                  setIsOpen(false)
+                  onProfileClick();
+                  setIsOpen(false);
                 }}
               >
                 <User className="w-4 h-4 mr-3" />
@@ -99,8 +119,8 @@ export function ProfileDropdown({ username, onProfileClick, onSettingsClick }: P
                 variant="ghost"
                 className="w-full justify-start px-4 py-2 text-sm hover:bg-accent hover:text-black"
                 onClick={() => {
-                  onSettingsClick()
-                  setIsOpen(false)
+                  onSettingsClick();
+                  setIsOpen(false);
                 }}
               >
                 <Settings className="w-4 h-4 mr-3" />
@@ -140,5 +160,5 @@ export function ProfileDropdown({ username, onProfileClick, onSettingsClick }: P
         </Card>
       )}
     </div>
-  )
+  );
 }
