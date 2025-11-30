@@ -73,6 +73,14 @@ const config: Config = {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+
+        //toolbar
+        toolbar: {
+          DEFAULT: "hsl(var(--toolbar-background))",
+          primary: "hsl(var(--toolbar-primary))",
+          accent: "hsl(var(--toolbar-accent))",
+          border: "hsl(var(--toolbar-border))",
+        }
       },
 
       // Radii
