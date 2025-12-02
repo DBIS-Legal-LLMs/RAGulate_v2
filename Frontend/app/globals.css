@@ -6,6 +6,14 @@
    Base Layer: Root Theme Variables (Light + Dark)
 ---------------------------------------------------------------- */
 @layer base {
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  button:focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 2px hsl(var(--accent)) !important;
+    border-radius: var(--radius);
+  }
   /* Light Theme (default) */
   :root {
     /* gray scale */
@@ -46,7 +54,7 @@
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --input: var(--gray-5);
     --ring: 221.2 83.2% 53.3%;
 
     --sidebar-background: var(--gray-1);
@@ -110,7 +118,7 @@
     --destructive-foreground: 210 40% 98%;
 
     --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --input: var(--gray-5);
     --ring: 224.3 76.3% 94.1%;
 
     /* Sidebar dark variants */
@@ -140,6 +148,8 @@
     @apply bg-background text-foreground;
     font-family: Arial, Helvetica, sans-serif;
   }
+
+
 }
 
 /* --------------------------------------------------------------
