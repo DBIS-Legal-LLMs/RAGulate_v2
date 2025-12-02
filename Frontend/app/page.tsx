@@ -427,7 +427,7 @@ export default function GDPRChatbot() {
 
   return (
     <ThemeProvider>
-      {/* {showAuthModal && <AuthModal onLoginSuccess={handleLoginSuccess} />} */}
+      {showAuthModal && <AuthModal onLoginSuccess={handleLoginSuccess} />}
       {/* Main Background */}
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
         {/* 
