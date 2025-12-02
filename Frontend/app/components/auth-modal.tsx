@@ -96,7 +96,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
               setUsername(e.target.value);
               if (usernameError) setUsernameError(false);
             }}
-            className={`bg-primary w-full px-3 py-2 border rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent
+            className={`bg-primary w-full px-3 py-2 border rounded
               ${usernameError ? "border-red-500 placeholder-red-500" : "border-sidebar-border"}`}
           />
           <input
@@ -107,7 +107,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
               setPassword(e.target.value);
               if (passwordError) setPasswordError(false);
             }}
-            className={`bg-primary w-full px-3 py-2 border rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent
+            className={`bg-primary w-full px-3 py-2 border rounded
               ${passwordError ? "border-red-500 placeholder-red-500" : "border-sidebar-border"}`}
           />
           <button

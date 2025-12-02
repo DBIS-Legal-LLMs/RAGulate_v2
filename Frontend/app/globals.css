@@ -6,6 +6,14 @@
    Base Layer: Root Theme Variables (Light + Dark)
 ---------------------------------------------------------------- */
 @layer base {
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  button:focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 2px hsl(var(--accent)) !important;
+    border-radius: var(--radius);
+  }
   /* Light Theme (default) */
   :root {
     /* gray scale */
@@ -140,6 +148,8 @@
     @apply bg-background text-foreground;
     font-family: Arial, Helvetica, sans-serif;
   }
+
+
 }
 
 /* --------------------------------------------------------------

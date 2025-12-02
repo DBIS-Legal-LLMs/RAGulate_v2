@@ -410,7 +410,7 @@ export function SettingsModal({ onClose, username }: SettingsModalProps) {
                 </Label>
                 <textarea
                   id="custom-prompt"
-                  className="w-full min-h-[120px] rounded-md border border-sidebar-border border-input bg-primary p-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="w-full min-h-[120px] rounded-md border border-sidebar-border border-input bg-primary p-2 text-sm ring-offset-background"
                   placeholder="e.g., 'Answer concisely and cite GDPR articles when relevant.'"
                   value={settings.customPrompt}
                   onChange={(e) =>

@@ -427,7 +427,7 @@ export default function GDPRChatbot() {
 
   return (
     <ThemeProvider>
-      {showAuthModal && <AuthModal onLoginSuccess={handleLoginSuccess} />}
+      {/* {showAuthModal && <AuthModal onLoginSuccess={handleLoginSuccess} />} */}
       {/* Main Background */}
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
         {/* 
@@ -561,11 +561,7 @@ export default function GDPRChatbot() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Ask about GDPR compliance, data protection, or upload documents for review..."
-                    className="pr-12 min-h-[44px] resize-none bg-primary border-sidebar-border     focus-visible:ring-0
-                      focus-visible:ring-offset-0
-                      focus:outline-none
-                      focus:ring-0
-                      focus:ring-offset-0"
+                    className="pr-12 min-h-[44px] resize-none bg-primary border-sidebar-border"
                     disabled={isLoading}
                   />
 
