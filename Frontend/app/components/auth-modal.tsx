@@ -1,97 +1,126 @@
-import React, { useState } from "react"
+import React, { useState } from "react";
 
-const BACKEND_URL = "http://134.60.71.197:8000"
+const BACKEND_URL = "http://134.60.71.197:8000";
 
 interface AuthModalProps {
-  onLoginSuccess: (sessions: any, username: string) => void
+  onLoginSuccess: (sessions: any, username: string) => void;
 }
 
 export function AuthModal({ onLoginSuccess }: AuthModalProps) {
-  const [mode, setMode] = useState<"login" | "register">("login")
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [usernameError, setUsernameError] = useState(false);
+  const [passwordError, setPasswordError] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+
+    // Reset Server Error
+    setServerError(null);
+
+    // Client-side Validation pro Feld
+    let hasError = false;
+    if (!username.trim()) {
+      setUsernameError(true);
+      setServerError("Please enter username")
+      hasError = true;
+    }
+    if (!password.trim()) {
+      setPasswordError(true);
+      setServerError("Please enter password")
+      hasError = true;
+    }
+    if (hasError) return;
+
+    // Alles validiert → Login/Register starten
+    setLoading(true);
+
     try {
       if (mode === "login") {
         const res = await fetch(BACKEND_URL + "/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password }),
-        })
-        const data = await res.json()
+        });
+        const data = await res.json();
         if (res.ok) {
-          onLoginSuccess(data.sessions, username)
+          onLoginSuccess(data.sessions, username);
         } else {
-          setError(data.error || "Login failed")
+          setServerError(data.error || "Login failed");
         }
       } else {
         const res = await fetch(BACKEND_URL + "/api/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password }),
-        })
-        const data = await res.json()
+        });
+        const data = await res.json();
         if (res.ok) {
-          // Automatically log in after registration
+          // Optional: direkt einloggen
           const loginRes = await fetch(BACKEND_URL + "/api/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password }),
-          })
-          const loginData = await loginRes.json()
+          });
+          const loginData = await loginRes.json();
           if (loginRes.ok) {
-            onLoginSuccess(loginData.sessions, username)
+            onLoginSuccess(loginData.sessions, username);
           } else {
-            setMode("login")
-            setError("Registration successful, but login failed. Please try logging in.")
+            setMode("login");
+            setServerError("Registration successful, but login failed. Please try logging in.");
           }
         } else {
-          setError(data.error || "Registration failed")
+          setServerError(data.error || "Registration failed");
         }
       }
     } catch (err) {
-      setError("Network error")
+      setServerError("Network error");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-sm relative">
+      <div className="bg-sidebar rounded-lg border border-sidebar-border shadow-lg p-8 w-full max-w-sm relative">
         <h2 className="text-xl font-bold mb-4 text-center">{mode === "login" ? "Login" : "Register"}</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <input
             type="text"
             placeholder="Username"
             value={username}
-            onChange={e => setUsername(e.target.value)}
-            className="w-full px-3 py-2 border rounded text-black"
-            required
+            onChange={e => {
+              setUsername(e.target.value);
+              if (usernameError) setUsernameError(false);
+            }}
+            className={`bg-primary w-full px-3 py-2 border rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent
+              ${usernameError ? "border-red-500 placeholder-red-500" : "border-sidebar-border"}`}
           />
           <input
             type="password"
             placeholder="Password"
             value={password}
-            onChange={e => setPassword(e.target.value)}
-            className="w-full px-3 py-2 border rounded text-black"
-            required
+            onChange={e => {
+              setPassword(e.target.value);
+              if (passwordError) setPasswordError(false);
+            }}
+            className={`bg-primary w-full px-3 py-2 border rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent
+              ${passwordError ? "border-red-500 placeholder-red-500" : "border-sidebar-border"}`}
           />
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+            className="w-full bg-primary py-2 rounded hover:bg-accent hover:text-black disabled:opacity-50"
             disabled={loading}
           >
             {loading ? "Processing..." : mode === "login" ? "Login" : "Register"}
           </button>
         </form>
-        {error && <div className="text-red-600 text-sm mt-2 text-center">{error}</div>}
+        {/* Server Error */}
+        {serverError && <div className="text-red-600 text-sm mt-2 text-center">{serverError}</div>}
+
         <div className="mt-4 text-center">
           {mode === "login" ? (
             <span>
@@ -99,8 +128,10 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
               <button
                 className="text-blue-600 underline"
                 onClick={() => {
-                  setMode("register")
-                  setError(null)
+                  setMode("register");
+                  setServerError(null);
+                  setUsernameError(false);
+                  setPasswordError(false);
                 }}
                 type="button"
               >
@@ -113,8 +144,10 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
               <button
                 className="text-blue-600 underline"
                 onClick={() => {
-                  setMode("login")
-                  setError(null)
+                  setMode("login");
+                  setServerError(null);
+                  setUsernameError(false);
+                  setPasswordError(false);
                 }}
                 type="button"
               >
@@ -125,5 +158,5 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

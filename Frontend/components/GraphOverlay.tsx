@@ -5,7 +5,6 @@ import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { graphMLtoForceData } from "@/utils/graphml"
 import { useTheme } from "next-themes"
-import 'aframe';
 
 const BACKEND_URL = "http://134.60.71.197:8000";
 
@@ -19,10 +18,20 @@ export function GraphOverlay({ open, onClose }: { open: boolean; onClose: () => 
   const [data, setData] = useState<{nodes:any[];links:any[]}>({ nodes: [], links: [] })
   const [linkColor, setLinkColor] = useState('#000000')
   const [selectedNode, setSelectedNode] = useState<any | null>(null)
-  const [dimensions, setDimensions] = useState({
-    width: window.innerWidth * 0.95,
-    height: window.innerHeight * 0.85
-  });
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+  const update = () => {
+    setDimensions({
+      width: window.innerWidth * 0.95,
+      height: window.innerHeight * 0.85
+    });
+  };
+
+  update();
+  window.addEventListener("resize", update);
+  return () => window.removeEventListener("resize", update);
+}, []);
 
   useEffect(() => {
     setLinkColor(resolvedTheme === 'dark' ? '#ffffff' : '#000000')
