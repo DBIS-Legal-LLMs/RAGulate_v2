@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FocusScope } from "@radix-ui/react-focus-scope";
 
 const BACKEND_URL = "http://134.60.71.197:8000";
 
@@ -84,79 +85,90 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-sidebar rounded-lg border border-sidebar-border shadow-lg p-8 w-full max-w-sm relative">
-        <h2 className="text-xl font-bold mb-4 text-center">{mode === "login" ? "Login" : "Register"}</h2>
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={e => {
-              setUsername(e.target.value);
-              if (usernameError) setUsernameError(false);
-            }}
-            className={`bg-primary w-full px-3 py-2 border rounded
-              ${usernameError ? "border-red-500 placeholder-red-500" : "border-sidebar-border"}`}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={e => {
-              setPassword(e.target.value);
-              if (passwordError) setPasswordError(false);
-            }}
-            className={`bg-primary w-full px-3 py-2 border rounded
-              ${passwordError ? "border-red-500 placeholder-red-500" : "border-sidebar-border"}`}
-          />
-          <button
-            type="submit"
-            className="w-full bg-primary py-2 rounded hover:bg-accent hover:text-black disabled:opacity-50"
-            disabled={loading}
-          >
-            {loading ? "Processing..." : mode === "login" ? "Login" : "Register"}
-          </button>
-        </form>
-        {/* Server Error */}
-        {serverError && <div className="text-red-600 text-sm mt-2 text-center">{serverError}</div>}
+    
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <FocusScope trapped>
+        <div className="bg-sidebar rounded-lg border border-sidebar-border shadow-lg p-8 w-full max-w-sm relative">
+          <h2 className="text-xl font-bold mb-4 text-center">{mode === "login" ? "Login" : "Register"}</h2>
+          
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            <input
+              autoFocus
+              tabIndex={0}
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={e => {
+                setUsername(e.target.value);
+                if (usernameError) setUsernameError(false);
+              }}
+              className={`bg-primary w-full px-3 py-2 border rounded
+                ${usernameError ? "border-red-500 placeholder-red-500" : "border-sidebar-border"}`}
+            />
+            <input
+              tabIndex={0}
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={e => {
+                setPassword(e.target.value);
+                if (passwordError) setPasswordError(false);
+              }}
+              className={`bg-primary w-full px-3 py-2 border rounded
+                ${passwordError ? "border-red-500 placeholder-red-500" : "border-sidebar-border"}`}
+            />
+            <button
+              tabIndex={0}
+              type="submit"
+              className="w-full bg-primary py-2 rounded hover:bg-accent hover:text-black disabled:opacity-50 focus:bg-accent"
+              disabled={loading}
+            >
+              {loading ? "Processing..." : mode === "login" ? "Login" : "Register"}
+            </button>
+          </form>
+          {/* Server Error */}
+          {serverError && <div className="text-red-600 text-sm mt-2 text-center">{serverError}</div>}
 
-        <div className="mt-4 text-center">
-          {mode === "login" ? (
-            <span>
-              Don't have an account?{" "}
-              <button
-                className="text-blue-600 underline"
-                onClick={() => {
-                  setMode("register");
-                  setServerError(null);
-                  setUsernameError(false);
-                  setPasswordError(false);
-                }}
-                type="button"
-              >
-                Register
-              </button>
-            </span>
-          ) : (
-            <span>
-              Already have an account?{" "}
-              <button
-                className="text-blue-600 underline"
-                onClick={() => {
-                  setMode("login");
-                  setServerError(null);
-                  setUsernameError(false);
-                  setPasswordError(false);
-                }}
-                type="button"
-              >
-                Login
-              </button>
-            </span>
-          )}
+          <div className="mt-4 text-center">
+            {mode === "login" ? (
+              <span>
+                Don't have an account?{" "}
+                <button
+                  tabIndex={0}
+                  className="text-blue-600 underline"
+                  onClick={() => {
+                    setMode("register");
+                    setServerError(null);
+                    setUsernameError(false);
+                    setPasswordError(false);
+                  }}
+                  type="button"
+                >
+                  Register
+                </button>
+              </span>
+            ) : (
+              <span>
+                Already have an account?{" "}
+                <button
+                  tabIndex={0}
+                  className="text-blue-600 underline"
+                  onClick={() => {
+                    setMode("login");
+                    setServerError(null);
+                    setUsernameError(false);
+                    setPasswordError(false);
+                  }}
+                  type="button"
+                >
+                  Login
+                </button>
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-    </div>
+        </FocusScope>
+        </div>
+      
   );
 }
