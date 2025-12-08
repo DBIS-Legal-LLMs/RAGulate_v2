@@ -1,6 +1,6 @@
 # Backend/Dockerfile
 
-FROM python:3.14.0-slim
+FROM python:3.11.0-slim
 
 # System Dependencies
 RUN apt update && apt install -y build-essential && rm -rf /var/lib/apt/lists/*
