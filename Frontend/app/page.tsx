@@ -427,7 +427,15 @@ export default function GDPRChatbot() {
 
   return (
     <ThemeProvider>
-      {showAuthModal && <AuthModal onLoginSuccess={handleLoginSuccess} />}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <AuthModal onLoginSuccess={handleLoginSuccess} />
+        </div>
+      )}
+      <div
+        className={`${showAuthModal ? "pointer-events-none select-none" : ""}`}
+        aria-hidden={showAuthModal ? "true" : "false"}
+      >
       {/* Main Background */}
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
         {/* 
@@ -467,142 +475,143 @@ export default function GDPRChatbot() {
             - Document management
             - Profile settings
           */}
-          <div className="bg-toolbar border-b border-sidebar-border p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div>
-                  <h1 className="text-lg font-semibold">
-                    GDPR Compliance Assistant
-                  </h1>
-                  <p className="text-sm text-gray-600">
-                    Ask me anything about GDPR regulations and compliance
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                {/* <Button variant="outline" onClick={() => setShowGraph(true)}>
-                  Graph
-                </Button>
-                <Button variant="outline" onClick={() => setShowDocuments(true)}>
-                  Documents
-                </Button> */}
-                <ProfileDropdown
-                  username={username}
-                  onProfileClick={() => setShowProfileModal(true)}
-                  onSettingsClick={() => setShowSettingsModal(true)}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 
-            Messages Section
-            Features:
-            - Scrollable message history
-            - Welcome message for empty chats
-            - Markdown rendering for messages
-            - Loading indicators
-            - Auto-scroll behavior
-          */}
-          <ScrollArea className="flex-1 p-4 bg-chat">
-            <div className="max-w-4xl mx-auto space-y-4">
-              {messages.length === 0 && (
-                <div className="text-center py-12">
-                  <Shield className="w-12 h-12 text-accent mx-auto mb-4" />
-                  <h2 className="text-xl font-semibold mb-2">
-                    Welcome to the RAGulate GDPR Assistant
-                  </h2>
-                  <p className="text-gray-600 mb-4">
-                    I'm here to help you understand and comply with GDPR
-                    regulations.
-                  </p>
-                </div>
-              )}
-
-              {messages.map((message) => (
-                <ChatMessage key={message.id} message={message} />
-              ))}
-
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-100 rounded-lg p-4 max-w-xs">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.1s" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
-                    </div>
+            <div className="bg-toolbar border-b border-sidebar-border p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div>
+                    <h1 className="text-lg font-semibold">
+                      GDPR Compliance Assistant
+                    </h1>
+                    <p className="text-sm text-gray-600">
+                      Ask me anything about GDPR regulations and compliance
+                    </p>
                   </div>
                 </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          </ScrollArea>
-
-          {/* 
-            Input Area
-            Features:
-            - Message input field
-            - Send button with loading state
-            - Helper text for document upload
-            - Responsive layout with max width
-            - Submit handling with error prevention
-          */}
-          <div className="bg-chat p-4 mb-10">
-            <div className="max-w-4xl mx-auto">
-              <form onSubmit={handleSubmit} className="flex items-end">
-                <div className="flex-1 relative">
-                  <Input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Ask about GDPR compliance, data protection, or upload documents for review..."
-                    className="pr-12 min-h-[44px] resize-none bg-primary border-sidebar-border"
-                    disabled={isLoading}
+                <div className="flex items-center space-x-2">
+                  {/* <Button variant="outline" onClick={() => setShowGraph(true)}>
+                    Graph
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowDocuments(true)}>
+                    Documents
+                  </Button> */}
+                  <ProfileDropdown
+                    username={username}
+                    onProfileClick={() => setShowProfileModal(true)}
+                    onSettingsClick={() => setShowSettingsModal(true)}
                   />
-
-                  {/* Button inside input */}
-                  <button
-                    type="submit"
-                    disabled={isLoading || !input.trim()}
-                    className="
-                      absolute right-2 top-1/2 -translate-y-1/2 
-                      p-2 rounded-md 
-                      bg-white dark:bg-sidebar hover:bg-accent dark:hover:bg-accent dark:hover:text-black
-                      text-invert
-                    "
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
                 </div>
-              </form>
+              </div>
+            </div>
 
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                Upload documents for GDPR compliance review or ask questions
-                about data protection regulations
-              </p>
+            {/* 
+              Messages Section
+              Features:
+              - Scrollable message history
+              - Welcome message for empty chats
+              - Markdown rendering for messages
+              - Loading indicators
+              - Auto-scroll behavior
+            */}
+            <ScrollArea className="flex-1 p-4 bg-chat">
+              <div className="max-w-4xl mx-auto space-y-4">
+                {messages.length === 0 && (
+                  <div className="text-center py-12">
+                    <Shield className="w-12 h-12 text-accent mx-auto mb-4" />
+                    <h2 className="text-xl font-semibold mb-2">
+                      Welcome to the RAGulate GDPR Assistant
+                    </h2>
+                    <p className="text-gray-600 mb-4">
+                      I'm here to help you understand and comply with GDPR
+                      regulations.
+                    </p>
+                  </div>
+                )}
+
+                {messages.map((message) => (
+                  <ChatMessage key={message.id} message={message} />
+                ))}
+
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-gray-100 rounded-lg p-4 max-w-xs">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.1s" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.2s" }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+
+            {/* 
+              Input Area
+              Features:
+              - Message input field
+              - Send button with loading state
+              - Helper text for document upload
+              - Responsive layout with max width
+              - Submit handling with error prevention
+            */}
+            <div className="bg-chat p-4 mb-10">
+              <div className="max-w-4xl mx-auto">
+                <form onSubmit={handleSubmit} className="flex items-end">
+                  <div className="flex-1 relative">
+                    <Input
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder="Ask about GDPR compliance, data protection, or upload documents for review..."
+                      className="pr-12 min-h-[44px] resize-none bg-primary border-sidebar-border"
+                      disabled={isLoading}
+                    />
+
+                    {/* Button inside input */}
+                    <button
+                      type="submit"
+                      disabled={isLoading || !input.trim()}
+                      className="
+                        absolute right-2 top-1/2 -translate-y-1/2 
+                        p-2 rounded-md 
+                        bg-white dark:bg-sidebar hover:bg-accent dark:hover:bg-accent dark:hover:text-black
+                        text-invert
+                      "
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+                </form>
+
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Upload documents for GDPR compliance review or ask questions
+                  about data protection regulations
+                </p>
+              </div>
             </div>
           </div>
+
+          {showProfileModal && (
+            <ProfileModal
+              username={username}
+              onSaveUsername={(newName) => setUsername(newName)}
+              onClose={() => setShowProfileModal(false)}
+            />
+          )}
+
+          {showSettingsModal && (
+            <SettingsModal
+              onClose={() => setShowSettingsModal(false)}
+              username={username}
+            />
+          )}
         </div>
-
-        {showProfileModal && (
-          <ProfileModal
-            username={username}
-            onSaveUsername={(newName) => setUsername(newName)}
-            onClose={() => setShowProfileModal(false)}
-          />
-        )}
-
-        {showSettingsModal && (
-          <SettingsModal
-            onClose={() => setShowSettingsModal(false)}
-            username={username}
-          />
-        )}
       </div>
       {/* Graph Overlay */}
       <GraphOverlay open={showGraph} onClose={() => setShowGraph(false)} />
