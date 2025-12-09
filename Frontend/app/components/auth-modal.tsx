@@ -26,12 +26,12 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
     let hasError = false;
     if (!username.trim()) {
       setUsernameError(true);
-      setServerError("Please enter username")
+      setServerError("Please enter username");
       hasError = true;
     }
     if (!password.trim()) {
       setPasswordError(true);
-      setServerError("Please enter password")
+      setServerError("Please enter password");
       hasError = true;
     }
     if (hasError) return;
@@ -41,10 +41,16 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
 
     try {
       if (mode === "login") {
-        const res = await fetch(BACKEND_URL + "/api/login", {
+        const params = new URLSearchParams();
+        params.append("grant_type", "password");
+        params.append("username", username);
+        params.append("password", password);
+        const res = await fetch(BACKEND_URL + "/api/auth/login", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: params,
         });
         const data = await res.json();
         if (res.ok) {
@@ -53,25 +59,39 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
           setServerError(data.error || "Login failed");
         }
       } else {
-        const res = await fetch(BACKEND_URL + "/api/register", {
+        const res = await fetch(BACKEND_URL + "/api/auth/register", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            email: username,
+            password: password,
+          }),
         });
         const data = await res.json();
         if (res.ok) {
           // Optional: direkt einloggen
-          const loginRes = await fetch(BACKEND_URL + "/api/login", {
+          const params = new URLSearchParams();
+          params.append("grant_type", "password");
+          params.append("username", username);
+          params.append("password", password);
+          const loginRes = await fetch(BACKEND_URL + "/api/auth/login", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password }),
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: params,
           });
           const loginData = await loginRes.json();
           if (loginRes.ok) {
             onLoginSuccess(loginData.sessions, username);
           } else {
             setMode("login");
-            setServerError("Registration successful, but login failed. Please try logging in.");
+            setServerError(
+              "Registration successful, but login failed. Please try logging in."
+            );
           }
         } else {
           setServerError(data.error || "Registration failed");
@@ -85,12 +105,13 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
   };
 
   return (
-    
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-        <FocusScope trapped>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <FocusScope trapped>
         <div className="bg-sidebar rounded-lg border border-sidebar-border shadow-lg p-8 w-full max-w-sm relative">
-          <h2 className="text-xl font-bold mb-4 text-center">{mode === "login" ? "Login" : "Register"}</h2>
-          
+          <h2 className="text-xl font-bold mb-4 text-center">
+            {mode === "login" ? "Login" : "Register"}
+          </h2>
+
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <input
               autoFocus
@@ -98,24 +119,32 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
               type="text"
               placeholder="Username"
               value={username}
-              onChange={e => {
+              onChange={(e) => {
                 setUsername(e.target.value);
                 if (usernameError) setUsernameError(false);
               }}
               className={`bg-primary w-full px-3 py-2 border rounded
-                ${usernameError ? "border-red-500 placeholder-red-500" : "border-sidebar-border"}`}
+                ${
+                  usernameError
+                    ? "border-red-500 placeholder-red-500"
+                    : "border-sidebar-border"
+                }`}
             />
             <input
               tabIndex={0}
               type="password"
               placeholder="Password"
               value={password}
-              onChange={e => {
+              onChange={(e) => {
                 setPassword(e.target.value);
                 if (passwordError) setPasswordError(false);
               }}
               className={`bg-primary w-full px-3 py-2 border rounded
-                ${passwordError ? "border-red-500 placeholder-red-500" : "border-sidebar-border"}`}
+                ${
+                  passwordError
+                    ? "border-red-500 placeholder-red-500"
+                    : "border-sidebar-border"
+                }`}
             />
             <button
               tabIndex={0}
@@ -123,11 +152,19 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
               className="w-full bg-primary py-2 rounded hover:bg-accent hover:text-black disabled:opacity-50 focus:bg-accent"
               disabled={loading}
             >
-              {loading ? "Processing..." : mode === "login" ? "Login" : "Register"}
+              {loading
+                ? "Processing..."
+                : mode === "login"
+                ? "Login"
+                : "Register"}
             </button>
           </form>
           {/* Server Error */}
-          {serverError && <div className="text-red-600 text-sm mt-2 text-center">{serverError}</div>}
+          {serverError && (
+            <div className="text-red-600 text-sm mt-2 text-center">
+              {serverError}
+            </div>
+          )}
 
           <div className="mt-4 text-center">
             {mode === "login" ? (
@@ -167,8 +204,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
             )}
           </div>
         </div>
-        </FocusScope>
-        </div>
-      
+      </FocusScope>
+    </div>
   );
 }
