@@ -71,7 +71,7 @@
     --toolbar-accent: 240 4.8% 95.9%;
     --toolbar-border: var(--secondary);
 
-    --chat-background: var(--gray-2);
+    --chat-background: var(--gray-3);
 
     --radius: 0.5rem;
   }
@@ -148,8 +148,6 @@
     @apply bg-background text-foreground;
     font-family: Arial, Helvetica, sans-serif;
   }
-
-
 }
 
 /* --------------------------------------------------------------

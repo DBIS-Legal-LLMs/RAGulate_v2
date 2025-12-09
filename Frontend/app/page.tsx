@@ -429,16 +429,16 @@ export default function GDPRChatbot() {
     <ThemeProvider>
       {showAuthModal && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <AuthModal onLoginSuccess={handleLoginSuccess} />
+          <AuthModal onLoginSuccess={handleLoginSuccess} />
         </div>
       )}
       <div
         className={`${showAuthModal ? "pointer-events-none select-none" : ""}`}
         aria-hidden={showAuthModal ? "true" : "false"}
       >
-      {/* Main Background */}
-      <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-        {/* 
+        {/* Main Background */}
+        <div className="flex h-screen">
+          {/* 
           Sidebar Component
           Contains:
           - New chat button
@@ -446,20 +446,20 @@ export default function GDPRChatbot() {
           - Session management controls
           - Assistant info footer
         */}
-        <Sidebar
-          chatSessions={chatSessions}
-          currentSessionId={currentSessionId}
-          createNewChat={createNewChat}
-          setCurrentSessionId={setCurrentSessionId}
-          setMessages={setMessages}
-          deleteChatSession={deleteChatSession}
-          editingSessionId={editingSessionId}
-          setEditingSessionId={setEditingSessionId}
-          editedTitle={editedTitle}
-          setEditedTitle={setEditedTitle}
-        />
+          <Sidebar
+            chatSessions={chatSessions}
+            currentSessionId={currentSessionId}
+            createNewChat={createNewChat}
+            setCurrentSessionId={setCurrentSessionId}
+            setMessages={setMessages}
+            deleteChatSession={deleteChatSession}
+            editingSessionId={editingSessionId}
+            setEditingSessionId={setEditingSessionId}
+            editedTitle={editedTitle}
+            setEditedTitle={setEditedTitle}
+          />
 
-        {/* 
+          {/* 
           Main Chat Area
           Contains:
           - Header with assistant info and controls
@@ -467,15 +467,15 @@ export default function GDPRChatbot() {
           - Input area for user messages
           - Loading indicators and status messages
         */}
-        <div className="flex-1 flex flex-col bg-chat">
-          {/* 
+          <div className="flex-1 flex flex-col bg-sidebar">
+            {/* 
             Header Section
             Shows assistant identity and provides access to:
             - Graph visualization
             - Document management
             - Profile settings
           */}
-            <div className="bg-toolbar border-b border-sidebar-border p-4">
+            <div className="bg-toolbar p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div>
@@ -489,11 +489,11 @@ export default function GDPRChatbot() {
                 </div>
                 <div className="flex items-center space-x-2">
                   {/* <Button variant="outline" onClick={() => setShowGraph(true)}>
-                    Graph
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowDocuments(true)}>
-                    Documents
-                  </Button> */}
+                  Graph
+                </Button>
+                <Button variant="outline" onClick={() => setShowDocuments(true)}>
+                  Documents
+                </Button> */}
                   <ProfileDropdown
                     username={username}
                     onProfileClick={() => setShowProfileModal(true)}
@@ -504,15 +504,15 @@ export default function GDPRChatbot() {
             </div>
 
             {/* 
-              Messages Section
-              Features:
-              - Scrollable message history
-              - Welcome message for empty chats
-              - Markdown rendering for messages
-              - Loading indicators
-              - Auto-scroll behavior
-            */}
-            <ScrollArea className="flex-1 p-4 bg-chat">
+            Messages Section
+            Features:
+            - Scrollable message history
+            - Welcome message for empty chats
+            - Markdown rendering for messages
+            - Loading indicators
+            - Auto-scroll behavior
+          */}
+            <ScrollArea className="flex-1 p-4 rounded-tl-2xl bg-chat">
               <div className="max-w-4xl mx-auto space-y-4">
                 {messages.length === 0 && (
                   <div className="text-center py-12">
@@ -553,23 +553,23 @@ export default function GDPRChatbot() {
             </ScrollArea>
 
             {/* 
-              Input Area
-              Features:
-              - Message input field
-              - Send button with loading state
-              - Helper text for document upload
-              - Responsive layout with max width
-              - Submit handling with error prevention
-            */}
-            <div className="bg-chat p-4 mb-10">
-              <div className="max-w-4xl mx-auto">
+            Input Area
+            Features:
+            - Message input field
+            - Send button with loading state
+            - Helper text for document upload
+            - Responsive layout with max width
+            - Submit handling with error prevention
+          */}
+            <div className="bg-chat p-4">
+              <div className="max-w-4xl mx-auto mb-5">
                 <form onSubmit={handleSubmit} className="flex items-end">
-                  <div className="flex-1 relative">
+                  <div className="flex-1 relative ">
                     <Input
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       placeholder="Ask about GDPR compliance, data protection, or upload documents for review..."
-                      className="pr-12 min-h-[44px] resize-none bg-primary border-sidebar-border"
+                      className="pr-12 min-h-[44px] resize-none bg-secondary dark:bg-primary border-sidebar-border"
                       disabled={isLoading}
                     />
 
@@ -620,16 +620,6 @@ export default function GDPRChatbot() {
         open={showDocuments}
         onClose={() => setShowDocuments(false)}
       />
-
-      {/* Bottom Bar */}
-      <div
-        className="fixed bottom-0 left-0 right-0 py-2 px-4 bg-sidebar
-                      border-t border-sidebar-border text-sm 
-                      text-gray-600 dark:text-gray-300 flex justify-between z-50"
-      >
-        <span>RAGulate</span>
-        <span>v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
-      </div>
     </ThemeProvider>
   );
 }
