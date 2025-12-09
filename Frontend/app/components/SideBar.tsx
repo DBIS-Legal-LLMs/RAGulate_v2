@@ -1,10 +1,16 @@
-"use client"
+"use client";
 
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Button } from "@/components/ui/button"
-import { MessageSquare, Shield, X, PanelLeftOpen, PanelLeftClose } from "lucide-react"
-import { useState } from "react"
-import Image from "next/image"
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import {
+  MessageSquare,
+  Shield,
+  X,
+  PanelLeftOpen,
+  PanelLeftClose,
+} from "lucide-react";
+import { useState } from "react";
+import Image from "next/image";
 
 interface SidebarProps {
   chatSessions: any[]; // ChatSession[]
@@ -31,26 +37,25 @@ export default function Sidebar({
   editedTitle,
   setEditedTitle,
 }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <div
-      className={`bg-sidebar flex flex-col transition-all duration-300 border-r border-sidebar-border
+      className={`bg-sidebar flex flex-col transition-all duration-300 
         ${collapsed ? "w-16" : "w-64"}`}
     >
       {/* Collapse / Expand Button */}
       <div className="p-2 flex justify-end">
-
         {!collapsed && (
-        <Image
+          <Image
             src="logo_light.png"
             alt="Logo"
             width={32}
             height={32}
             className="rounded h-8 w-auto object-contain ml-1 mt-1 dark:invert ease-in-out"
-        />
+          />
         )}
-        
+
         {/* Spacer */}
         <div className="flex-1" />
 
@@ -87,11 +92,15 @@ export default function Sidebar({
           <div
             key={session.id}
             onClick={() => {
-              setCurrentSessionId(session.id)
-              setMessages(session.messages)
+              setCurrentSessionId(session.id);
+              setMessages(session.messages);
             }}
             className={`group p-3 mb-2 rounded cursor-pointer flex items-center transition-colors 
-            ${currentSessionId === session.id ? "bg-accent dark:text-black" : "hover:secondary hover:bg-primary"}
+            ${
+              currentSessionId === session.id
+                ? "bg-accent dark:text-black"
+                : "hover:secondary hover:bg-primary"
+            }
             `}
           >
             {!collapsed ? (
@@ -99,13 +108,17 @@ export default function Sidebar({
                 {editingSessionId === session.id ? (
                   <form
                     onSubmit={(e) => {
-                      e.preventDefault()
-                      setEditingSessionId(null)
+                      e.preventDefault();
+                      setEditingSessionId(null);
                     }}
                   >
                     <input
                       className={`text-sm font-medium rounded px-1 w-ful
-                        ${currentSessionId === session.id ? "text-black bg-accent" : "bg-primary"}
+                        ${
+                          currentSessionId === session.id
+                            ? "text-black bg-accent"
+                            : "bg-primary"
+                        }
                         `}
                       value={editedTitle}
                       onChange={(e) => setEditedTitle(e.target.value)}
@@ -118,10 +131,10 @@ export default function Sidebar({
                     className="text-sm font-medium truncate cursor-pointer"
                     onClick={(e) => {
                       // only current session can be edited
-                      if ((currentSessionId === session.id)) {
-                        e.stopPropagation()
-                        setEditingSessionId(session.id)
-                        setEditedTitle(session.title)
+                      if (currentSessionId === session.id) {
+                        e.stopPropagation();
+                        setEditingSessionId(session.id);
+                        setEditedTitle(session.title);
                       }
                     }}
                   >
@@ -141,11 +154,15 @@ export default function Sidebar({
             {!collapsed && (
               <button
                 className={`opacity-0 group-hover:opacity-100 ml-2 hover:text-red-500 p-1
-                  ${currentSessionId === session.id ? "text-secondary" : "text-accent"}
+                  ${
+                    currentSessionId === session.id
+                      ? "text-secondary"
+                      : "text-accent"
+                  }
                   `}
                 onClick={(e) => {
-                  e.stopPropagation()
-                  deleteChatSession(session.id)
+                  e.stopPropagation();
+                  deleteChatSession(session.id);
                 }}
               >
                 <X className="w-4 h-4" />
@@ -167,6 +184,15 @@ export default function Sidebar({
           </div>
         </div>
       )} */}
+
+      <div
+        className="bottom-0 left-0 right-0 py-2 px-4 bg-sidebar
+             text-sm 
+             text-gray-600 dark:text-gray-300 flex justify-between z-50"
+      >
+        {!collapsed && <span>RAGulate</span>}
+        <span>v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
+      </div>
     </div>
-  )
+  );
 }

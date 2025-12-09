@@ -75,7 +75,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             className={`inline-block p-4 rounded-lg ${
               isUser
                 ? "bg-accent text-black border border-sidebar-border"
-                : "bg-primary"
+                : "bg-secondary dark:bg-primary"
             }`}
           >
             {message.files && message.files.length > 0 && (
