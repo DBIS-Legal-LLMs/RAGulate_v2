@@ -18,6 +18,18 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
     )
 
+    origins = [
+        "http://localhost:3000",
+    ]
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     # Hier sind die Router registriert
 
     # Check Health Router
@@ -32,18 +44,6 @@ def create_app() -> FastAPI:
     return app
 
 app = create_app()
-
-origins = [
-    "http://localhost:3000",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], #origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 @app.get("/debug-config")
 def debug_config():
