@@ -321,17 +321,25 @@ export default function GDPRChatbot() {
    */
   const fetchSessions = async (username: string) => {
     try {
-      const url = `${BACKEND_URL}/api/sessions?username=${encodeURIComponent(
-        username
-      )}`;
-      console.log("Fetching sessions from:", url);
-      const response = await fetch(url);
+      const url = `${BACKEND_URL}/api/chat/sessions`;
+      const token = localStorage.getItem("token");
+
+      if (!token) throw new Error("User not logged in");
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`, // Token im Header
+        },
+      });
       if (!response.ok) throw new Error("Failed to fetch sessions");
-      const sessions = await response.json();
-      return sessions;
+
+      const data = await response.json();
+      return { sessions: data.sessions || [] };
     } catch (error) {
       console.error("Error fetching sessions:", error);
-      return [];
+      return { sessions: [] };
     }
   };
 
@@ -376,10 +384,11 @@ export default function GDPRChatbot() {
     setUsername(usernameFromAuth);
     setShowAuthModal(false);
 
-    const userSessions = await fetchSessions(usernameFromAuth);
-    if (userSessions.sessions.length > 0) {
+    const userSessionsraw = await fetchSessions(usernameFromAuth);
+    const userSessions = userSessionsraw?.sessions || [];
+    if (userSessions.length > 0) {
       const sessionsWithDetails = await Promise.all(
-        userSessions.sessions.map(async (sessionId: string) => {
+        userSessions.map(async (sessionId: string) => {
           const details = await fetchSessionDetails(sessionId);
           return {
             id: sessionId,

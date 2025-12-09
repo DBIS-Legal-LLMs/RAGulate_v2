@@ -54,6 +54,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
         });
         const data = await res.json();
         if (res.ok) {
+          localStorage.setItem("token", data.access_token);
           onLoginSuccess(data.sessions, username);
         } else {
           setServerError(data.error || "Login failed");
