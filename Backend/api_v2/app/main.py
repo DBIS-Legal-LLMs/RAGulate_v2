@@ -1,6 +1,8 @@
 # Backend/api_v2/app/main.py
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from .api.routes.health import router as health_router
 from .api.routes.auth import router as auth_router
 from .api.routes.chat import router as chat_router
@@ -30,6 +32,18 @@ def create_app() -> FastAPI:
     return app
 
 app = create_app()
+
+origins = [
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], #origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/debug-config")
 def debug_config():
