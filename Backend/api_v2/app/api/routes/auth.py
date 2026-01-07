@@ -25,15 +25,33 @@ async def register(
 ):
     try:
         user = await user_service.create_user(user_in)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User already exists",
-        )
+
+    except ValueError as e:
+        error = str(e)
+        
+        # Passwort-Regeln
+        if error.startswith("{"):
+            details = eval(error)
+            if details.get("type") == "PASSWORD_POLICY":
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail=details
+                )
+
+        if error == "EMAIL_INVALID":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid email format")
+        if error == "EMAIL_EXISTS":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists")
+        if error == "USERNAME_EXISTS":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already exists")
+
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Registration failed")
+    
     return UserPublic(
         id=str(user.id),
         email=user.email,
         full_name=user.full_name,
+        username=user.username,
         role=user.role,
         preferred_llm_provider=user.preferred_llm_provider,
         preferred_model=user.preferred_model,
@@ -65,6 +83,7 @@ async def login(
         "token_type": "bearer",
         "user": {
             "id": str(user.id),
+            "username": user.username,
             "email": user.email,
             "full_name": user.full_name,
             "role": user.role,
