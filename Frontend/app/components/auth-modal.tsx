@@ -9,8 +9,10 @@ interface AuthModalProps {
 
 export function AuthModal({ onLoginSuccess }: AuthModalProps) {
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState(false);
   const [usernameError, setUsernameError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -24,9 +26,9 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
 
     // Client-side Validation pro Feld
     let hasError = false;
-    if (!username.trim()) {
-      setUsernameError(true);
-      setServerError("Please enter username");
+    if (!email.trim()) {
+      setEmailError(true);
+      setServerError("Please enter email");
       hasError = true;
     }
     if (!password.trim()) {
@@ -34,6 +36,18 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
       setServerError("Please enter password");
       hasError = true;
     }
+    if (mode === "register" && !username.trim()) {
+      setUsernameError(true);
+      setServerError("Please enter username")
+      hasError = true;
+    }
+
+    if (mode === "register" && !isPasswordValid) {
+      setPasswordError(true);
+      setServerError("Password does not meet security requirements.");
+      return;
+    }   
+
     if (hasError) return;
 
     // Alles validiert → Login/Register starten
@@ -43,7 +57,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
       if (mode === "login") {
         const params = new URLSearchParams();
         params.append("grant_type", "password");
-        params.append("username", username);
+        params.append("username", email);
         params.append("password", password);
         const res = await fetch(BACKEND_URL + "/api/auth/login", {
           method: "POST",
@@ -55,7 +69,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
         const data = await res.json();
         if (res.ok) {
           localStorage.setItem("token", data.access_token);
-          onLoginSuccess(data.sessions, username);
+          onLoginSuccess(data.sessions, email);
         } else {
           setServerError(data.error || "Login failed");
         }
@@ -67,7 +81,8 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
             Accept: "application/json",
           },
           body: JSON.stringify({
-            email: username,
+            email: email,
+            full_name: username,
             password: password,
           }),
         });
@@ -76,7 +91,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
           // Optional: direkt einloggen
           const params = new URLSearchParams();
           params.append("grant_type", "password");
-          params.append("username", username);
+          params.append("username", email);
           params.append("password", password);
           const loginRes = await fetch(BACKEND_URL + "/api/auth/login", {
             method: "POST",
@@ -87,7 +102,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
           });
           const loginData = await loginRes.json();
           if (loginRes.ok) {
-            onLoginSuccess(loginData.sessions, username);
+            onLoginSuccess(loginData.sessions, email);
           } else {
             setMode("login");
             setServerError(
@@ -105,6 +120,24 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
     }
   };
 
+  const passwordRules = {
+    length: (pw: string) => pw.length >= 8,
+    upper: (pw: string) => /[A-Z]/.test(pw),
+    lower: (pw: string) => /[a-z]/.test(pw),
+    number: (pw: string) => /[0-9]/.test(pw),
+    special: (pw: string) => /[^A-Za-z0-9]/.test(pw),
+  };
+
+  const passwordValidation = {
+    length: passwordRules.length(password),
+    upper: passwordRules.upper(password),
+    lower: passwordRules.lower(password),
+    number: passwordRules.number(password),
+    special: passwordRules.special(password),
+  };
+
+  const isPasswordValid = Object.values(passwordValidation).every(Boolean);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <FocusScope trapped>
@@ -118,19 +151,39 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
               autoFocus
               tabIndex={0}
               type="text"
-              placeholder="Username"
-              value={username}
+              placeholder="Email"
+              value={email}
               onChange={(e) => {
-                setUsername(e.target.value);
-                if (usernameError) setUsernameError(false);
+                setEmail(e.target.value);
+                if (emailError) setEmailError(false);
               }}
               className={`bg-primary w-full px-3 py-2 border rounded
                 ${
-                  usernameError
+                  emailError
                     ? "border-red-500 placeholder-red-500"
                     : "border-sidebar-border"
                 }`}
             />
+
+            {mode === "register" && (
+              <input
+                tabIndex={0}
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  if (usernameError) setUsernameError(false);
+                }}
+                className={`bg-primary w-full px-3 py-2 border rounded
+                  ${
+                    passwordError
+                      ? "border-red-500 placeholder-red-500"
+                      : "border-sidebar-border"
+                  }`}
+              />
+            )}
+
             <input
               tabIndex={0}
               type="password"
@@ -147,6 +200,27 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
                     : "border-sidebar-border"
                 }`}
             />
+
+            {mode === "register" && password && (
+              <ul className="text-xs space-y-1 mt-2">
+                <li className={passwordValidation.length ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+                  • At least 8 characters
+                </li>
+                <li className={passwordValidation.upper ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+                  • One uppercase letter
+                </li>
+                <li className={passwordValidation.lower ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+                  • One lowercase letter
+                </li>
+                <li className={passwordValidation.number ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+                  • One number
+                </li>
+                <li className={passwordValidation.special ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+                  • One special character
+                </li>
+              </ul>
+            )}
+
             <button
               tabIndex={0}
               type="submit"
@@ -177,8 +251,9 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
                   onClick={() => {
                     setMode("register");
                     setServerError(null);
-                    setUsernameError(false);
+                    setEmailError(false);
                     setPasswordError(false);
+                    setUsernameError(false);
                   }}
                   type="button"
                 >
@@ -194,8 +269,9 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
                   onClick={() => {
                     setMode("login");
                     setServerError(null);
-                    setUsernameError(false);
+                    setEmailError(false);
                     setPasswordError(false);
+                    setUsernameError(false);
                   }}
                   type="button"
                 >
