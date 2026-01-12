@@ -10,12 +10,14 @@ from pydantic import BaseModel, Field
 
 class ChatSessionCreate(BaseModel):
     title: str | None = None
+    folder_id: str | None = None
 
 
 class ChatSessionInDB(BaseModel):
     # MongoDB-ID as String, alias "_id"
     id: str | None = Field(default=None, alias="_id")
     user_id: str
+    folder_id: str | None = None
     title: str
     created_at: datetime
     updated_at: datetime
@@ -27,6 +29,7 @@ class ChatSessionInDB(BaseModel):
 class ChatSessionPublic(BaseModel):
     id: str
     title: str
+    folder_id: str | None = None
     created_at: datetime
     updated_at: datetime
 

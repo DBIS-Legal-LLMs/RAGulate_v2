@@ -17,7 +17,9 @@ from ..models.chat import (
     ChatSessionWithMessages,
     ChatTurnPublic,
     )
+
 from .rag_service import run_rag_query, LLMProviderName, DEFAULT_MODEL
+from .folder_service import FolderService
 
 SESSIONS_COLLECTION = "chat_sessions"
 MESSAGES_COLLECTION = "chat_messages"
@@ -43,6 +45,14 @@ class ChatService:
             data: ChatSessionCreate
     ) -> ChatSessionInDB:
         now = datetime.now(timezone.utc)
+
+        folder_id = data.folder_id
+        if folder_id:
+            folder_service = FolderService(self._db)
+            folder = await folder_service.get_by_id(folder_id=folder_id, owner_id=user.id)
+            if not folder:
+                raise ValueError("Folder not found or not owned by user")
+
         doc = {
             "user_id": user.id,
             "title": data.title or "Neue Sitzung",
@@ -57,12 +67,14 @@ class ChatService:
 
     async def list_sessions(
             self, 
-            user: UserInDB
+            user: UserInDB,
+            folder_id: str | None = None
     ) -> list[ChatSessionInDB]:
-        cursor = (
-            self.sessions.find({"user_id": user.id})
-            .sort("updated_at", -1)
-        )
+        query = {"user_id": user.id}
+        if folder_id is not None:
+            query["folder_id"] = folder_id # None = Root, without explicit folder
+
+        cursor = self.sessions.find(query).sort("updated_at", -1)
         docs: list[ChatSessionInDB] = []
         async for doc in cursor:
             doc["_id"] = str(doc["_id"])
@@ -155,6 +167,7 @@ class ChatService:
         session_public = ChatSessionPublic(
             id= session.id,
             title= session.title,
+            folder_id= session.folder_id,
             created_at= session.created_at,
             updated_at= session.updated_at,
         )
@@ -251,7 +264,7 @@ class ChatService:
 
         # Session-Updated Timestamp aktualisieren
         await self.sessions.update_one(
-            {"id": ObjectId(session_id)},
+            {"_id": ObjectId(session_id)},
             {"$set": {"updated_at": now_assistant}},
         )
 

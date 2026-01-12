@@ -37,6 +37,7 @@ async def create_session(
     return ChatSessionPublic(
         id= session.id,
         title= session.title,
+        folder_id=session.folder_id,
         created_at= session.created_at,
         updated_at= session.updated_at,
     )
@@ -55,6 +56,7 @@ async def list_sessions(
         ChatSessionPublic(
             id= s.id,
             title= s.title,
+            folder_id= s.folder_id,
             created_at= s.created_at,
             updated_at= s.updated_at,
         )
