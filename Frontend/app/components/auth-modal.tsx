@@ -38,7 +38,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
     }
     if (mode === "register" && !username.trim()) {
       setUsernameError(true);
-      setServerError("Please enter username")
+      setServerError("Please enter username");
       hasError = true;
     }
 
@@ -46,7 +46,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
       setPasswordError(true);
       setServerError("Password does not meet security requirements.");
       return;
-    }   
+    }
 
     if (hasError) return;
 
@@ -138,6 +138,24 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
 
   const isPasswordValid = Object.values(passwordValidation).every(Boolean);
 
+  const PasswordRuleItem = ({
+    valid,
+    text,
+  }: {
+    valid: boolean;
+    text: string;
+  }) => (
+    <li
+      className={`flex items-center gap-2 font-semibold ${
+        valid ? "text-green-600" : "text-red-600"
+      }`}
+      aria-label={`${text} ${valid ? "fulfilled" : "not fulfilled"}`}
+    >
+      <span aria-hidden="true">{valid ? "✓" : "✗"}</span>
+      <span>{text}</span>
+    </li>
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <FocusScope trapped>
@@ -177,7 +195,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
                 }}
                 className={`bg-primary w-full px-3 py-2 border rounded
                   ${
-                    passwordError
+                    usernameError
                       ? "border-red-500 placeholder-red-500"
                       : "border-sidebar-border"
                   }`}
@@ -202,22 +220,31 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
             />
 
             {mode === "register" && password && (
-              <ul className="text-xs space-y-1 mt-2">
-                <li className={passwordValidation.length ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
-                  • At least 8 characters
-                </li>
-                <li className={passwordValidation.upper ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
-                  • One uppercase letter
-                </li>
-                <li className={passwordValidation.lower ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
-                  • One lowercase letter
-                </li>
-                <li className={passwordValidation.number ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
-                  • One number
-                </li>
-                <li className={passwordValidation.special ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
-                  • One special character
-                </li>
+              <ul
+                className="text-xs space-y-1 mt-2"
+                role="status"
+                aria-live="polite"
+              >
+                <PasswordRuleItem
+                  valid={passwordValidation.length}
+                  text="At least 8 characters"
+                />
+                <PasswordRuleItem
+                  valid={passwordValidation.upper}
+                  text="One uppercase letter"
+                />
+                <PasswordRuleItem
+                  valid={passwordValidation.lower}
+                  text="One lowercase letter"
+                />
+                <PasswordRuleItem
+                  valid={passwordValidation.number}
+                  text="One number"
+                />
+                <PasswordRuleItem
+                  valid={passwordValidation.special}
+                  text="One special character"
+                />
               </ul>
             )}
 
