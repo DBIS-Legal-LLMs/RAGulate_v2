@@ -5,8 +5,11 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ...core.deps import get_current_user, get_db
-from ...models.folder import FolderCreate, FolderPublic
 from ...models.user import UserInDB
+from ...models.folder import (
+    FolderCreate, 
+    FolderPublic
+)
 from ...services.folder_service import FolderService
 
 router = APIRouter(prefix="/folders", tags=["folders"])
@@ -43,7 +46,7 @@ async def create_folder(
         raise HTTPException(status_code=400, detail="[UNKNOWN ERROR] Could not create folder")
     
 
-@router.get("", response_model=list[FolderPublic])
+@router.get("list", response_model=list[FolderPublic])
 async def list_folders(
     parent_id: Optional[str] = None,
     current_user: UserInDB = Depends(get_current_user),
