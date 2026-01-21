@@ -497,12 +497,12 @@ export default function GDPRChatbot() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {/* <Button variant="outline" onClick={() => setShowGraph(true)}>
+                  <Button variant="outline" onClick={() => setShowGraph(true)}>
                   Graph
                 </Button>
                 <Button variant="outline" onClick={() => setShowDocuments(true)}>
                   Documents
-                </Button> */}
+                </Button>
                   <ProfileDropdown
                     username={username}
                     onProfileClick={() => setShowProfileModal(true)}
