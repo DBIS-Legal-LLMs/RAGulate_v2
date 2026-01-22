@@ -114,28 +114,26 @@ export default function GDPRChatbot() {
   }, [messages]);
 
   useEffect(() => {
-  if (!activeSessionId) return;
+    if (!activeSessionId) return;
 
-  const loadMessages = async () => {
-    const token = localStorage.getItem("token");
-    const res = await fetch(
-      `${BACKEND_URL}/api/chat/sessions/${activeSessionId}`,{
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-    const data = await res.json();
-    console.log(data.messages)
+    const loadMessages = async () => {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${BACKEND_URL}/api/chat/sessions/${activeSessionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const data = await res.json();
+      console.log(data.messages);
 
-    setMessages(
-      (data.messages || []).map(transformMessage)
-    );
+      setMessages((data.messages || []).map(transformMessage));
+    };
 
-  };
-
-  loadMessages();
-}, [activeSessionId]);
+    loadMessages();
+  }, [activeSessionId]);
 
   /**
    * Generates a unique session identifier
@@ -154,116 +152,78 @@ export default function GDPRChatbot() {
    * @returns {Promise<void>}
    */
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!input.trim() || !activeSessionId) return; // keine leeren Nachrichten oder ohne Session
+    e.preventDefault();
+    if (!input.trim() || !activeSessionId) return; // keine leeren Nachrichten oder ohne Session
 
-  const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-  // User Message sofort ins Frontend setzen
-  const userMessage: Message = {
-    id: Date.now().toString(),
-    role: "user",
-    content: input,
-    timestamp: new Date(),
-  };
-
-  setMessages((prev) => [...prev, userMessage]);
-  setInput(""); // Input leeren
-  setIsLoading(true);
-
-  try {
-    const res = await fetch(
-      `${BACKEND_URL}/api/chat/sessions/${activeSessionId}/messages`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          content: input,
-        }),
-      }
-    );
-
-    if (!res.ok) throw new Error("Failed to send message");
-
-    const data = await res.json(); // enthält die neue AI-Message
-
-    // Assistant Message ins Frontend setzen
-    if (data?.id) {
-      const assistantMessage: Message = {
-        id: data.id,
-        role: data.role as "assistant",
-        content: data.content,
-        timestamp: new Date(data.created_at),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-    }
-  } catch (error) {
-    console.error("Error sending message:", error);
-    const errorMessage: Message = {
-      id: Date.now().toString() + "-error",
-      role: "assistant",
-      content: "Sorry, ich konnte deine Nachricht nicht senden. Bitte versuche es erneut.",
+    // User Message sofort ins Frontend setzen
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: input,
       timestamp: new Date(),
     };
-    setMessages((prev) => [...prev, errorMessage]);
-  } finally {
-    setIsLoading(false);
-  }
-};
 
-  const fetchFolders = async () => {
-      const token = localStorage.getItem("token");
+    setMessages((prev) => [...prev, userMessage]);
+    setInput(""); // Input leeren
+    setIsLoading(true);
 
-      const res = await fetch(`${BACKEND_URL}/api/folderslist`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!res.ok) throw new Error("Failed to fetch folders");
-        return res.json();
-  };  
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/chat/sessions/${activeSessionId}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            content: input,
+          }),
+        }
+      );
 
-useEffect(() => {
-  const loadSidebarData = async () => {
-    if (!username) return;
+      if (!res.ok) throw new Error("Failed to send message");
 
-    /* 1. Folder */
-    const rawFolders = await fetchFolders();
-    console.log(rawFolders)
-    const uiFolders: UIFolder[] = rawFolders.map((f: any) => ({
-      id: f.id,
-      name: f.name,
-      parentId: f.parent_id,
-      depth: f.depth,
-      createdAt: new Date(f.created_at),
-    }));
+      const data = await res.json(); // enthält die neue AI-Message
 
-    /* 2. Sessions */
-    const rawSessions = await fetchSessions();
-    console.log(rawSessions)
-    const uiSessions: UISession[] = rawSessions.map((s: any) => ({
-      id: s.id,
-      title: s.title,
-      folderId: s.folder_id,
-      createdAt: new Date(s.created_at),
-    }));
-
-    setFolders(uiFolders);
-    setSessions(uiSessions);
-
-    /* 3. Default Selection */
-    const firstTopSession = uiSessions.find((s) => s.folderId === null);
-    if (firstTopSession) {
-      setActiveSessionId(firstTopSession.id);
+      // Assistant Message ins Frontend setzen
+      if (data?.id) {
+        const assistantMessage: Message = {
+          id: data.id,
+          role: data.role as "assistant",
+          content: data.content,
+          timestamp: new Date(data.created_at),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      const errorMessage: Message = {
+        id: Date.now().toString() + "-error",
+        role: "assistant",
+        content:
+          "Sorry, ich konnte deine Nachricht nicht senden. Bitte versuche es erneut.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  loadSidebarData();
-}, [username]);
+  const fetchFolders = async () => {
+    const token = localStorage.getItem("token");
 
+    const res = await fetch(`${BACKEND_URL}/api/folderslist`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) throw new Error("Failed to fetch folders");
+    return res.json();
+  };
 
   /**
    * Retrieves all chat sessions for a given user from the backend
@@ -285,6 +245,44 @@ useEffect(() => {
 
     return res.ok ? res.json() : [];
   };
+
+  useEffect(() => {
+    const loadSidebarData = async () => {
+      if (!username) return;
+
+      /* 1. Folder */
+      const rawFolders = await fetchFolders();
+      console.log(rawFolders);
+      const uiFolders: UIFolder[] = rawFolders.map((f: any) => ({
+        id: f.id,
+        name: f.name,
+        parentId: f.parent_id,
+        depth: f.depth,
+        createdAt: new Date(f.created_at),
+      }));
+
+      /* 2. Sessions */
+      const rawSessions = await fetchSessions();
+      console.log(rawSessions);
+      const uiSessions: UISession[] = rawSessions.map((s: any) => ({
+        id: s.id,
+        title: s.title,
+        folderId: s.folder_id,
+        createdAt: new Date(s.created_at),
+      }));
+
+      setFolders(uiFolders);
+      setSessions(uiSessions);
+
+      /* 3. Default Selection */
+      const firstTopSession = uiSessions.find((s) => s.folderId === null);
+      if (firstTopSession) {
+        setActiveSessionId(firstTopSession.id);
+      }
+    };
+
+    loadSidebarData();
+  }, [username]);
 
   /**
    * Handles successful user login
@@ -393,11 +391,14 @@ useEffect(() => {
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button variant="outline" onClick={() => setShowGraph(true)}>
-                  Graph
-                </Button>
-                <Button variant="outline" onClick={() => setShowDocuments(true)}>
-                  Documents
-                </Button>
+                    Graph
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDocuments(true)}
+                  >
+                    Documents
+                  </Button>
                   <ProfileDropdown
                     username={username}
                     onProfileClick={() => setShowProfileModal(true)}

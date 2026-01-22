@@ -55,12 +55,11 @@ export default function Sidebar({
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
-  const topLevelFolders = folders.filter(f => f.parentId === null);
-  const topLevelSessions = sessions.filter(s => s.folderId === null);
+  const topLevelFolders = folders.filter((f) => f.parentId === null);
+  const topLevelSessions = sessions.filter((s) => s.folderId === null);
 
   const sessionsByFolder = (folderId: string) =>
-    sessions.filter(s => s.folderId === folderId);
-  
+    sessions.filter((s) => s.folderId === folderId);
 
   return (
     <div
@@ -99,9 +98,7 @@ export default function Sidebar({
       {/* New Chat */}
       {!collapsed && (
         <div className="p-4">
-          <Button
-            className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black "
-          >
+          <Button className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black ">
             <MessageSquare className="w-4 h-4 mr-2" />
             New Chat
           </Button>
@@ -117,7 +114,7 @@ export default function Sidebar({
             onClick={() => {
               setActiveSessionId(session.id);
               setActiveFolderId(null);
-              console.log(session.id)
+              console.log(session.id);
             }}
             className={`p-3 mb-1 rounded cursor-pointer flex items-center
               ${
@@ -140,7 +137,7 @@ export default function Sidebar({
               onClick={() => {
                 setActiveFolderId(folder.id);
                 setActiveSessionId(null);
-                console.log(folder.id)
+                console.log(folder.id);
               }}
               className={`p-3 font-semibold cursor-pointer rounded flex items-center
                 ${
