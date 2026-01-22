@@ -19,6 +19,7 @@ interface UIFolder {
   parentId: string | null;
   depth: number;
   createdAt: Date;
+  isDraft?: boolean;
 }
 
 interface UISession {
@@ -41,6 +42,15 @@ interface SidebarProps {
   setEditedTitle: (title: string) => void;
   onNewChat: () => void;
   onNewFolder: () => void;
+  onConfirmCreateFolder: (
+    tempId: string,
+    name: string,
+    parentId: string | null
+  ) => void;
+  editingFolderId: string | null;
+  setEditingFolderId: (id: string | null) => void;
+  onUpdateDraftFolderName: (id: string, name: string) => void;
+  onCancelDraftFolder: (id: string) => void;
 }
 
 export default function Sidebar({
@@ -56,10 +66,21 @@ export default function Sidebar({
   setEditedTitle,
   onNewChat,
   onNewFolder,
+  editingFolderId,
+  setEditingFolderId,
+  onConfirmCreateFolder,
+  onUpdateDraftFolderName,
+  onCancelDraftFolder,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
-  const topLevelFolders = folders.filter((f) => f.parentId === null);
+  const topLevelFolders = folders
+    .filter((f) => f.parentId === null)
+    .sort((a, b) => {
+      if (a.isDraft && !b.isDraft) return 1; // Draft nach unten
+      if (!a.isDraft && b.isDraft) return -1; // Normale nach oben
+      return 0;
+    });
   const topLevelSessions = sessions.filter((s) => s.folderId === null);
 
   const sessionsByFolder = (folderId: string) =>
@@ -155,6 +176,7 @@ export default function Sidebar({
             {/* Folder Header */}
             <div
               onClick={() => {
+                if (folder.isDraft) return;
                 setActiveFolderId(folder.id);
                 setActiveSessionId(null);
                 console.log(folder.id);
@@ -169,7 +191,48 @@ export default function Sidebar({
               `}
             >
               <Folder className="w-4 h-4 mr-2 shrink-0" />
-              <span>{folder.name}</span>
+              {folder.isDraft && editingFolderId === folder.id ? (
+                <input
+                  autoFocus
+                  value={folder.name}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    onUpdateDraftFolderName(folder.id, value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && folder.name.trim()) {
+                      onConfirmCreateFolder(
+                        folder.id,
+                        folder.name,
+                        folder.parentId
+                      );
+                    }
+
+                    if (e.key === "Escape") {
+                      onCancelDraftFolder(folder.id);
+                      setEditingFolderId(null);
+                      setEditingFolderId(null);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (folder.name.trim()) {
+                      onConfirmCreateFolder(
+                        folder.id,
+                        folder.name,
+                        folder.parentId
+                      );
+                    } else {
+                      onCancelDraftFolder(folder.id);
+                      setEditingFolderId(null);
+                      setEditingFolderId(null);
+                    }
+                  }}
+                  className="w-full bg-transparent border-b border-accent outline-none px-1"
+                  placeholder="Folder name"
+                />
+              ) : (
+                <span>{folder.name}</span>
+              )}
             </div>
 
             {/* Sessions in Folder */}

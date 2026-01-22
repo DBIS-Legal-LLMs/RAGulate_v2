@@ -61,6 +61,7 @@ interface UIFolder {
   parentId: string | null;
   depth: number;
   createdAt: Date;
+  isDraft?: boolean;
 }
 
 interface UISession {
@@ -86,6 +87,8 @@ export default function GDPRChatbot() {
 
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
 
   // UI References and state
   const messagesEndRef = useRef<HTMLDivElement>(null); // For auto-scrolling
@@ -290,17 +293,30 @@ export default function GDPRChatbot() {
     setMessages([]);
   };
 
-  const createNewFolder = async () => {
-    const token = localStorage.getItem("token");
-    console.log(token);
-    console.log(activeFolderId);
-    const body: { name: string; parent_id?: string } = {
-      name: `New Folder ${Date.now()}`,
+  const createNewFolder = () => {
+    const tempId = `draft-${Date.now()}`;
+
+    const draftFolder: UIFolder = {
+      id: tempId,
+      name: "",
+      parentId: activeFolderId ?? null,
+      depth: 0,
+      createdAt: new Date(),
+      isDraft: true,
     };
 
-    if (activeFolderId) {
-      body.parent_id = activeFolderId;
-    }
+    setFolders((prev) => [...prev, draftFolder]);
+    setEditingFolderId(tempId);
+    setActiveFolderId(tempId);
+    setActiveSessionId(null);
+  };
+
+  const confirmCreateFolder = async (
+    tempId: string,
+    name: string,
+    parentId: string | null
+  ) => {
+    const token = localStorage.getItem("token");
 
     const res = await fetch(`${BACKEND_URL}/api/folders`, {
       method: "POST",
@@ -308,28 +324,39 @@ export default function GDPRChatbot() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        name,
+        parent_id: parentId,
+      }),
     });
 
     if (!res.ok) {
-      throw new Error("Failed to create folder");
+      onCancelDraftFolder;
+      setFolders((prev) => prev.filter((f) => f.id !== tempId));
+      setEditingFolderId(null);
+      setEditingFolderId(null);
+      alert("Folder konnte nicht erstellt werden (Name evtl. schon vergeben)");
+      return;
     }
 
     const folder = await res.json();
 
-    const uiFolder: UIFolder = {
-      id: folder.id,
-      name: folder.name,
-      parentId: folder.parent_id,
-      depth: folder.depth,
-      createdAt: new Date(folder.created_at),
-    };
+    setFolders((prev) =>
+      prev.map((f) =>
+        f.id === tempId
+          ? {
+              ...f, // 👈 Position & createdAt bleiben
+              id: folder.id, // echte ID vom Backend
+              name: folder.name,
+              parentId: folder.parent_id,
+              isDraft: false, // 👈 Draft erst JETZT entfernen
+            }
+          : f
+      )
+    );
 
-    setFolders((prev) => [...prev, uiFolder]);
-
-    // neuen Folder aktivieren
-    setActiveFolderId(uiFolder.id);
-    setActiveSessionId(null);
+    setEditingFolderId(null);
+    setActiveFolderId(folder.id);
   };
 
   useEffect(() => {
@@ -386,6 +413,14 @@ export default function GDPRChatbot() {
   ) => {
     setUsername(usernameFromAuth);
     setShowAuthModal(false);
+  };
+
+  const onUpdateDraftFolderName = (id: string, name: string) => {
+    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
+  };
+
+  const onCancelDraftFolder = (id: string) => {
+    setFolders((prev) => prev.filter((f) => f.id !== id));
   };
 
   /**
@@ -447,6 +482,11 @@ export default function GDPRChatbot() {
             setEditedTitle={setEditedTitle}
             onNewChat={createNewSession}
             onNewFolder={createNewFolder}
+            editingFolderId={editingFolderId}
+            setEditingFolderId={setEditingFolderId}
+            onConfirmCreateFolder={confirmCreateFolder}
+            onUpdateDraftFolderName={onUpdateDraftFolderName}
+            onCancelDraftFolder={onCancelDraftFolder}
           />
 
           {/* 
