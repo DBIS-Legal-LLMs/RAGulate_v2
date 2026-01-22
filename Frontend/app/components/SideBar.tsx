@@ -51,6 +51,7 @@ interface SidebarProps {
   setEditingFolderId: (id: string | null) => void;
   onUpdateDraftFolderName: (id: string, name: string) => void;
   onCancelDraftFolder: (id: string) => void;
+  onDeleteFolder: (folderId: string) => void;
 }
 
 export default function Sidebar({
@@ -71,6 +72,7 @@ export default function Sidebar({
   onConfirmCreateFolder,
   onUpdateDraftFolderName,
   onCancelDraftFolder,
+  onDeleteFolder,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -232,6 +234,15 @@ export default function Sidebar({
                 />
               ) : (
                 <span>{folder.name}</span>
+              )}
+              {activeFolderId === folder.id && !folder.isDraft && (
+                <X
+                  className="w-4 h-4 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
+                  onClick={(e) => {
+                    e.stopPropagation(); // verhindert, dass der Folder selektiert wird
+                    onDeleteFolder(folder.id);
+                  }}
+                />
               )}
             </div>
 

@@ -359,6 +359,37 @@ export default function GDPRChatbot() {
     setActiveFolderId(folder.id);
   };
 
+  const deleteFolder = async (folderId: string) => {
+    const token = localStorage.getItem("token");
+
+    if (!confirm("Willst du diesen Ordner wirklich löschen?")) return;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/folders/${folderId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        alert(
+          "Ordner konnte nicht gelöscht werden, evtl. ist Ordner nicht leer"
+        );
+        return;
+      }
+
+      // Folder aus State entfernen
+      setFolders((prev) => prev.filter((f) => f.id !== folderId));
+
+      // Falls dieser Ordner aktiv war → ActiveFolderId zurücksetzen
+      if (activeFolderId === folderId) setActiveFolderId(null);
+    } catch (error) {
+      console.error(error);
+      alert("Fehler beim Löschen des Ordners");
+    }
+  };
+
   useEffect(() => {
     const loadSidebarData = async () => {
       if (!username) return;
@@ -487,6 +518,7 @@ export default function GDPRChatbot() {
             onConfirmCreateFolder={confirmCreateFolder}
             onUpdateDraftFolderName={onUpdateDraftFolderName}
             onCancelDraftFolder={onCancelDraftFolder}
+            onDeleteFolder={deleteFolder}
           />
 
           {/* 
