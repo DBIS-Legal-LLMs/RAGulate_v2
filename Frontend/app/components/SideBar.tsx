@@ -39,6 +39,8 @@ interface SidebarProps {
   setEditingSessionId: (id: string | null) => void;
   editedTitle: string;
   setEditedTitle: (title: string) => void;
+  onNewChat: () => void;
+  onNewFolder: () => void;
 }
 
 export default function Sidebar({
@@ -52,6 +54,8 @@ export default function Sidebar({
   setEditingSessionId,
   editedTitle,
   setEditedTitle,
+  onNewChat,
+  onNewFolder,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -97,10 +101,22 @@ export default function Sidebar({
 
       {/* New Chat */}
       {!collapsed && (
-        <div className="p-4">
+        <div className="p-4" onClick={onNewChat}>
           <Button className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black ">
             <MessageSquare className="w-4 h-4 mr-2" />
             New Chat
+          </Button>
+        </div>
+      )}
+
+      {!collapsed && (
+        <div className="px-4 pb-2">
+          <Button
+            onClick={onNewFolder}
+            className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black"
+          >
+            <Folder className="w-4 h-4 mr-2" />
+            New Folder
           </Button>
         </div>
       )}
@@ -116,7 +132,9 @@ export default function Sidebar({
               setActiveFolderId(null);
               console.log(session.id);
             }}
-            className={`p-3 mb-1 rounded cursor-pointer flex items-center
+            className={`
+              mb-1 rounded cursor-pointer flex items-center
+              ${collapsed ? " hidden" : "p-3"}
               ${
                 activeSessionId === session.id
                   ? "bg-accent dark:text-black"
@@ -125,7 +143,9 @@ export default function Sidebar({
             `}
           >
             <MessageSquare className="w-4 h-4 mr-2 shrink-0" />
-            <span className="truncate">{session.title}</span>
+            {!collapsed && (
+              <span className="ml-2 truncate">{session.title}</span>
+            )}
           </div>
         ))}
 
@@ -140,6 +160,7 @@ export default function Sidebar({
                 console.log(folder.id);
               }}
               className={`p-3 font-semibold cursor-pointer rounded flex items-center
+                ${collapsed ? " hidden" : "p-3"}
                 ${
                   activeFolderId === folder.id
                     ? "bg-accent dark:text-black"

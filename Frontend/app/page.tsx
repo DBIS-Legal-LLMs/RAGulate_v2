@@ -51,7 +51,7 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  timestamp: Date;
+  created_at: Date;
   userName?: string;
 }
 
@@ -162,7 +162,7 @@ export default function GDPRChatbot() {
       id: Date.now().toString(),
       role: "user",
       content: input,
-      timestamp: new Date(),
+      created_at: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -194,7 +194,7 @@ export default function GDPRChatbot() {
           id: data.id,
           role: data.role as "assistant",
           content: data.content,
-          timestamp: new Date(data.created_at),
+          created_at: new Date(data.created_at),
         };
         setMessages((prev) => [...prev, assistantMessage]);
       }
@@ -205,7 +205,7 @@ export default function GDPRChatbot() {
         role: "assistant",
         content:
           "Sorry, ich konnte deine Nachricht nicht senden. Bitte versuche es erneut.",
-        timestamp: new Date(),
+        created_at: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -213,6 +213,9 @@ export default function GDPRChatbot() {
     }
   };
 
+  /**
+   * Fetch
+   */
   const fetchFolders = async () => {
     const token = localStorage.getItem("token");
 
@@ -244,6 +247,89 @@ export default function GDPRChatbot() {
     });
 
     return res.ok ? res.json() : [];
+  };
+
+  /**
+   * Create
+   */
+  const createNewSession = async () => {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${BACKEND_URL}/api/chat/sessions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title: "New Chat",
+        folder_id: activeFolderId ?? null, // ⭐ KEY LOGIC
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to create new session");
+    }
+
+    const session = await res.json();
+
+    const uiSession: UISession = {
+      id: session.id,
+      title: session.title,
+      folderId: session.folder_id,
+      createdAt: new Date(session.created_at),
+    };
+
+    // Sidebar updaten
+    setSessions((prev) => [uiSession, ...prev]);
+
+    // Neue Session aktivieren
+    setActiveSessionId(uiSession.id);
+
+    // Chat leeren
+    setMessages([]);
+  };
+
+  const createNewFolder = async () => {
+    const token = localStorage.getItem("token");
+    console.log(token);
+    console.log(activeFolderId);
+    const body: { name: string; parent_id?: string } = {
+      name: `New Folder ${Date.now()}`,
+    };
+
+    if (activeFolderId) {
+      body.parent_id = activeFolderId;
+    }
+
+    const res = await fetch(`${BACKEND_URL}/api/folders`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to create folder");
+    }
+
+    const folder = await res.json();
+
+    const uiFolder: UIFolder = {
+      id: folder.id,
+      name: folder.name,
+      parentId: folder.parent_id,
+      depth: folder.depth,
+      createdAt: new Date(folder.created_at),
+    };
+
+    setFolders((prev) => [...prev, uiFolder]);
+
+    // neuen Folder aktivieren
+    setActiveFolderId(uiFolder.id);
+    setActiveSessionId(null);
   };
 
   useEffect(() => {
@@ -322,7 +408,7 @@ export default function GDPRChatbot() {
       id: msg.id || Date.now().toString(),
       role: msg.role as "user" | "assistant",
       content: msg.content,
-      timestamp: new Date(msg.timestamp),
+      created_at: new Date(msg.created_at),
       userName: msg.user_name,
     };
   };
@@ -359,6 +445,8 @@ export default function GDPRChatbot() {
             setEditingSessionId={setEditingSessionId}
             editedTitle={editedTitle}
             setEditedTitle={setEditedTitle}
+            onNewChat={createNewSession}
+            onNewFolder={createNewFolder}
           />
 
           {/* 
