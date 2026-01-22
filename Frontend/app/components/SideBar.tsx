@@ -8,17 +8,33 @@ import {
   X,
   PanelLeftOpen,
   PanelLeftClose,
+  Folder,
 } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
 
+interface UIFolder {
+  id: string;
+  name: string;
+  parentId: string | null;
+  depth: number;
+  createdAt: Date;
+}
+
+interface UISession {
+  id: string;
+  title: string;
+  folderId: string | null;
+  createdAt: Date;
+}
+
 interface SidebarProps {
-  chatSessions: any[]; // ChatSession[]
-  currentSessionId: string | null;
-  createNewChat: () => void;
-  setCurrentSessionId: (id: string) => void;
-  setMessages: (messages: any[]) => void;
-  deleteChatSession: (id: string) => void;
+  folders: UIFolder[];
+  sessions: UISession[];
+  activeFolderId: string | null;
+  setActiveFolderId: (id: string | null) => void;
+  activeSessionId: string | null;
+  setActiveSessionId: (id: string | null) => void;
   editingSessionId: string | null;
   setEditingSessionId: (id: string | null) => void;
   editedTitle: string;
@@ -26,18 +42,25 @@ interface SidebarProps {
 }
 
 export default function Sidebar({
-  chatSessions,
-  currentSessionId,
-  createNewChat,
-  setCurrentSessionId,
-  setMessages,
-  deleteChatSession,
+  folders,
+  sessions,
+  activeFolderId,
+  setActiveFolderId,
+  activeSessionId,
+  setActiveSessionId,
   editingSessionId,
   setEditingSessionId,
   editedTitle,
   setEditedTitle,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+
+  const topLevelFolders = folders.filter(f => f.parentId === null);
+  const topLevelSessions = sessions.filter(s => s.folderId === null);
+
+  const sessionsByFolder = (folderId: string) =>
+    sessions.filter(s => s.folderId === folderId);
+  
 
   return (
     <div
@@ -77,7 +100,6 @@ export default function Sidebar({
       {!collapsed && (
         <div className="p-4">
           <Button
-            onClick={createNewChat}
             className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black "
           >
             <MessageSquare className="w-4 h-4 mr-2" />
@@ -88,86 +110,66 @@ export default function Sidebar({
 
       {/* Chat Sessions */}
       <ScrollArea className="flex-1 px-2">
-        {chatSessions.map((session) => (
+        {/* Top-Level Sessions */}
+        {topLevelSessions.map((session) => (
           <div
             key={session.id}
             onClick={() => {
-              setCurrentSessionId(session.id);
-              setMessages(session.messages);
+              setActiveSessionId(session.id);
+              setActiveFolderId(null);
+              console.log(session.id)
             }}
-            className={`group p-3 mb-2 rounded cursor-pointer flex items-center transition-colors 
-            ${
-              currentSessionId === session.id
-                ? "bg-accent dark:text-black"
-                : "hover:secondary hover:bg-primary"
-            }
+            className={`p-3 mb-1 rounded cursor-pointer flex items-center
+              ${
+                activeSessionId === session.id
+                  ? "bg-accent dark:text-black"
+                  : "hover:bg-primary"
+              }
             `}
           >
-            {!collapsed ? (
-              <div className="flex-1 min-w-0">
-                {editingSessionId === session.id ? (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      setEditingSessionId(null);
-                    }}
-                  >
-                    <input
-                      className={`text-sm font-medium rounded px-1 w-ful
-                        ${
-                          currentSessionId === session.id
-                            ? "text-black bg-accent"
-                            : "bg-primary"
-                        }
-                        `}
-                      value={editedTitle}
-                      onChange={(e) => setEditedTitle(e.target.value)}
-                      autoFocus
-                      onBlur={() => setEditingSessionId(null)}
-                    />
-                  </form>
-                ) : (
-                  <div
-                    className="text-sm font-medium truncate cursor-pointer"
-                    onClick={(e) => {
-                      // only current session can be edited
-                      if (currentSessionId === session.id) {
-                        e.stopPropagation();
-                        setEditingSessionId(session.id);
-                        setEditedTitle(session.title);
-                      }
-                    }}
-                  >
-                    {session.title}
-                  </div>
-                )}
+            <MessageSquare className="w-4 h-4 mr-2 shrink-0" />
+            <span className="truncate">{session.title}</span>
+          </div>
+        ))}
 
-                <div className="text-xs">
-                  {session.createdAt.toLocaleDateString()}
-                </div>
-              </div>
-            ) : (
-              <MessageSquare className="w-4 h-4 ml-1" />
-            )}
+        {/* Folders */}
+        {topLevelFolders.map((folder) => (
+          <div key={folder.id} className="mt-2">
+            {/* Folder Header */}
+            <div
+              onClick={() => {
+                setActiveFolderId(folder.id);
+                setActiveSessionId(null);
+                console.log(folder.id)
+              }}
+              className={`p-3 font-semibold cursor-pointer rounded flex items-center
+                ${
+                  activeFolderId === folder.id
+                    ? "bg-accent dark:text-black"
+                    : "hover:bg-primary"
+                }
+              `}
+            >
+              <Folder className="w-4 h-4 mr-2 shrink-0" />
+              <span>{folder.name}</span>
+            </div>
 
-            {/* Delete Button */}
-            {!collapsed && (
-              <button
-                className={`opacity-0 group-hover:opacity-100 ml-2 hover:text-red-500 p-1
+            {/* Sessions in Folder */}
+            {sessionsByFolder(folder.id).map((session) => (
+              <div
+                key={session.id}
+                onClick={() => setActiveSessionId(session.id)}
+                className={`ml-4 p-2 rounded cursor-pointer
                   ${
-                    currentSessionId === session.id
-                      ? "text-secondary"
-                      : "text-accent"
+                    activeSessionId === session.id
+                      ? "bg-accent dark:text-black"
+                      : "hover:bg-primary"
                   }
-                  `}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteChatSession(session.id);
-                }}
+                `}
               >
-                <X className="w-4 h-4" />
-              </button>
-            )}
+                💬 {session.title}
+              </div>
+            ))}
           </div>
         ))}
       </ScrollArea>
