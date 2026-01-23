@@ -99,7 +99,14 @@ async def post_messages(
 ):
     # aktuell nur User-Nachrichten speichern
     try:
-        turn = await chat_service.chat_with_rag(
+        # turn = await chat_service.chat_with_rag(
+        #     user= current_user,
+        #     session_id= session_id,
+        #     data= data,
+        # )
+        
+        # Echo Chat ohne RAG
+        turn = await chat_service.chat_echo(
             user= current_user,
             session_id= session_id,
             data= data,

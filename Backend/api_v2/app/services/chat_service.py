@@ -191,6 +191,59 @@ class ChatService:
 
     # ----- Chat + LightRAG -----
 
+    async def chat_echo(
+            self,
+            user: UserInDB,
+            session_id: str,
+            data: MessageCreate,
+    ) -> ChatTurnPublic:
+        """
+        Einfache Echo-Implementierung ohne RAG.
+        Speichert die User-Nachricht und antwortet mit der gleichen Nachricht.
+        """
+        # 1) Session checken
+        session = await self.get_session_for_user(user, session_id)
+        if not session:
+            raise ValueError("Session not found or not owned by user")
+        
+        now = datetime.now(timezone.utc)
+
+        # 2) User-Message speichern
+        user_doc = {
+            "session_id": session_id,
+            "user_id": user.id,
+            "role": "user",
+            "content": data.content,
+            "created_at": now,
+        }
+        result_user = await self.messages.insert_one(user_doc)
+        user_doc["_id"] = str(result_user.inserted_id)
+        user_msg = MessageInDB(**user_doc)
+
+        # 3) Assitant-Message (Echo) speichern
+        now_assistant = datetime.now(timezone.utc)
+        assistant_doc = {
+            "session_id": session_id,
+            "user_id": user.id,
+            "role": "assistant",
+            "content": data.content,  # Echo
+            "created_at": now_assistant,
+        }
+        result_assistant = await self.messages.insert_one(assistant_doc)
+        assistant_doc["_id"] = str(result_assistant.inserted_id)
+        assistant_msg = MessageInDB(**assistant_doc)
+
+        # Session-Updated Timestamp aktualisieren
+        await self.sessions.update_one(
+            {"_id": ObjectId(session_id)},
+            {"$set": {"updated_at": now_assistant}},
+        )
+
+        return ChatTurnPublic(
+            user_message= MessagePublic.from_db(user_msg),
+            assistant_message= MessagePublic.from_db(assistant_msg),
+        )
+
     async def chat_with_rag(
             self,
             user: UserInDB,
