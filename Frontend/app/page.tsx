@@ -550,11 +550,11 @@ export default function GDPRChatbot() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" onClick={() => setShowGraph(true)}>
+                  <Button variant="ghost" className="hover:bg-accent hover:text-black" onClick={() => setShowGraph(true)}>
                     Graph
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost" className="hover:bg-accent hover:text-black"
                     onClick={() => setShowDocuments(true)}
                   >
                     Documents
