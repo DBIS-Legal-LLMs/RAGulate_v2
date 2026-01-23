@@ -71,12 +71,7 @@ class UserService:
         return self._db[USERS_COLLECTION]
 
     # ----- CREATE USER -----
-    async def create_user(self, user_in: UserCreate) -> UserInDB:
-        # E-Mail check
-        existing = await self.get_by_email(normalized_email)
-        if existing:
-            raise ValueError("EMAIL_EXISTS")
-        
+    async def create_user(self, user_in: UserCreate) -> UserInDB:        
         # E-Mail validieren
         from ..core.security import validate_email_address, validate_password_policy
         try:
@@ -84,6 +79,11 @@ class UserService:
         except ValueError:
             raise ValueError("EMAIL_INVALID")
 
+        # E-Mail check
+        existing = await self.get_by_email(normalized_email)
+        if existing:
+            raise ValueError("EMAIL_EXISTS")
+        
         # Username prüfen und generieren falls keiner mitgegeben
         username = user_in.username
         if username:
