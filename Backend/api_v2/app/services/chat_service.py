@@ -97,6 +97,22 @@ class ChatService:
 
         return ChatSessionInDB(**doc)
     
+    
+    async def delete_session(
+            self, 
+            user: UserInDB,
+            session_id: str
+    ) -> None:
+        session = await self.get_session_for_user(user, session_id)
+        if not session:
+            raise ValueError("Session not found or not owned by user")
+        
+        # Session löschen
+        await self.sessions.delete_one({"_id": ObjectId(session_id)})
+
+        # Alle zugehörigen Messages löschen
+        await self.messages.delete_many({"session_id": session_id})
+    
 
     # ----- Messages -----
 

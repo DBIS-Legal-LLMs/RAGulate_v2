@@ -83,6 +83,23 @@ async def get_session(
     
     return result
 
+@router.delete(
+    "/sessions/{session_id}",
+    status_code= status.HTTP_204_NO_CONTENT,
+)
+async def delete_session(
+    session_id: str,
+    current_user: UserInDB = Depends(get_current_user),
+    chat_service: ChatService = Depends(get_chat_service),
+):
+    try:
+        await chat_service.delete_session(current_user, session_id)
+    except ValueError:
+        raise HTTPException(
+            status_code= status.HTTP_404_NOT_FOUND,
+            detail= "Session not found",
+        )
+
 
 # ----- Messages -----
 
