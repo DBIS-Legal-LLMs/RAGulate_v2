@@ -55,15 +55,15 @@ class FolderService:
             raise ValueError("MAX_DEPTH_EXCEEDED")
         
         # Optional: folder-name must be unique in same parent-level
-        existing = await self.collection.find_one(
-            {
-                "owner_id": owner_id,
-                "parent_id": folder_in.parent_id,
-                "name": folder_in.name,
-            }
-        )
-        if existing: 
-            raise ValueError("FOLDER_NAME_EXISTS")
+        # existing = await self.collection.find_one(
+        #    {
+        #        "owner_id": owner_id,
+        #        "parent_id": folder_in.parent_id,
+        #        "name": folder_in.name,
+        #    }
+        #)
+        #if existing: 
+        #    raise ValueError("FOLDER_NAME_EXISTS")
 
         now = datetime.now(timezone.utc)
         doc = {
