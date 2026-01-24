@@ -69,6 +69,7 @@ interface UISession {
   title: string;
   folderId: string | null;
   createdAt: Date;
+  isDraft?: boolean;
 }
 
 /**
@@ -134,7 +135,6 @@ export default function GDPRChatbot() {
 
       setMessages((data.messages || []).map(transformMessage));
     };
-
     loadMessages();
   }, [activeSessionId]);
 
@@ -146,6 +146,10 @@ export default function GDPRChatbot() {
   const generateSessionID = () => {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   };
+
+  function delay(ms: number) {
+    return new Promise( resolve => setTimeout(resolve, ms) );
+}
 
   /**
    * Handles the submission of new chat messages
@@ -188,16 +192,16 @@ export default function GDPRChatbot() {
       );
 
       if (!res.ok) throw new Error("Failed to send message");
-
       const data = await res.json(); // enthält die neue AI-Message
+      await delay(1000);
 
       // Assistant Message ins Frontend setzen
-      if (data?.id) {
+      if (data.assistant_message.id) {
         const assistantMessage: Message = {
-          id: data.id,
-          role: data.role as "assistant",
-          content: data.content,
-          created_at: new Date(data.created_at),
+          id: data.assistant_message.id,
+          role: data.assistant_message.role as "assistant",
+          content: data.assistant_message.content,
+          created_at: new Date(data.assistant_message.created_at),
         };
         setMessages((prev) => [...prev, assistantMessage]);
       }
@@ -255,9 +259,28 @@ export default function GDPRChatbot() {
   /**
    * Create
    */
-  const createNewSession = async () => {
-    const token = localStorage.getItem("token");
+  const createNewSession = () => {
+    const tempId = `draft-${Date.now()}`
 
+    const draftSession: UISession = {
+      id: tempId,
+      title: "",
+      folderId: activeFolderId ?? null,
+      createdAt: new Date(),
+      isDraft: true,
+    }
+
+    setSessions((prev) => [...prev, draftSession])
+    setEditingSessionId(tempId)
+  }
+
+  const confirmCreateSession = async (
+    tempId: string,
+    name:string,
+    parentId: string | null
+  ) => {
+    console.log(name)
+    const token = localStorage.getItem("token");
     const res = await fetch(`${BACKEND_URL}/api/chat/sessions`, {
       method: "POST",
       headers: {
@@ -265,33 +288,38 @@ export default function GDPRChatbot() {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        title: "New Chat",
-        folder_id: activeFolderId ?? null, // ⭐ KEY LOGIC
+        title: name,
+        folder_id: parentId
       }),
     });
 
     if (!res.ok) {
-      throw new Error("Failed to create new session");
+      onCancelDraftSession;
+      setSessions((prev) => prev.filter((f) => f.id !== tempId));
+      setEditingSessionId(null);
+      alert("Folder konnte nicht erstellt werden (Name evtl. schon vergeben)");
+      return;
     }
 
     const session = await res.json();
 
-    const uiSession: UISession = {
-      id: session.id,
-      title: session.title,
-      folderId: session.folder_id,
-      createdAt: new Date(session.created_at),
-    };
+    setSessions((prev) => {
+      const withoutDraft = prev.filter((s) => s.id !== tempId);
 
-    // Sidebar updaten
-    setSessions((prev) => [uiSession, ...prev]);
+      const confirmedSession: UISession = {
+        id: session.id,
+        title: session.title,
+        folderId: session.folder_id ?? null,
+        createdAt: new Date(session.created_at ?? Date.now()),
+        isDraft: false,
+      };
 
-    // Neue Session aktivieren
-    setActiveSessionId(uiSession.id);
+      return [...withoutDraft, confirmedSession];
+    });
 
-    // Chat leeren
-    setMessages([]);
-  };
+    setEditingSessionId(null);
+    setActiveSessionId(session.id);
+  }
 
   const createNewFolder = () => {
     const tempId = `draft-${Date.now()}`;
@@ -442,6 +470,16 @@ export default function GDPRChatbot() {
     _sessions: any,
     usernameFromAuth: string
   ) => {
+    // RESET OLD USER STATE
+    setFolders([]);
+    setSessions([]);
+    setMessages([]);
+    setActiveFolderId(null);
+    setActiveSessionId(null);
+    setEditingFolderId(null);
+    setEditingSessionId(null);
+    setEditedTitle("");
+
     setUsername(usernameFromAuth);
     setShowAuthModal(false);
   };
@@ -453,6 +491,14 @@ export default function GDPRChatbot() {
   const onCancelDraftFolder = (id: string) => {
     setFolders((prev) => prev.filter((f) => f.id !== id));
   };
+
+  const onUpdateDraftSessionName = (id: string, title: string) => {
+    setSessions((prev) => prev.map((f) => (f.id === id ? { ...f, title } : f)));
+  };
+
+  const onCancelDraftSession = (id: string) => {
+    setSessions((prev) => prev.filter((f) => f.id !== id))
+  }
 
   /**
    * Transforms a raw message object from the API into the frontend Message format
@@ -519,6 +565,9 @@ export default function GDPRChatbot() {
             onUpdateDraftFolderName={onUpdateDraftFolderName}
             onCancelDraftFolder={onCancelDraftFolder}
             onDeleteFolder={deleteFolder}
+            onConfirmCreateSession={confirmCreateSession}
+            onCancelDraftSession={onCancelDraftSession}
+            onUpdateDraftSessionName={onUpdateDraftSessionName}
           />
 
           {/* 

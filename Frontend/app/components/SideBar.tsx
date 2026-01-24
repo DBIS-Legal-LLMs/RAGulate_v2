@@ -27,6 +27,7 @@ interface UISession {
   title: string;
   folderId: string | null;
   createdAt: Date;
+  isDraft?: boolean
 }
 
 interface SidebarProps {
@@ -52,6 +53,13 @@ interface SidebarProps {
   onUpdateDraftFolderName: (id: string, name: string) => void;
   onCancelDraftFolder: (id: string) => void;
   onDeleteFolder: (folderId: string) => void;
+  onConfirmCreateSession: (
+    tempId:string,
+    name: string,
+    parentId: string | null
+  ) => void;
+  onUpdateDraftSessionName: (id: string, name: string) => void;
+  onCancelDraftSession: (id: string) => void;
 }
 
 export default function Sidebar({
@@ -73,6 +81,9 @@ export default function Sidebar({
   onUpdateDraftFolderName,
   onCancelDraftFolder,
   onDeleteFolder,
+  onConfirmCreateSession,
+  onUpdateDraftSessionName,
+  onCancelDraftSession
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -83,7 +94,11 @@ export default function Sidebar({
       if (!a.isDraft && b.isDraft) return -1; // Normale nach oben
       return 0;
     });
-  const topLevelSessions = sessions.filter((s) => s.folderId === null);
+  const topLevelSessions = sessions.filter((s) => s.folderId === null).sort((a, b) => {
+      if (a.isDraft && !b.isDraft) return 1; // Draft nach unten
+      if (!a.isDraft && b.isDraft) return -1; // Normale nach oben
+      return 0;
+    });
 
   const sessionsByFolder = (folderId: string) =>
     sessions.filter((s) => s.folderId === folderId);
@@ -151,6 +166,7 @@ export default function Sidebar({
           <div
             key={session.id}
             onClick={() => {
+              if (session.isDraft) return;
               setActiveSessionId(session.id);
               setActiveFolderId(null);
               console.log(session.id);
@@ -166,9 +182,46 @@ export default function Sidebar({
             `}
           >
             <MessageSquare className="w-4 h-4 mr-2 shrink-0" />
-            {!collapsed && (
-              <span className="ml-2 truncate">{session.title}</span>
-            )}
+              {session.isDraft && editingSessionId === session.id ? (
+              <input
+                autoFocus
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && editedTitle.trim()) {
+                    onConfirmCreateSession(
+                      session.id,
+                      editedTitle,
+                      session.folderId
+                    );
+                    setEditedTitle("");
+                  }
+
+                  if (e.key === "Escape") {
+                    onCancelDraftSession(session.id);
+                    setEditingSessionId(null);
+                    setEditedTitle("");
+                  }
+                }}
+                onBlur={() => {
+                  if (editedTitle.trim()) {
+                    onConfirmCreateSession(
+                      session.id,
+                      editedTitle,
+                      session.folderId
+                    );
+                  } else {
+                    onCancelDraftSession(session.id);
+                  }
+                  setEditingSessionId(null);
+                  setEditedTitle("");
+                }}
+                className="w-full bg-transparent border-b border-accent outline-none px-1"
+                placeholder="Chat name"
+              />
+              ) : (
+                <span>{session.title}</span>
+              )}
           </div>
         ))}
 
