@@ -53,6 +53,7 @@ interface SidebarProps {
   onUpdateDraftFolderName: (id: string, name: string) => void;
   onCancelDraftFolder: (id: string) => void;
   onDeleteFolder: (folderId: string) => void;
+  onDeleteSession: (sessionID: string) => void;
   onConfirmCreateSession: (
     tempId:string,
     name: string,
@@ -81,6 +82,7 @@ export default function Sidebar({
   onUpdateDraftFolderName,
   onCancelDraftFolder,
   onDeleteFolder,
+  onDeleteSession,
   onConfirmCreateSession,
   onUpdateDraftSessionName,
   onCancelDraftSession
@@ -222,6 +224,15 @@ export default function Sidebar({
               ) : (
                 <span>{session.title}</span>
               )}
+              {activeSessionId === session.id && !session.isDraft && (
+                <X
+                  className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
+                  onClick={(e) => {
+                    e.stopPropagation(); // verhindert, dass der Folder selektiert wird
+                    onDeleteSession(session.id);
+                  }}
+                />
+              )}
           </div>
         ))}
 
@@ -290,7 +301,7 @@ export default function Sidebar({
               )}
               {activeFolderId === folder.id && !folder.isDraft && (
                 <X
-                  className="w-4 h-4 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
+                  className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
                   onClick={(e) => {
                     e.stopPropagation(); // verhindert, dass der Folder selektiert wird
                     onDeleteFolder(folder.id);

@@ -468,6 +468,39 @@ export default function GDPRChatbot() {
   };
 
   /**
+   * Delets Session from Backend
+   * @param sessionID Id from Session
+   */
+  const deleteSession = async (sessionID: string) => {
+    const token = localStorage.getItem("token");
+
+    if(!confirm("Willst du diesen Chat wirklich löschen?")) return;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/chat/sessions/${sessionID}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
+
+      if (!res.ok) {
+        alert(
+          "Chat konnte nicht gelöscht werden."
+        );
+        return;
+      }
+      // remove Chat from State
+      setSessions((prev) => prev.filter((f) => f.id !== sessionID));
+
+      if (activeSessionId === sessionID) setActiveSessionId(null)
+    } catch (error) {
+      console.error(error);
+      alert("Fehler beim Löschen des Chats")
+    }
+  }
+
+  /**
    * Loads Sidebar content. Contains Sessions and Folders
    */
   useEffect(() => {
@@ -579,6 +612,7 @@ export default function GDPRChatbot() {
             onConfirmCreateSession={confirmCreateSession}
             onCancelDraftSession={onCancelDraftSession}
             onUpdateDraftSessionName={onUpdateDraftSessionName}
+            onDeleteSession={deleteSession}
           />
 
           {/* 
