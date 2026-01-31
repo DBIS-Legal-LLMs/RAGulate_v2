@@ -141,8 +141,13 @@ export default function Sidebar({
 
       {/* New Chat */}
       {!collapsed && (
-        <div className="p-4" onClick={onNewChat}>
-          <Button className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black ">
+        <div className="p-4">
+          <Button 
+          onClick={() => {
+            setActiveSessionId(null)
+              onNewChat();
+            }}
+            className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black ">
             <MessageSquare className="w-4 h-4 mr-2" />
             New Chat
           </Button>
@@ -152,7 +157,9 @@ export default function Sidebar({
       {!collapsed && (
         <div className="px-4 pb-2">
           <Button
-            onClick={onNewFolder}
+            onClick={() => {
+              onNewFolder();
+            }}
             className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black"
           >
             <Folder className="w-4 h-4 mr-2" />
@@ -177,7 +184,7 @@ export default function Sidebar({
               className={`p-3 font-semibold cursor-pointer rounded flex items-center
                 ${collapsed ? " hidden" : "p-3"}
                 ${
-                  activeFolderId === folder.id
+                  activeFolderId === folder.id || editingFolderId === folder.id
                     ? "bg-accent dark:text-black"
                     : "hover:bg-primary"
                 }
@@ -204,7 +211,8 @@ export default function Sidebar({
                     if (e.key === "Escape") {
                       onCancelDraftFolder(folder.id);
                       setEditingFolderId(null);
-                      setEditingFolderId(null);
+                      setActiveFolderId(null)
+                      onUpdateDraftFolderName(folder.id, "")
                     }
                   }}
                   onBlur={() => {
@@ -216,7 +224,6 @@ export default function Sidebar({
                       );
                     } else {
                       onCancelDraftFolder(folder.id);
-                      setEditingFolderId(null);
                       setEditingFolderId(null);
                     }
                   }}
@@ -244,13 +251,64 @@ export default function Sidebar({
                 onClick={() => setActiveSessionId(session.id)}
                 className={`ml-4 p-2 rounded cursor-pointer
                   ${
-                    activeSessionId === session.id
+                    activeSessionId === session.id || editingSessionId === session.id
                       ? "bg-accent dark:text-black"
                       : "hover:bg-primary"
                   }
                 `}
               >
-                💬 {session.title}
+              <MessageSquare className="w-4 h-4 mr-2 shrink-0" />
+              {session.isDraft && editingSessionId === session.id ? (
+                <input
+                  autoFocus
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && editedTitle.trim()) {
+                      onConfirmCreateSession(
+                        session.id,
+                        editedTitle,
+                        session.folderId
+                      );
+                      setEditedTitle("");
+                    }
+
+                    if (e.key === "Escape") {
+                      onCancelDraftSession(session.id);
+                      setEditingSessionId(null);
+                      setActiveSessionId(null);
+                      setEditedTitle("");
+                    }
+                  }}
+                  onBlur={() => {
+                    if (editedTitle.trim()) {
+                      onConfirmCreateSession(
+                        session.id,
+                        editedTitle,
+                        session.folderId
+                      );
+                    } else {
+                      onCancelDraftSession(session.id);
+                      setActiveSessionId(null);
+                    }
+                    setEditingSessionId(null);
+                    setEditedTitle("");
+                  }}
+                  className="w-full bg-transparent border-b border-accent outline-none px-1"
+                  placeholder="Chat name"
+                />
+                ) : (
+                  <span>{session.title}</span>
+                )}
+                {activeSessionId === session.id && !session.isDraft && (
+                  <X
+                    className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
+                    onClick={(e) => {
+                      e.stopPropagation(); // verhindert, dass der Folder selektiert wird
+                      onDeleteSession(session.id);
+                    }}
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -264,13 +322,12 @@ export default function Sidebar({
               if (session.isDraft) return;
               setActiveSessionId(session.id);
               setActiveFolderId(null);
-              console.log(session.id);
             }}
             className={`
               mb-1 rounded cursor-pointer flex items-center
               ${collapsed ? " hidden" : "p-3"}
               ${
-                activeSessionId === session.id
+                activeSessionId === session.id || editingSessionId === session.id
                   ? "bg-accent dark:text-black"
                   : "hover:bg-primary"
               }
@@ -295,6 +352,7 @@ export default function Sidebar({
                   if (e.key === "Escape") {
                     onCancelDraftSession(session.id);
                     setEditingSessionId(null);
+                    setActiveSessionId(null);
                     setEditedTitle("");
                   }
                 }}
@@ -307,6 +365,7 @@ export default function Sidebar({
                     );
                   } else {
                     onCancelDraftSession(session.id);
+                    setActiveSessionId(null);
                   }
                   setEditingSessionId(null);
                   setEditedTitle("");

@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Send, MessageSquare, Shield, X } from "lucide-react";
+import { Send, MessageSquare, Shield, X, Folder } from "lucide-react";
 import { ChatMessage } from "./components/chat-message";
 import { ProfileDropdown } from "./components/profile-dropdown";
 import { ProfileModal } from "./components/profile-modal";
@@ -171,7 +171,10 @@ export default function GDPRChatbot() {
    * Load Messages from Backend
    */
   useEffect(() => {
-    if (!activeSessionId) return;
+    if (!activeSessionId) {
+      setMessages([])
+      return;
+    } 
 
     const loadMessages = async () => {
       const token = localStorage.getItem("token");
@@ -375,7 +378,6 @@ export default function GDPRChatbot() {
 
     setFolders((prev) => [draftFolder,...prev]);
     setEditingFolderId(tempId);
-    setActiveFolderId(tempId);
     setActiveSessionId(null);
   };
 
@@ -531,12 +533,6 @@ export default function GDPRChatbot() {
 
       setFolders(uiFolders);
       setSessions(uiSessions);
-
-      /* 3. Default Selection */
-      const firstTopSession = uiSessions.find((s) => s.folderId === null);
-      if (firstTopSession) {
-        setActiveSessionId(firstTopSession.id);
-      }
     };
 
     loadSidebarData();
@@ -687,6 +683,28 @@ export default function GDPRChatbot() {
                   </div>
                 )}
 
+                {(!activeSessionId || editingSessionId) && (
+                  <div className="flex justify-center">
+                    <div className="p-4 flex flex-col items-center gap-3 w-full max-w-xs" >
+                      <Button 
+                        onClick={createNewSession}
+                        className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black " 
+                      >
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        New Chat
+                      </Button>
+
+                      <Button
+                        onClick={createNewFolder}
+                        className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black"
+                      >
+                        <Folder className="w-4 h-4 mr-2" />
+                        New Folder
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {messages.map((message) => (
                   <ChatMessage key={message.id} message={message} />
                 ))}
@@ -721,6 +739,7 @@ export default function GDPRChatbot() {
             - Responsive layout with max width
             - Submit handling with error prevention
           */}
+          {activeSessionId && !editingSessionId &&(
             <div className="bg-chat p-4">
               <div className="max-w-4xl mx-auto mb-5">
                 <form onSubmit={handleSubmit} className="flex items-end">
@@ -755,6 +774,8 @@ export default function GDPRChatbot() {
                 </p>
               </div>
             </div>
+          )}
+
           </div>
 
           {showProfileModal && (
