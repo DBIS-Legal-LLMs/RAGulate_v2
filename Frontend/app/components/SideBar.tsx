@@ -170,6 +170,11 @@ export default function Sidebar({
 
       {/* Chat Sessions */}
       <ScrollArea className="flex-1 px-2">
+
+         <div className="mb-2 mt-4 text-gray-500 dark:text-gray-400">
+          <span>Folders</span>
+        </div>
+
         {/* Folders */}
         {topLevelFolders.map((folder) => (
           <div key={folder.id} className="mt-2">
@@ -313,6 +318,10 @@ export default function Sidebar({
             ))}
           </div>
         ))}
+
+        <div className="mb-2 mt-4 text-gray-500 dark:text-gray-400">
+          <span>Chats</span>
+        </div>
 
         {/* Top-Level Sessions */}
         {topLevelSessions.map((session) => (
