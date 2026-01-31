@@ -300,7 +300,7 @@ export default function GDPRChatbot() {
       isDraft: true,
     }
 
-    setSessions((prev) => [...prev, draftSession])
+    setSessions((prev) => [draftSession,...prev])
     setEditingSessionId(tempId)
   }
 
@@ -316,6 +316,7 @@ export default function GDPRChatbot() {
     parentId: string | null
   ) => {
     console.log(name)
+    console.log(parentId)
     const token = localStorage.getItem("token");
     const res = await fetch(`${BACKEND_URL}/api/chat/sessions`, {
       method: "POST",
@@ -350,7 +351,7 @@ export default function GDPRChatbot() {
         isDraft: false,
       };
 
-      return [...withoutDraft, confirmedSession];
+      return [confirmedSession,...withoutDraft];
     });
 
     setEditingSessionId(null);
@@ -372,7 +373,7 @@ export default function GDPRChatbot() {
       isDraft: true,
     };
 
-    setFolders((prev) => [...prev, draftFolder]);
+    setFolders((prev) => [draftFolder,...prev]);
     setEditingFolderId(tempId);
     setActiveFolderId(tempId);
     setActiveSessionId(null);
@@ -418,11 +419,11 @@ export default function GDPRChatbot() {
       prev.map((f) =>
         f.id === tempId
           ? {
-              ...f, // 👈 Position & createdAt bleiben
-              id: folder.id, // echte ID vom Backend
+              ...f, 
+              id: folder.id, 
               name: folder.name,
               parentId: folder.parent_id,
-              isDraft: false, // 👈 Draft erst JETZT entfernen
+              isDraft: false,
             }
           : f
       )
