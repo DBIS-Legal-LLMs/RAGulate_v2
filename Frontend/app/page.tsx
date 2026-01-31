@@ -105,6 +105,48 @@ export default function GDPRChatbot() {
   const [showGraph, setShowGraph] = useState(false); // Knowledge graph visibility
   const [showDocuments, setShowDocuments] = useState(false); // Documents modal visibility
 
+  /* Helper Functions */
+  const onUpdateDraftFolderName = (id: string, name: string) => {
+    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
+  };
+
+  const onCancelDraftFolder = (id: string) => {
+    setFolders((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const onUpdateDraftSessionName = (id: string, title: string) => {
+    setSessions((prev) => prev.map((f) => (f.id === id ? { ...f, title } : f)));
+  };
+
+  const onCancelDraftSession = (id: string) => {
+    setSessions((prev) => prev.filter((f) => f.id !== id))
+  }
+
+  /**
+   * Transforms a raw message object from the API into the frontend Message format
+   *
+   * @param {any} msg - Raw message object from backend
+   * @returns {Message} Formatted message for frontend use
+   *
+   * @example
+   * const formatted = transformMessage({
+   *   _id: "123",
+   *   role: "user",
+   *   content: "Hello",
+   *   timestamp: "2023-01-01T00:00:00Z",
+   *   user_name: "john"
+   * });
+   */
+  const transformMessage = (msg: any): Message => {
+    return {
+      id: msg.id || Date.now().toString(),
+      role: msg.role as "user" | "assistant",
+      content: msg.content,
+      created_at: new Date(msg.created_at),
+      userName: msg.user_name,
+    };
+  };
+
   /**
    * Scrolls the chat window to the most recent message
    * Used after new messages are added or on viewport changes
@@ -117,6 +159,17 @@ export default function GDPRChatbot() {
     scrollToBottom();
   }, [messages]);
 
+  /**
+   * Adds delay, used to give delay for echo chat
+   * @param ms time in ms
+   */
+  function delay(ms: number) {
+    return new Promise( resolve => setTimeout(resolve, ms) );
+  }
+
+  /**
+   * Load Messages from Backend
+   */
   useEffect(() => {
     if (!activeSessionId) return;
 
@@ -139,19 +192,6 @@ export default function GDPRChatbot() {
   }, [activeSessionId]);
 
   /**
-   * Generates a unique session identifier
-   * Combines timestamp and random string for uniqueness
-   * @returns {string} Unique session identifier
-   */
-  const generateSessionID = () => {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  };
-
-  function delay(ms: number) {
-    return new Promise( resolve => setTimeout(resolve, ms) );
-}
-
-  /**
    * Handles the submission of new chat messages
    * Sends message to backend API and updates UI with response
    *
@@ -160,11 +200,10 @@ export default function GDPRChatbot() {
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !activeSessionId) return; // keine leeren Nachrichten oder ohne Session
+    if (!input.trim() || !activeSessionId) return;
 
     const token = localStorage.getItem("token");
 
-    // User Message sofort ins Frontend setzen
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -173,7 +212,7 @@ export default function GDPRChatbot() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInput(""); // Input leeren
+    setInput("");
     setIsLoading(true);
 
     try {
@@ -192,10 +231,9 @@ export default function GDPRChatbot() {
       );
 
       if (!res.ok) throw new Error("Failed to send message");
-      const data = await res.json(); // enthält die neue AI-Message
+      const data = await res.json();
       await delay(1000);
 
-      // Assistant Message ins Frontend setzen
       if (data.assistant_message.id) {
         const assistantMessage: Message = {
           id: data.assistant_message.id,
@@ -221,7 +259,7 @@ export default function GDPRChatbot() {
   };
 
   /**
-   * Fetch
+   * Fetch Folders from Backend
    */
   const fetchFolders = async () => {
     const token = localStorage.getItem("token");
@@ -237,14 +275,6 @@ export default function GDPRChatbot() {
 
   /**
    * Retrieves all chat sessions for a given user from the backend
-   *
-   * @param {string} username - Username to fetch sessions for
-   * @returns {Promise<{sessions: string[]}>} Array of session IDs
-   *
-   * @throws Will return empty array on fetch failure
-   * @example
-   * const sessions = await fetchSessions("john_doe");
-   * // returns { sessions: ["session1", "session2"] }
    */
   const fetchSessions = async () => {
     const token = localStorage.getItem("token");
@@ -257,7 +287,7 @@ export default function GDPRChatbot() {
   };
 
   /**
-   * Create
+   * Creates new Draft Session, this is only used for Frontend, is confirmed later
    */
   const createNewSession = () => {
     const tempId = `draft-${Date.now()}`
@@ -274,6 +304,12 @@ export default function GDPRChatbot() {
     setEditingSessionId(tempId)
   }
 
+  /**
+   * Confirms the Session, sends a POST reuqest to the Backend to fully create the Session
+   * @param tempId ID from Draft Session
+   * @param name title of the Session
+   * @param parentId which folder it belongs to
+   */
   const confirmCreateSession = async (
     tempId: string,
     name:string,
@@ -321,6 +357,9 @@ export default function GDPRChatbot() {
     setActiveSessionId(session.id);
   }
 
+  /**
+   * Create new Draft Folder, this is only used for Frontend, is confirmed later
+   */
   const createNewFolder = () => {
     const tempId = `draft-${Date.now()}`;
 
@@ -339,6 +378,12 @@ export default function GDPRChatbot() {
     setActiveSessionId(null);
   };
 
+  /**
+   * Confirms the Folder, sends a POST reuqest to the Backend to fully create the Folder
+   * @param tempId ID from Draft Folder
+   * @param name name of Folder
+   * @param parentId which folder it belongs to, none for root folder
+   */
   const confirmCreateFolder = async (
     tempId: string,
     name: string,
@@ -387,6 +432,10 @@ export default function GDPRChatbot() {
     setActiveFolderId(folder.id);
   };
 
+  /**
+   * Deleted Folder from Backend
+   * @param folderId ID of folder
+   */
   const deleteFolder = async (folderId: string) => {
     const token = localStorage.getItem("token");
 
@@ -418,6 +467,9 @@ export default function GDPRChatbot() {
     }
   };
 
+  /**
+   * Loads Sidebar content. Contains Sessions and Folders
+   */
   useEffect(() => {
     const loadSidebarData = async () => {
       if (!username) return;
@@ -482,47 +534,6 @@ export default function GDPRChatbot() {
 
     setUsername(usernameFromAuth);
     setShowAuthModal(false);
-  };
-
-  const onUpdateDraftFolderName = (id: string, name: string) => {
-    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
-  };
-
-  const onCancelDraftFolder = (id: string) => {
-    setFolders((prev) => prev.filter((f) => f.id !== id));
-  };
-
-  const onUpdateDraftSessionName = (id: string, title: string) => {
-    setSessions((prev) => prev.map((f) => (f.id === id ? { ...f, title } : f)));
-  };
-
-  const onCancelDraftSession = (id: string) => {
-    setSessions((prev) => prev.filter((f) => f.id !== id))
-  }
-
-  /**
-   * Transforms a raw message object from the API into the frontend Message format
-   *
-   * @param {any} msg - Raw message object from backend
-   * @returns {Message} Formatted message for frontend use
-   *
-   * @example
-   * const formatted = transformMessage({
-   *   _id: "123",
-   *   role: "user",
-   *   content: "Hello",
-   *   timestamp: "2023-01-01T00:00:00Z",
-   *   user_name: "john"
-   * });
-   */
-  const transformMessage = (msg: any): Message => {
-    return {
-      id: msg.id || Date.now().toString(),
-      role: msg.role as "user" | "assistant",
-      content: msg.content,
-      created_at: new Date(msg.created_at),
-      userName: msg.user_name,
-    };
   };
 
   return (
