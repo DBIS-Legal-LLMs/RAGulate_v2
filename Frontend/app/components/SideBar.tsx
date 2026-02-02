@@ -27,7 +27,7 @@ interface UISession {
   title: string;
   folderId: string | null;
   createdAt: Date;
-  isDraft?: boolean
+  isDraft?: boolean;
 }
 
 interface SidebarProps {
@@ -46,7 +46,7 @@ interface SidebarProps {
   onConfirmCreateFolder: (
     tempId: string,
     name: string,
-    parentId: string | null
+    parentId: string | null,
   ) => void;
   editingFolderId: string | null;
   setEditingFolderId: (id: string | null) => void;
@@ -55,9 +55,9 @@ interface SidebarProps {
   onDeleteFolder: (folderId: string) => void;
   onDeleteSession: (sessionID: string) => void;
   onConfirmCreateSession: (
-    tempId:string,
+    tempId: string,
     name: string,
-    parentId: string | null
+    parentId: string | null,
   ) => void;
   onUpdateDraftSessionName: (id: string, name: string) => void;
   onCancelDraftSession: (id: string) => void;
@@ -85,7 +85,7 @@ export default function Sidebar({
   onDeleteSession,
   onConfirmCreateSession,
   onUpdateDraftSessionName,
-  onCancelDraftSession
+  onCancelDraftSession,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -96,7 +96,9 @@ export default function Sidebar({
       if (!a.isDraft && b.isDraft) return 1; // Normale nach oben
       return 0;
     });
-  const topLevelSessions = sessions.filter((s) => s.folderId === null).sort((a, b) => {
+  const topLevelSessions = sessions
+    .filter((s) => s.folderId === null)
+    .sort((a, b) => {
       if (a.isDraft && !b.isDraft) return -1; // Draft nach unten
       if (!a.isDraft && b.isDraft) return 1; // Normale nach oben
       return 0;
@@ -142,12 +144,13 @@ export default function Sidebar({
       {/* New Chat */}
       {!collapsed && (
         <div className="p-4">
-          <Button 
-          onClick={() => {
-            setActiveSessionId(null)
+          <Button
+            onClick={() => {
+              setActiveSessionId(null);
               onNewChat();
             }}
-            className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black ">
+            className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black "
+          >
             <MessageSquare className="w-4 h-4 mr-2" />
             New Chat
           </Button>
@@ -170,10 +173,11 @@ export default function Sidebar({
 
       {/* Chat Sessions */}
       <ScrollArea className="flex-1 px-2">
-
-         <div className="mb-2 mt-4 text-gray-500 dark:text-gray-400">
-          <span>Folders</span>
-        </div>
+        {!collapsed && (
+          <div className="mb-2 mt-4 text-gray-500 dark:text-gray-400">
+            <span>Folders</span>
+          </div>
+        )}
 
         {/* Folders */}
         {topLevelFolders.map((folder) => (
@@ -209,15 +213,15 @@ export default function Sidebar({
                       onConfirmCreateFolder(
                         folder.id,
                         folder.name,
-                        folder.parentId
+                        folder.parentId,
                       );
                     }
 
                     if (e.key === "Escape") {
                       onCancelDraftFolder(folder.id);
                       setEditingFolderId(null);
-                      setActiveFolderId(null)
-                      onUpdateDraftFolderName(folder.id, "")
+                      setActiveFolderId(null);
+                      onUpdateDraftFolderName(folder.id, "");
                     }
                   }}
                   onBlur={() => {
@@ -225,7 +229,7 @@ export default function Sidebar({
                       onConfirmCreateFolder(
                         folder.id,
                         folder.name,
-                        folder.parentId
+                        folder.parentId,
                       );
                     } else {
                       onCancelDraftFolder(folder.id);
@@ -256,52 +260,53 @@ export default function Sidebar({
                 onClick={() => setActiveSessionId(session.id)}
                 className={`ml-4 p-2 rounded cursor-pointer
                   ${
-                    activeSessionId === session.id || editingSessionId === session.id
+                    activeSessionId === session.id ||
+                    editingSessionId === session.id
                       ? "bg-accent dark:text-black"
                       : "hover:bg-primary"
                   }
                 `}
               >
-              <MessageSquare className="w-4 h-4 mr-2 shrink-0" />
-              {session.isDraft && editingSessionId === session.id ? (
-                <input
-                  autoFocus
-                  value={editedTitle}
-                  onChange={(e) => setEditedTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && editedTitle.trim()) {
-                      onConfirmCreateSession(
-                        session.id,
-                        editedTitle,
-                        session.folderId
-                      );
-                      setEditedTitle("");
-                    }
+                <MessageSquare className="w-4 h-4 mr-2 shrink-0" />
+                {session.isDraft && editingSessionId === session.id ? (
+                  <input
+                    autoFocus
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && editedTitle.trim()) {
+                        onConfirmCreateSession(
+                          session.id,
+                          editedTitle,
+                          session.folderId,
+                        );
+                        setEditedTitle("");
+                      }
 
-                    if (e.key === "Escape") {
-                      onCancelDraftSession(session.id);
+                      if (e.key === "Escape") {
+                        onCancelDraftSession(session.id);
+                        setEditingSessionId(null);
+                        setActiveSessionId(null);
+                        setEditedTitle("");
+                      }
+                    }}
+                    onBlur={() => {
+                      if (editedTitle.trim()) {
+                        onConfirmCreateSession(
+                          session.id,
+                          editedTitle,
+                          session.folderId,
+                        );
+                      } else {
+                        onCancelDraftSession(session.id);
+                        setActiveSessionId(null);
+                      }
                       setEditingSessionId(null);
-                      setActiveSessionId(null);
                       setEditedTitle("");
-                    }
-                  }}
-                  onBlur={() => {
-                    if (editedTitle.trim()) {
-                      onConfirmCreateSession(
-                        session.id,
-                        editedTitle,
-                        session.folderId
-                      );
-                    } else {
-                      onCancelDraftSession(session.id);
-                      setActiveSessionId(null);
-                    }
-                    setEditingSessionId(null);
-                    setEditedTitle("");
-                  }}
-                  className="w-full bg-transparent border-b border-accent outline-none px-1"
-                  placeholder="Chat name"
-                />
+                    }}
+                    className="w-full bg-transparent border-b border-accent outline-none px-1"
+                    placeholder="Chat name"
+                  />
                 ) : (
                   <span>{session.title}</span>
                 )}
@@ -319,9 +324,11 @@ export default function Sidebar({
           </div>
         ))}
 
-        <div className="mb-2 mt-4 text-gray-500 dark:text-gray-400">
-          <span>Chats</span>
-        </div>
+        {!collapsed && (
+          <div className="mb-2 mt-4 text-gray-500 dark:text-gray-400">
+            <span>Chats</span>
+          </div>
+        )}
 
         {/* Top-Level Sessions */}
         {topLevelSessions.map((session) => (
@@ -336,14 +343,15 @@ export default function Sidebar({
               mb-1 rounded cursor-pointer flex items-center
               ${collapsed ? " hidden" : "p-3"}
               ${
-                activeSessionId === session.id || editingSessionId === session.id
+                activeSessionId === session.id ||
+                editingSessionId === session.id
                   ? "bg-accent dark:text-black"
                   : "hover:bg-primary"
               }
             `}
           >
             <MessageSquare className="w-4 h-4 mr-2 shrink-0" />
-              {session.isDraft && editingSessionId === session.id ? (
+            {session.isDraft && editingSessionId === session.id ? (
               <input
                 autoFocus
                 value={editedTitle}
@@ -353,7 +361,7 @@ export default function Sidebar({
                     onConfirmCreateSession(
                       session.id,
                       editedTitle,
-                      session.folderId
+                      session.folderId,
                     );
                     setEditedTitle("");
                   }
@@ -370,7 +378,7 @@ export default function Sidebar({
                     onConfirmCreateSession(
                       session.id,
                       editedTitle,
-                      session.folderId
+                      session.folderId,
                     );
                   } else {
                     onCancelDraftSession(session.id);
@@ -382,18 +390,18 @@ export default function Sidebar({
                 className="w-full bg-transparent border-b border-accent outline-none px-1"
                 placeholder="Chat name"
               />
-              ) : (
-                <span>{session.title}</span>
-              )}
-              {activeSessionId === session.id && !session.isDraft && (
-                <X
-                  className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
-                  onClick={(e) => {
-                    e.stopPropagation(); // verhindert, dass der Folder selektiert wird
-                    onDeleteSession(session.id);
-                  }}
-                />
-              )}
+            ) : (
+              <span>{session.title}</span>
+            )}
+            {activeSessionId === session.id && !session.isDraft && (
+              <X
+                className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
+                onClick={(e) => {
+                  e.stopPropagation(); // verhindert, dass der Folder selektiert wird
+                  onDeleteSession(session.id);
+                }}
+              />
+            )}
           </div>
         ))}
       </ScrollArea>
