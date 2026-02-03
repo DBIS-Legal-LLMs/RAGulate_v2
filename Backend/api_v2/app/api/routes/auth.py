@@ -18,6 +18,14 @@ class TokenResponse(UserPublic):
     access_token: str
     token_type: str = "bearer"
 
+@router.get("/register/genuser")
+async def generate_username(
+    user_service: UserService = Depends(get_user_service),
+):
+    username = await user_service.generate_unique_username()
+    return username
+
+
 @router.post("/register", response_model=UserPublic)
 async def register(
     user_in: UserCreate,
@@ -57,6 +65,7 @@ async def register(
         preferred_model=user.preferred_model,
         created_at=user.created_at,
     )
+
 
 @router.post("/login")
 async def login(

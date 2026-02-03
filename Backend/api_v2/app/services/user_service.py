@@ -10,6 +10,8 @@ from pymongo.asynchronous.database import AsyncDatabase
 import random
 import string
 from pathlib import Path
+import time
+import asyncio
 
 from ..models.user import UserCreate, UserInDB
 from ..core.security import hash_password, verify_password
@@ -91,7 +93,7 @@ class UserService:
             if username_exists:
                 raise ValueError("USERNAME_EXISTS")
         else:
-            username = await self.generate_unique_username()
+            raise ValueError("USERNAME_EMPTY")
 
         # Passwort prüfen
         pw_errors = validate_password_policy(user_in.password)
@@ -115,12 +117,16 @@ class UserService:
         doc["_id"] = str(result.inserted_id)
         return UserInDB(**doc)
     
-    async def generate_unique_username(self) -> str:
-        for _ in range(100):
+    async def generate_unique_username(self) -> Optional[str]:
+        start = time.monotonic()
+        while True:
             candidate = _generate_random_username_base()
             existing = await self.collection.find_one({"username": candidate})
             if not existing:
                 return candidate
+            if time.monotonic() - start > 15:
+                return None
+            await asyncio.sleep(0.01)
 
     # ----- GET USER -----
     async def get_by_email(self, email: str) -> Optional[UserInDB]:
