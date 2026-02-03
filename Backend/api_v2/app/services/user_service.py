@@ -23,19 +23,19 @@ USERS_COLLECTION = "users"
 def _generate_random_username_base() -> str:
     """
     Erzeugt einen Basis-Username wie 'TopDogReptile8907' (ohne DB-Check).
-    - 0–1 Prefix-Wort
-    - 1–2 Suffix-Wörter
+    - 1 Prefix-Wort
+    - 1–3 Suffix-Wörter
     - 3–5 Ziffern (basierend auf NUMBER_CHARS)
     """
     parts: list[str] = []
     PREFIX_WORDS, SUFFIX_WORDS, NUMBER_CHARS = func.get_username_parts()
 
-    # optionales Prefix
-    if PREFIX_WORDS and random.random() < 0.5:
+    # 1 Prefix
+    if PREFIX_WORDS:
         parts.append(random.choice(PREFIX_WORDS))
 
-    # mindestens 1, höchstens 2 Suffix-Wörter
-    suffix_count = 1 if len(SUFFIX_WORDS) < 2 else random.randint(1, 2)
+    # mindestens 1, höchstens 3 Suffix-Wörter
+    suffix_count = 1 if len(SUFFIX_WORDS) < 3 else random.randint(1, 3)
     for _ in range(suffix_count):
         if SUFFIX_WORDS:
             parts.append(random.choice(SUFFIX_WORDS))
