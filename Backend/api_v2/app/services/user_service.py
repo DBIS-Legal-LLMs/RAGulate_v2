@@ -13,30 +13,12 @@ from pathlib import Path
 import time
 import asyncio
 
+from ..data import func
 from ..models.user import UserCreate, UserInDB
 from ..core.security import hash_password, verify_password
 
 USERS_COLLECTION = "users"
-    
-def _load_wordlist(path: str) -> list[str]:
-    p = Path(path)
-    if not p.exists():
-        return []
-    words: list[str] = []
-    with p.open("r", encoding="utf-8") as f:
-        for line in f:
-            w = line.strip()
-            if w:
-                words.append(w[0].upper() + w[1:])
-    return words
 
-PREFIX_FILE = "../data/username_prefix.txt"
-SUFFIX_FILE = "../data/username_suffix.txt"
-NUMBERS_FILE = "../data/username_numbers.txt"
-
-PREFIX_WORDS = _load_wordlist(PREFIX_FILE)
-SUFFIX_WORDS = _load_wordlist(SUFFIX_FILE)
-NUMBER_CHARS = list(string.digits)
 
 def _generate_random_username_base() -> str:
     """
@@ -46,6 +28,7 @@ def _generate_random_username_base() -> str:
     - 3–5 Ziffern (basierend auf NUMBER_CHARS)
     """
     parts: list[str] = []
+    PREFIX_WORDS, SUFFIX_WORDS, NUMBER_CHARS = func.get_username_parts()
 
     # optionales Prefix
     if PREFIX_WORDS and random.random() < 0.5:
@@ -86,7 +69,7 @@ class UserService:
         if existing:
             raise ValueError("EMAIL_EXISTS")
         
-        # Username prüfen und generieren falls keiner mitgegeben
+        # Username prüfen
         username = user_in.username
         if username:
             username_exists = await self.collection.find_one({"username": username})
