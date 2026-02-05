@@ -39,7 +39,7 @@ class ChatService:
 
     # ----- Sessions -----
 
-    async def create_session(
+    async def create_chat(
             self, 
             user: UserInDB, 
             data: ChatSessionCreate
@@ -65,7 +65,7 @@ class ChatService:
         return ChatSessionInDB(**doc)
     
 
-    async def list_sessions(
+    async def list_chats(
             self, 
             user: UserInDB,
             folder_id: str | None = None
@@ -83,7 +83,7 @@ class ChatService:
         return docs
     
 
-    async def get_session_for_user(
+    async def get_chat_for_user(
             self, 
             user: UserInDB, 
             session_id: str
@@ -98,12 +98,12 @@ class ChatService:
         return ChatSessionInDB(**doc)
     
     
-    async def delete_session(
+    async def delete_chat(
             self, 
             user: UserInDB,
             session_id: str
     ) -> None:
-        session = await self.get_session_for_user(user, session_id)
+        session = await self.get_chat_for_user(user, session_id)
         if not session:
             raise ValueError("Session not found or not owned by user")
         
@@ -116,13 +116,13 @@ class ChatService:
 
     # ----- Messages -----
 
-    async def list_messages_for_session(
+    async def list_messages_in_chat(
             self, 
             user: UserInDB, 
             session_id: str
     ) -> list[MessageInDB]:
         # Ensure session belongs to user
-        session = await self.get_session_for_user(user, session_id)
+        session = await self.get_chat_for_user(user, session_id)
         if not session:
             return []
         
@@ -146,7 +146,7 @@ class ChatService:
             data: MessageCreate,
     ) -> MessageInDB:
         # ensure session exists & belongs to user
-        session = await self.get_session_for_user(user, session_id)
+        session = await self.get_chat_for_user(user, session_id)
         if not session:
             raise ValueError("Session not found or not owned by user")
         
@@ -170,15 +170,15 @@ class ChatService:
         return MessageInDB(**doc)
     
 
-    async def get_session_with_messages(
+    async def get_chat_with_messages(
             self,
             user: UserInDB, 
             session_id: str
     ) -> Optional[ChatSessionWithMessages]:
-        session = await self.get_session_for_user(user, session_id)
+        session = await self.get_chat_for_user(user, session_id)
         if not session:
             return None
-        msgs = await self.list_messages_for_session(user, session_id)
+        msgs = await self.list_messages_in_chat(user, session_id)
 
         session_public = ChatSessionPublic(
             id= session.id,
@@ -218,7 +218,7 @@ class ChatService:
         Speichert die User-Nachricht und antwortet mit der gleichen Nachricht.
         """
         # 1) Session checken
-        session = await self.get_session_for_user(user, session_id)
+        session = await self.get_chat_for_user(user, session_id)
         if not session:
             raise ValueError("Session not found or not owned by user")
         
@@ -275,7 +275,7 @@ class ChatService:
         5. Beide Nachrichten als ChatTurnPublic zurückgeben
         """
         # 1) Session checken
-        session = await self.get_session_for_user(user, session_id)
+        session = await self.get_chat_for_user(user, session_id)
         if not session:
             raise ValueError("Session not found or not owned by user")
         
@@ -294,7 +294,7 @@ class ChatService:
         user_msg = MessageInDB(**user_doc)
 
         # 3) Historie laden (inkl. gerade gespeicherter User-Message)
-        history = await self.list_messages_for_session(user, session_id)
+        history = await self.list_messages_in_chat(user, session_id)
 
         lightrag_history = [
             {"role": m.role, "content": m.content}
