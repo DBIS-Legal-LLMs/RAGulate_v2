@@ -8,36 +8,104 @@ import {
   X,
   PanelLeftOpen,
   PanelLeftClose,
+  Folder,
 } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
 
+interface UIFolder {
+  id: string;
+  name: string;
+  parentId: string | null;
+  depth: number;
+  createdAt: Date;
+  isDraft?: boolean;
+}
+
+interface UISession {
+  id: string;
+  title: string;
+  folderId: string | null;
+  createdAt: Date;
+  isDraft?: boolean;
+}
+
 interface SidebarProps {
-  chatSessions: any[]; // ChatSession[]
-  currentSessionId: string | null;
-  createNewChat: () => void;
-  setCurrentSessionId: (id: string) => void;
-  setMessages: (messages: any[]) => void;
-  deleteChatSession: (id: string) => void;
+  folders: UIFolder[];
+  sessions: UISession[];
+  activeFolderId: string | null;
+  setActiveFolderId: (id: string | null) => void;
+  activeSessionId: string | null;
+  setActiveSessionId: (id: string | null) => void;
   editingSessionId: string | null;
   setEditingSessionId: (id: string | null) => void;
   editedTitle: string;
   setEditedTitle: (title: string) => void;
+  onNewChat: () => void;
+  onNewFolder: () => void;
+  onConfirmCreateFolder: (
+    tempId: string,
+    name: string,
+    parentId: string | null,
+  ) => void;
+  editingFolderId: string | null;
+  setEditingFolderId: (id: string | null) => void;
+  onUpdateDraftFolderName: (id: string, name: string) => void;
+  onCancelDraftFolder: (id: string) => void;
+  onDeleteFolder: (folderId: string) => void;
+  onDeleteSession: (sessionID: string) => void;
+  onConfirmCreateSession: (
+    tempId: string,
+    name: string,
+    parentId: string | null,
+  ) => void;
+  onUpdateDraftSessionName: (id: string, name: string) => void;
+  onCancelDraftSession: (id: string) => void;
 }
 
 export default function Sidebar({
-  chatSessions,
-  currentSessionId,
-  createNewChat,
-  setCurrentSessionId,
-  setMessages,
-  deleteChatSession,
+  folders,
+  sessions,
+  activeFolderId,
+  setActiveFolderId,
+  activeSessionId,
+  setActiveSessionId,
   editingSessionId,
   setEditingSessionId,
   editedTitle,
   setEditedTitle,
+  onNewChat,
+  onNewFolder,
+  editingFolderId,
+  setEditingFolderId,
+  onConfirmCreateFolder,
+  onUpdateDraftFolderName,
+  onCancelDraftFolder,
+  onDeleteFolder,
+  onDeleteSession,
+  onConfirmCreateSession,
+  onUpdateDraftSessionName,
+  onCancelDraftSession,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+
+  const topLevelFolders = folders
+    .filter((f) => f.parentId === null)
+    .sort((a, b) => {
+      if (a.isDraft && !b.isDraft) return -1; // Draft nach unten
+      if (!a.isDraft && b.isDraft) return 1; // Normale nach oben
+      return 0;
+    });
+  const topLevelSessions = sessions
+    .filter((s) => s.folderId === null)
+    .sort((a, b) => {
+      if (a.isDraft && !b.isDraft) return -1; // Draft nach unten
+      if (!a.isDraft && b.isDraft) return 1; // Normale nach oben
+      return 0;
+    });
+
+  const sessionsByFolder = (folderId: string) =>
+    sessions.filter((s) => s.folderId === folderId);
 
   return (
     <div
@@ -77,7 +145,10 @@ export default function Sidebar({
       {!collapsed && (
         <div className="p-4">
           <Button
-            onClick={createNewChat}
+            onClick={() => {
+              setActiveSessionId(null);
+              onNewChat();
+            }}
             className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black "
           >
             <MessageSquare className="w-4 h-4 mr-2" />
@@ -86,87 +157,250 @@ export default function Sidebar({
         </div>
       )}
 
+      {!collapsed && (
+        <div className="px-4 pb-2">
+          <Button
+            onClick={() => {
+              onNewFolder();
+            }}
+            className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black"
+          >
+            <Folder className="w-4 h-4 mr-2" />
+            New Folder
+          </Button>
+        </div>
+      )}
+
       {/* Chat Sessions */}
       <ScrollArea className="flex-1 px-2">
-        {chatSessions.map((session) => (
+        {!collapsed && (
+          <div className="mb-2 mt-4 text-gray-500 dark:text-gray-400">
+            <span>Folders</span>
+          </div>
+        )}
+
+        {/* Folders */}
+        {topLevelFolders.map((folder) => (
+          <div key={folder.id} className="mt-2">
+            {/* Folder Header */}
+            <div
+              onClick={() => {
+                if (folder.isDraft) return;
+                setActiveFolderId(folder.id);
+                setActiveSessionId(null);
+                console.log(folder.id);
+              }}
+              className={`p-3 font-semibold cursor-pointer rounded flex items-center
+                ${collapsed ? " hidden" : "p-3"}
+                ${
+                  activeFolderId === folder.id || editingFolderId === folder.id
+                    ? "bg-accent dark:text-black"
+                    : "hover:bg-primary"
+                }
+              `}
+            >
+              <Folder className="w-4 h-4 mr-2 shrink-0" />
+              {folder.isDraft && editingFolderId === folder.id ? (
+                <input
+                  autoFocus
+                  value={folder.name}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    onUpdateDraftFolderName(folder.id, value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && folder.name.trim()) {
+                      onConfirmCreateFolder(
+                        folder.id,
+                        folder.name,
+                        folder.parentId,
+                      );
+                    }
+
+                    if (e.key === "Escape") {
+                      onCancelDraftFolder(folder.id);
+                      setEditingFolderId(null);
+                      setActiveFolderId(null);
+                      onUpdateDraftFolderName(folder.id, "");
+                    }
+                  }}
+                  onBlur={() => {
+                    if (folder.name.trim()) {
+                      onConfirmCreateFolder(
+                        folder.id,
+                        folder.name,
+                        folder.parentId,
+                      );
+                    } else {
+                      onCancelDraftFolder(folder.id);
+                      setEditingFolderId(null);
+                    }
+                  }}
+                  className="w-full bg-transparent border-b border-accent outline-none px-1"
+                  placeholder="Folder name"
+                />
+              ) : (
+                <span>{folder.name}</span>
+              )}
+              {activeFolderId === folder.id && !folder.isDraft && (
+                <X
+                  className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
+                  onClick={(e) => {
+                    e.stopPropagation(); // verhindert, dass der Folder selektiert wird
+                    onDeleteFolder(folder.id);
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Sessions in Folder */}
+            {sessionsByFolder(folder.id).map((session) => (
+              <div
+                key={session.id}
+                onClick={() => setActiveSessionId(session.id)}
+                className={`ml-4 p-2 rounded cursor-pointer
+                  ${
+                    activeSessionId === session.id ||
+                    editingSessionId === session.id
+                      ? "bg-accent dark:text-black"
+                      : "hover:bg-primary"
+                  }
+                `}
+              >
+                <MessageSquare className="w-4 h-4 mr-2 shrink-0" />
+                {session.isDraft && editingSessionId === session.id ? (
+                  <input
+                    autoFocus
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && editedTitle.trim()) {
+                        onConfirmCreateSession(
+                          session.id,
+                          editedTitle,
+                          session.folderId,
+                        );
+                        setEditedTitle("");
+                      }
+
+                      if (e.key === "Escape") {
+                        onCancelDraftSession(session.id);
+                        setEditingSessionId(null);
+                        setActiveSessionId(null);
+                        setEditedTitle("");
+                      }
+                    }}
+                    onBlur={() => {
+                      if (editedTitle.trim()) {
+                        onConfirmCreateSession(
+                          session.id,
+                          editedTitle,
+                          session.folderId,
+                        );
+                      } else {
+                        onCancelDraftSession(session.id);
+                        setActiveSessionId(null);
+                      }
+                      setEditingSessionId(null);
+                      setEditedTitle("");
+                    }}
+                    className="w-full bg-transparent border-b border-accent outline-none px-1"
+                    placeholder="Chat name"
+                  />
+                ) : (
+                  <span>{session.title}</span>
+                )}
+                {activeSessionId === session.id && !session.isDraft && (
+                  <X
+                    className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
+                    onClick={(e) => {
+                      e.stopPropagation(); // verhindert, dass der Folder selektiert wird
+                      onDeleteSession(session.id);
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+
+        {!collapsed && (
+          <div className="mb-2 mt-4 text-gray-500 dark:text-gray-400">
+            <span>Chats</span>
+          </div>
+        )}
+
+        {/* Top-Level Sessions */}
+        {topLevelSessions.map((session) => (
           <div
             key={session.id}
             onClick={() => {
-              setCurrentSessionId(session.id);
-              setMessages(session.messages);
+              if (session.isDraft) return;
+              setActiveSessionId(session.id);
+              setActiveFolderId(null);
             }}
-            className={`group p-3 mb-2 rounded cursor-pointer flex items-center transition-colors 
-            ${
-              currentSessionId === session.id
-                ? "bg-accent dark:text-black"
-                : "hover:secondary hover:bg-primary"
-            }
+            className={`
+              mb-1 rounded cursor-pointer flex items-center
+              ${collapsed ? " hidden" : "p-3"}
+              ${
+                activeSessionId === session.id ||
+                editingSessionId === session.id
+                  ? "bg-accent dark:text-black"
+                  : "hover:bg-primary"
+              }
             `}
           >
-            {!collapsed ? (
-              <div className="flex-1 min-w-0">
-                {editingSessionId === session.id ? (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      setEditingSessionId(null);
-                    }}
-                  >
-                    <input
-                      className={`text-sm font-medium rounded px-1 w-ful
-                        ${
-                          currentSessionId === session.id
-                            ? "text-black bg-accent"
-                            : "bg-primary"
-                        }
-                        `}
-                      value={editedTitle}
-                      onChange={(e) => setEditedTitle(e.target.value)}
-                      autoFocus
-                      onBlur={() => setEditingSessionId(null)}
-                    />
-                  </form>
-                ) : (
-                  <div
-                    className="text-sm font-medium truncate cursor-pointer"
-                    onClick={(e) => {
-                      // only current session can be edited
-                      if (currentSessionId === session.id) {
-                        e.stopPropagation();
-                        setEditingSessionId(session.id);
-                        setEditedTitle(session.title);
-                      }
-                    }}
-                  >
-                    {session.title}
-                  </div>
-                )}
-
-                <div className="text-xs">
-                  {session.createdAt.toLocaleDateString()}
-                </div>
-              </div>
-            ) : (
-              <MessageSquare className="w-4 h-4 ml-1" />
-            )}
-
-            {/* Delete Button */}
-            {!collapsed && (
-              <button
-                className={`opacity-0 group-hover:opacity-100 ml-2 hover:text-red-500 p-1
-                  ${
-                    currentSessionId === session.id
-                      ? "text-secondary"
-                      : "text-accent"
+            <MessageSquare className="w-4 h-4 mr-2 shrink-0" />
+            {session.isDraft && editingSessionId === session.id ? (
+              <input
+                autoFocus
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && editedTitle.trim()) {
+                    onConfirmCreateSession(
+                      session.id,
+                      editedTitle,
+                      session.folderId,
+                    );
+                    setEditedTitle("");
                   }
-                  `}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteChatSession(session.id);
+
+                  if (e.key === "Escape") {
+                    onCancelDraftSession(session.id);
+                    setEditingSessionId(null);
+                    setActiveSessionId(null);
+                    setEditedTitle("");
+                  }
                 }}
-              >
-                <X className="w-4 h-4" />
-              </button>
+                onBlur={() => {
+                  if (editedTitle.trim()) {
+                    onConfirmCreateSession(
+                      session.id,
+                      editedTitle,
+                      session.folderId,
+                    );
+                  } else {
+                    onCancelDraftSession(session.id);
+                    setActiveSessionId(null);
+                  }
+                  setEditingSessionId(null);
+                  setEditedTitle("");
+                }}
+                className="w-full bg-transparent border-b border-accent outline-none px-1"
+                placeholder="Chat name"
+              />
+            ) : (
+              <span>{session.title}</span>
+            )}
+            {activeSessionId === session.id && !session.isDraft && (
+              <X
+                className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
+                onClick={(e) => {
+                  e.stopPropagation(); // verhindert, dass der Folder selektiert wird
+                  onDeleteSession(session.id);
+                }}
+              />
             )}
           </div>
         ))}

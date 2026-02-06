@@ -88,11 +88,11 @@ export function GraphOverlay({
   /* -------------------- Render -------------------- */
   return (
     <div className="fixed inset-0 z-50 bg-black/40">
-      <div className="absolute left-[2.5vw] top-[2.5vh] h-[95vh] w-[95vw] bg-white dark:bg-gray-900 shadow-xl rounded-lg">
+      <div className="absolute left-[2.5vw] top-[2.5vh] h-[95vh] w-[95vw] bg-sidebar dark:bg-sidebar shadow-xl rounded-lg">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 h-14 border-b">
+        <div className="flex items-center justify-between px-6 h-14">
           <div className="text-xl font-medium">Graph Viewer</div>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} className="dark:hover:text-black">
             Close
           </Button>
         </div>

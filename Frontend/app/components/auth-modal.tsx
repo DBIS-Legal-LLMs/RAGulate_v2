@@ -102,6 +102,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
           });
           const loginData = await loginRes.json();
           if (loginRes.ok) {
+            localStorage.setItem("token", loginData.access_token);
             onLoginSuccess(loginData.sessions, email);
           } else {
             setMode("login");

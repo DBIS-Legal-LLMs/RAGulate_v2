@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Send, MessageSquare, Shield, X } from "lucide-react";
+import { Send, MessageSquare, Shield, X, Folder } from "lucide-react";
 import { ChatMessage } from "./components/chat-message";
 import { ProfileDropdown } from "./components/profile-dropdown";
 import { ProfileModal } from "./components/profile-modal";
@@ -51,25 +51,25 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  timestamp: Date;
+  created_at: Date;
   userName?: string;
 }
 
-/**
- * Represents a chat session with its messages and metadata
- * @interface ChatSession
- * @property {string} id - Unique identifier for the session
- * @property {string} title - Display title for the session
- * @property {Message[]} messages - Array of messages in the session
- * @property {Date} createdAt - Session creation timestamp
- * @property {string} sessionID - Backend reference ID for the session
- */
-interface ChatSession {
+interface UIFolder {
+  id: string;
+  name: string;
+  parentId: string | null;
+  depth: number;
+  createdAt: Date;
+  isDraft?: boolean;
+}
+
+interface UISession {
   id: string;
   title: string;
-  messages: Message[];
+  folderId: string | null;
   createdAt: Date;
-  sessionID: string;
+  isDraft?: boolean;
 }
 
 /**
@@ -83,8 +83,13 @@ export default function GDPRChatbot() {
   const [isLoading, setIsLoading] = useState(false); // Loading state for API calls
 
   // Session management
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]); // All user's chat sessions
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null); // Active session ID
+  const [folders, setFolders] = useState<UIFolder[]>([]);
+  const [sessions, setSessions] = useState<UISession[]>([]);
+
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
 
   // UI References and state
   const messagesEndRef = useRef<HTMLDivElement>(null); // For auto-scrolling
@@ -94,320 +99,28 @@ export default function GDPRChatbot() {
   const [editedTitle, setEditedTitle] = useState<string>(""); // New title for edited session
   const [showAuthModal, setShowAuthModal] = useState(true); // Auth modal visibility
 
-  // User and session state
-  const [userSessions, setUserSessions] = useState<any[]>([]); // Raw session data from backend
   const [username, setUsername] = useState<string>(""); // Current user's username
 
   // Modal and overlay state
   const [showGraph, setShowGraph] = useState(false); // Knowledge graph visibility
   const [showDocuments, setShowDocuments] = useState(false); // Documents modal visibility
 
-  /**
-   * Scrolls the chat window to the most recent message
-   * Used after new messages are added or on viewport changes
-   */
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  /* Helper Functions */
+  const onUpdateDraftFolderName = (id: string, name: string) => {
+    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  /**
-   * Generates a unique session identifier
-   * Combines timestamp and random string for uniqueness
-   * @returns {string} Unique session identifier
-   */
-  const generateSessionID = () => {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const onCancelDraftFolder = (id: string) => {
+    setFolders((prev) => prev.filter((f) => f.id !== id));
   };
 
-  /**
-   * Creates a new chat session and sets it as active
-   * Adds the new session to the beginning of the sessions list
-   * Clears current messages to start fresh conversation
-   */
-  const createNewChat = () => {
-    const newSessionId = generateSessionID();
-    const newSession: ChatSession = {
-      id: Date.now().toString(),
-      title: "New GDPR Consultation",
-      messages: [],
-      createdAt: new Date(),
-      sessionID: newSessionId,
-    };
-    setChatSessions((prev) => [newSession, ...prev]);
-    setCurrentSessionId(newSession.id);
-    setMessages([]);
+  const onUpdateDraftSessionName = (id: string, title: string) => {
+    setSessions((prev) => prev.map((f) => (f.id === id ? { ...f, title } : f)));
   };
 
-  /**
-   * Handles the submission of new chat messages
-   * Sends message to backend API and updates UI with response
-   *
-   * @param {React.FormEvent} e - Form submission event
-   * @returns {Promise<void>}
-   */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input,
-      timestamp: new Date(),
-      userName: username,
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
-
-    try {
-      const currentSession = chatSessions.find(
-        (s) => s.id === currentSessionId
-      );
-
-      const response = await fetch(BACKEND_URL + "/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: input,
-          sessionId: currentSession?.sessionID || "",
-          userName: username,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to send message");
-      }
-
-      const data = await response.json();
-
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: data.answer,
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error("Error sending message:", error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content:
-          "Sorry, I encountered an error processing your request. Please try again.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /**
-   * Deletes a chat session and handles session switching
-   * If deleted session is current, switches to another session or creates new one
-   *
-   * @param {string} sessionId - ID of session to delete
-   *
-   * @example
-   * deleteChatSession("session123")
-   *
-   * @sideEffects
-   * - Updates chatSessions state
-   * - May update currentSessionId and messages
-   * - May create new chat if last session deleted
-   */
-  const deleteChatSession = (sessionId: string) => {
-    setChatSessions((prev) =>
-      prev.filter((session) => session.id !== sessionId)
-    );
-    if (currentSessionId === sessionId) {
-      // If the deleted session is current, switch to another or create new
-      if (chatSessions.length > 1) {
-        const nextSession = chatSessions.find((s) => s.id !== sessionId);
-        if (nextSession) {
-          setCurrentSessionId(nextSession.id);
-          setMessages(nextSession.messages);
-        }
-      } else {
-        createNewChat();
-      }
-    }
-  };
-
-  /**
-   * Ensures initial chat session exists
-   * Creates a new chat session if none exists on first load
-   * Uses ref to prevent multiple creations on re-renders
-   */
-  const hasCreatedChat = useRef(false);
-  useEffect(() => {
-    if (!hasCreatedChat.current && chatSessions.length === 0) {
-      createNewChat();
-      hasCreatedChat.current = true;
-    }
-  }, []);
-
-  /**
-   * Monitors current session changes and logs session ID
-   * Useful for debugging session switching and management
-   */
-  useEffect(() => {
-    if (currentSessionId) {
-      const session = chatSessions.find((s) => s.id === currentSessionId);
-      if (session) {
-        console.log("Current sessionID:", session.sessionID);
-      }
-    }
-  }, [chatSessions, currentSessionId]);
-
-  /**
-   * Loads user's chat sessions on initial page load
-   * Fetches all sessions and their details when user is authenticated
-   * Sets the most recent session as active
-   */
-  useEffect(() => {
-    const loadInitialSessions = async () => {
-      if (username) {
-        const userSessions = await fetchSessions(username);
-        if (userSessions.sessions.length > 0) {
-          const sessionsWithDetails = await Promise.all(
-            userSessions.sessions.map(async (sessionId: string) => {
-              const details = await fetchSessionDetails(sessionId);
-              console.log("Session details for", sessionId, ":", details);
-              return {
-                id: sessionId,
-                title: "GDPR Consultation", // Default title #TODO: not default name handling also needs to be sent to backend for saving of names
-                messages: details ? details.map(transformMessage) : [],
-                createdAt: new Date(),
-                sessionID: sessionId,
-              };
-            })
-          );
-
-          setChatSessions(sessionsWithDetails);
-
-          // Set the most recent session as current
-          if (sessionsWithDetails.length > 0) {
-            var lastIndex = sessionsWithDetails.length - 1;
-            setCurrentSessionId(sessionsWithDetails[lastIndex].id);
-            setMessages(sessionsWithDetails[lastIndex].messages || []);
-          }
-        }
-      }
-    };
-
-    loadInitialSessions();
-  }, [username]);
-
-  /**
-   * Retrieves all chat sessions for a given user from the backend
-   *
-   * @param {string} username - Username to fetch sessions for
-   * @returns {Promise<{sessions: string[]}>} Array of session IDs
-   *
-   * @throws Will return empty array on fetch failure
-   * @example
-   * const sessions = await fetchSessions("john_doe");
-   * // returns { sessions: ["session1", "session2"] }
-   */
-  const fetchSessions = async (username: string) => {
-    try {
-      const url = `${BACKEND_URL}/api/chat/sessions`;
-      const token = localStorage.getItem("token");
-
-      if (!token) throw new Error("User not logged in");
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`, // Token im Header
-        },
-      });
-      if (!response.ok) throw new Error("Failed to fetch sessions");
-
-      const data = await response.json();
-      return { sessions: data.sessions || [] };
-    } catch (error) {
-      console.error("Error fetching sessions:", error);
-      return { sessions: [] };
-    }
-  };
-
-  /**
-   * Fetches detailed information for a specific chat session
-   * Including all messages and metadata
-   *
-   * @param {string} sessionId - ID of the session to fetch
-   * @returns {Promise<any>} Session details including messages
-   *
-   * @throws Will return null on fetch failure
-   * @example
-   * const details = await fetchSessionDetails("session123");
-   * // returns array of messages with content and metadata
-   */
-  const fetchSessionDetails = async (sessionId: string) => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/sessions/${sessionId}`);
-      if (!response.ok) throw new Error("Failed to fetch session details");
-      const sessionDetails = await response.json();
-      return sessionDetails;
-    } catch (error) {
-      console.error("Error fetching session details:", error);
-      return null;
-    }
-  };
-
-  /**
-   * Handles successful user login
-   * Loads user's existing chat sessions and sets up the interface
-   *
-   * @param {any} sessions - Initial sessions data from auth
-   * @param {string} usernameFromAuth - Authenticated username
-   *
-   * @example
-   * handleLoginSuccess(userSessions, "john_doe")
-   */
-  const handleLoginSuccess = async (
-    sessions: any,
-    usernameFromAuth: string
-  ) => {
-    setUsername(usernameFromAuth);
-    setShowAuthModal(false);
-
-    const userSessionsraw = await fetchSessions(usernameFromAuth);
-    const userSessions = userSessionsraw?.sessions || [];
-    if (userSessions.length > 0) {
-      const sessionsWithDetails = await Promise.all(
-        userSessions.map(async (sessionId: string) => {
-          const details = await fetchSessionDetails(sessionId);
-          return {
-            id: sessionId,
-            title: "GDPR Consultation",
-            messages: details ? details.map(transformMessage) : [],
-            createdAt: new Date(),
-            sessionID: sessionId,
-          };
-        })
-      );
-
-      setChatSessions(sessionsWithDetails);
-
-      if (sessionsWithDetails.length > 0) {
-        setCurrentSessionId(sessionsWithDetails[0].id);
-        setMessages(sessionsWithDetails[0].messages || []);
-      }
-    }
-  };
+  const onCancelDraftSession = (id: string) => {
+    setSessions((prev) => prev.filter((f) => f.id !== id))
+  }
 
   /**
    * Transforms a raw message object from the API into the frontend Message format
@@ -426,12 +139,431 @@ export default function GDPRChatbot() {
    */
   const transformMessage = (msg: any): Message => {
     return {
-      id: msg._id || Date.now().toString(),
+      id: msg.id || Date.now().toString(),
       role: msg.role as "user" | "assistant",
       content: msg.content,
-      timestamp: new Date(msg.timestamp),
+      created_at: new Date(msg.created_at),
       userName: msg.user_name,
     };
+  };
+
+  /**
+   * Scrolls the chat window to the most recent message
+   * Used after new messages are added or on viewport changes
+   */
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  /**
+   * Adds delay, used to give delay for echo chat
+   * @param ms time in ms
+   */
+  function delay(ms: number) {
+    return new Promise( resolve => setTimeout(resolve, ms) );
+  }
+
+  /**
+   * Load Messages from Backend
+   */
+  useEffect(() => {
+    if (!activeSessionId) {
+      setMessages([])
+      return;
+    } 
+
+    const loadMessages = async () => {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${BACKEND_URL}/api/chat/sessions/${activeSessionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const data = await res.json();
+      console.log(data.messages);
+
+      setMessages((data.messages || []).map(transformMessage));
+    };
+    loadMessages();
+  }, [activeSessionId]);
+
+  /**
+   * Handles the submission of new chat messages
+   * Sends message to backend API and updates UI with response
+   *
+   * @param {React.FormEvent} e - Form submission event
+   * @returns {Promise<void>}
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || !activeSessionId) return;
+
+    const token = localStorage.getItem("token");
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: input,
+      created_at: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/chat/sessions/${activeSessionId}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            content: input,
+          }),
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to send message");
+      const data = await res.json();
+      await delay(1000);
+
+      if (data.assistant_message.id) {
+        const assistantMessage: Message = {
+          id: data.assistant_message.id,
+          role: data.assistant_message.role as "assistant",
+          content: data.assistant_message.content,
+          created_at: new Date(data.assistant_message.created_at),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      const errorMessage: Message = {
+        id: Date.now().toString() + "-error",
+        role: "assistant",
+        content:
+          "Sorry, ich konnte deine Nachricht nicht senden. Bitte versuche es erneut.",
+        created_at: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Fetch Folders from Backend
+   */
+  const fetchFolders = async () => {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${BACKEND_URL}/api/folderslist`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) throw new Error("Failed to fetch folders");
+    return res.json();
+  };
+
+  /**
+   * Retrieves all chat sessions for a given user from the backend
+   */
+  const fetchSessions = async () => {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${BACKEND_URL}/api/chat/sessions`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    return res.ok ? res.json() : [];
+  };
+
+  /**
+   * Creates new Draft Session, this is only used for Frontend, is confirmed later
+   */
+  const createNewSession = () => {
+    const tempId = `draft-${Date.now()}`
+
+    const draftSession: UISession = {
+      id: tempId,
+      title: "",
+      folderId: activeFolderId ?? null,
+      createdAt: new Date(),
+      isDraft: true,
+    }
+
+    setSessions((prev) => [draftSession,...prev])
+    setEditingSessionId(tempId)
+  }
+
+  /**
+   * Confirms the Session, sends a POST reuqest to the Backend to fully create the Session
+   * @param tempId ID from Draft Session
+   * @param name title of the Session
+   * @param parentId which folder it belongs to
+   */
+  const confirmCreateSession = async (
+    tempId: string,
+    name:string,
+    parentId: string | null
+  ) => {
+    console.log(name)
+    console.log(parentId)
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${BACKEND_URL}/api/chat/sessions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title: name,
+        folder_id: parentId
+      }),
+    });
+
+    if (!res.ok) {
+      onCancelDraftSession;
+      setSessions((prev) => prev.filter((f) => f.id !== tempId));
+      setEditingSessionId(null);
+      alert("Folder konnte nicht erstellt werden (Name evtl. schon vergeben)");
+      return;
+    }
+
+    const session = await res.json();
+
+    setSessions((prev) => {
+      const withoutDraft = prev.filter((s) => s.id !== tempId);
+
+      const confirmedSession: UISession = {
+        id: session.id,
+        title: session.title,
+        folderId: session.folder_id ?? null,
+        createdAt: new Date(session.created_at ?? Date.now()),
+        isDraft: false,
+      };
+
+      return [confirmedSession,...withoutDraft];
+    });
+
+    setEditingSessionId(null);
+    setActiveSessionId(session.id);
+  }
+
+  /**
+   * Create new Draft Folder, this is only used for Frontend, is confirmed later
+   */
+  const createNewFolder = () => {
+    const tempId = `draft-${Date.now()}`;
+
+    const draftFolder: UIFolder = {
+      id: tempId,
+      name: "",
+      parentId: activeFolderId ?? null,
+      depth: 0,
+      createdAt: new Date(),
+      isDraft: true,
+    };
+
+    setFolders((prev) => [draftFolder,...prev]);
+    setEditingFolderId(tempId);
+    setActiveSessionId(null);
+  };
+
+  /**
+   * Confirms the Folder, sends a POST reuqest to the Backend to fully create the Folder
+   * @param tempId ID from Draft Folder
+   * @param name name of Folder
+   * @param parentId which folder it belongs to, none for root folder
+   */
+  const confirmCreateFolder = async (
+    tempId: string,
+    name: string,
+    parentId: string | null
+  ) => {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${BACKEND_URL}/api/folders`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        name,
+        parent_id: parentId,
+      }),
+    });
+
+    if (!res.ok) {
+      onCancelDraftFolder;
+      setFolders((prev) => prev.filter((f) => f.id !== tempId));
+      setEditingFolderId(null);
+      setEditingFolderId(null);
+      alert("Folder konnte nicht erstellt werden (Name evtl. schon vergeben)");
+      return;
+    }
+
+    const folder = await res.json();
+
+    setFolders((prev) =>
+      prev.map((f) =>
+        f.id === tempId
+          ? {
+              ...f, 
+              id: folder.id, 
+              name: folder.name,
+              parentId: folder.parent_id,
+              isDraft: false,
+            }
+          : f
+      )
+    );
+
+    setEditingFolderId(null);
+    setActiveFolderId(folder.id);
+  };
+
+  /**
+   * Deleted Folder from Backend
+   * @param folderId ID of folder
+   */
+  const deleteFolder = async (folderId: string) => {
+    const token = localStorage.getItem("token");
+
+    if (!confirm("Willst du diesen Ordner wirklich löschen?")) return;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/folders/${folderId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        alert(
+          "Ordner konnte nicht gelöscht werden, evtl. ist Ordner nicht leer"
+        );
+        return;
+      }
+
+      // Folder aus State entfernen
+      setFolders((prev) => prev.filter((f) => f.id !== folderId));
+
+      // Falls dieser Ordner aktiv war → ActiveFolderId zurücksetzen
+      if (activeFolderId === folderId) setActiveFolderId(null);
+    } catch (error) {
+      console.error(error);
+      alert("Fehler beim Löschen des Ordners");
+    }
+  };
+
+  /**
+   * Delets Session from Backend
+   * @param sessionID Id from Session
+   */
+  const deleteSession = async (sessionID: string) => {
+    const token = localStorage.getItem("token");
+
+    if(!confirm("Willst du diesen Chat wirklich löschen?")) return;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/chat/sessions/${sessionID}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
+
+      if (!res.ok) {
+        alert(
+          "Chat konnte nicht gelöscht werden."
+        );
+        return;
+      }
+      // remove Chat from State
+      setSessions((prev) => prev.filter((f) => f.id !== sessionID));
+
+      if (activeSessionId === sessionID) setActiveSessionId(null)
+    } catch (error) {
+      console.error(error);
+      alert("Fehler beim Löschen des Chats")
+    }
+  }
+
+  /**
+   * Loads Sidebar content. Contains Sessions and Folders
+   */
+  useEffect(() => {
+    const loadSidebarData = async () => {
+      if (!username) return;
+
+      /* 1. Folder */
+      const rawFolders = await fetchFolders();
+      console.log(rawFolders);
+      const uiFolders: UIFolder[] = rawFolders.map((f: any) => ({
+        id: f.id,
+        name: f.name,
+        parentId: f.parent_id,
+        depth: f.depth,
+        createdAt: new Date(f.created_at),
+      }));
+
+      /* 2. Sessions */
+      const rawSessions = await fetchSessions();
+      console.log(rawSessions);
+      const uiSessions: UISession[] = rawSessions.map((s: any) => ({
+        id: s.id,
+        title: s.title,
+        folderId: s.folder_id,
+        createdAt: new Date(s.created_at),
+      }));
+
+      setFolders(uiFolders);
+      setSessions(uiSessions);
+    };
+
+    loadSidebarData();
+  }, [username]);
+
+  /**
+   * Handles successful user login
+   * Loads user's existing chat sessions and sets up the interface
+   *
+   * @param {any} sessions - Initial sessions data from auth
+   * @param {string} usernameFromAuth - Authenticated username
+   *
+   * @example
+   * handleLoginSuccess(userSessions, "john_doe")
+   */
+  const handleLoginSuccess = async (
+    _sessions: any,
+    usernameFromAuth: string
+  ) => {
+    // RESET OLD USER STATE
+    setFolders([]);
+    setSessions([]);
+    setMessages([]);
+    setActiveFolderId(null);
+    setActiveSessionId(null);
+    setEditingFolderId(null);
+    setEditingSessionId(null);
+    setEditedTitle("");
+
+    setUsername(usernameFromAuth);
+    setShowAuthModal(false);
   };
 
   return (
@@ -456,16 +588,28 @@ export default function GDPRChatbot() {
           - Assistant info footer
         */}
           <Sidebar
-            chatSessions={chatSessions}
-            currentSessionId={currentSessionId}
-            createNewChat={createNewChat}
-            setCurrentSessionId={setCurrentSessionId}
-            setMessages={setMessages}
-            deleteChatSession={deleteChatSession}
+            folders={folders}
+            sessions={sessions}
+            activeFolderId={activeFolderId}
+            setActiveFolderId={setActiveFolderId}
+            activeSessionId={activeSessionId}
+            setActiveSessionId={setActiveSessionId}
             editingSessionId={editingSessionId}
             setEditingSessionId={setEditingSessionId}
             editedTitle={editedTitle}
             setEditedTitle={setEditedTitle}
+            onNewChat={createNewSession}
+            onNewFolder={createNewFolder}
+            editingFolderId={editingFolderId}
+            setEditingFolderId={setEditingFolderId}
+            onConfirmCreateFolder={confirmCreateFolder}
+            onUpdateDraftFolderName={onUpdateDraftFolderName}
+            onCancelDraftFolder={onCancelDraftFolder}
+            onDeleteFolder={deleteFolder}
+            onConfirmCreateSession={confirmCreateSession}
+            onCancelDraftSession={onCancelDraftSession}
+            onUpdateDraftSessionName={onUpdateDraftSessionName}
+            onDeleteSession={deleteSession}
           />
 
           {/* 
@@ -497,12 +641,15 @@ export default function GDPRChatbot() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" onClick={() => setShowGraph(true)}>
-                  Graph
-                </Button>
-                <Button variant="outline" onClick={() => setShowDocuments(true)}>
-                  Documents
-                </Button>
+                  <Button variant="ghost" className="hover:bg-accent hover:text-black" onClick={() => setShowGraph(true)}>
+                    Graph
+                  </Button>
+                  <Button
+                    variant="ghost" className="hover:bg-accent hover:text-black"
+                    onClick={() => setShowDocuments(true)}
+                  >
+                    Documents
+                  </Button>
                   <ProfileDropdown
                     username={username}
                     onProfileClick={() => setShowProfileModal(true)}
@@ -533,6 +680,28 @@ export default function GDPRChatbot() {
                       I'm here to help you understand and comply with GDPR
                       regulations.
                     </p>
+                  </div>
+                )}
+
+                {(!activeSessionId || editingSessionId) && (
+                  <div className="flex justify-center">
+                    <div className="p-4 flex flex-col items-center gap-3 w-full max-w-xs" >
+                      <Button 
+                        onClick={createNewSession}
+                        className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black " 
+                      >
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        New Chat
+                      </Button>
+
+                      <Button
+                        onClick={createNewFolder}
+                        className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black"
+                      >
+                        <Folder className="w-4 h-4 mr-2" />
+                        New Folder
+                      </Button>
+                    </div>
                   </div>
                 )}
 
@@ -570,6 +739,7 @@ export default function GDPRChatbot() {
             - Responsive layout with max width
             - Submit handling with error prevention
           */}
+          {activeSessionId && !editingSessionId &&(
             <div className="bg-chat p-4">
               <div className="max-w-4xl mx-auto mb-5">
                 <form onSubmit={handleSubmit} className="flex items-end">
@@ -604,6 +774,8 @@ export default function GDPRChatbot() {
                 </p>
               </div>
             </div>
+          )}
+
           </div>
 
           {showProfileModal && (
