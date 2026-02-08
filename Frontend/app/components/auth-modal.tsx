@@ -1,4 +1,4 @@
-import React, { useEffect,useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FocusScope } from "@radix-ui/react-focus-scope";
 
 const BACKEND_URL = "http://134.60.71.197:8000";
@@ -113,7 +113,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
           } else {
             setMode("login");
             setServerError(
-              "Registration successful, but login failed. Please try logging in."
+              "Registration successful, but login failed. Please try logging in.",
             );
           }
         } else {
@@ -165,15 +165,12 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
 
   const fetchGeneratedUsername = async () => {
     try {
-      const res = await fetch(
-        BACKEND_URL + "/api/auth/register/genuser",
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
+      const res = await fetch(BACKEND_URL + "/api/auth/register/genuser", {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      });
 
       if (!res.ok) {
         throw new Error("Failed to generate username");
@@ -201,11 +198,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
               autoFocus
               tabIndex={0}
               type="text"
-              placeholder={
-                mode === "login"
-                  ? "Email or Username"
-                  : "Email"
-              }
+              placeholder={mode === "login" ? "Email or Username" : "Email"}
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
@@ -293,8 +286,8 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
               {loading
                 ? "Processing..."
                 : mode === "login"
-                ? "Login"
-                : "Register"}
+                  ? "Login"
+                  : "Register"}
             </button>
           </form>
           {/* Server Error */}
