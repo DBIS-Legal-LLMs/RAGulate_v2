@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect,useState } from "react";
 import { FocusScope } from "@radix-ui/react-focus-scope";
 
 const BACKEND_URL = "http://134.60.71.197:8000";
@@ -17,6 +17,12 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
   const [passwordError, setPasswordError] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (mode === "register" && !username) {
+      fetchGeneratedUsername();
+    }
+  }, [mode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,9 +75,9 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
         const data = await res.json();
         if (res.ok) {
           localStorage.setItem("token", data.access_token);
-          onLoginSuccess(data.sessions, email);
+          onLoginSuccess(data.sessions, data.user.username);
         } else {
-          setServerError(data.error || "Login failed");
+          setServerError(data.detail || "Login failed");
         }
       } else {
         const res = await fetch(BACKEND_URL + "/api/auth/register", {
@@ -82,7 +88,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
           },
           body: JSON.stringify({
             email: email,
-            full_name: username,
+            username: username,
             password: password,
           }),
         });
@@ -103,7 +109,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
           const loginData = await loginRes.json();
           if (loginRes.ok) {
             localStorage.setItem("token", loginData.access_token);
-            onLoginSuccess(loginData.sessions, email);
+            onLoginSuccess(loginData.sessions, data.user.username);
           } else {
             setMode("login");
             setServerError(
@@ -111,7 +117,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
             );
           }
         } else {
-          setServerError(data.error || "Registration failed");
+          setServerError(data.detail || "Registration failed");
         }
       }
     } catch (err) {
@@ -157,6 +163,31 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
     </li>
   );
 
+  const fetchGeneratedUsername = async () => {
+    try {
+      const res = await fetch(
+        BACKEND_URL + "/api/auth/register/genuser",
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error("Failed to generate username");
+      }
+
+      const generatedUsername = await res.text();
+      const cleanedUsername = generatedUsername.replace(/"/g, "");
+      setUsername(cleanedUsername);
+    } catch (err) {
+      console.error(err);
+      setServerError("Could not generate username");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <FocusScope trapped>
@@ -170,7 +201,11 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
               autoFocus
               tabIndex={0}
               type="text"
-              placeholder="Email"
+              placeholder={
+                mode === "login"
+                  ? "Email or Username"
+                  : "Email"
+              }
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
@@ -282,6 +317,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
                     setEmailError(false);
                     setPasswordError(false);
                     setUsernameError(false);
+                    // fetchGeneratedUsername();
                   }}
                   type="button"
                 >
