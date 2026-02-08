@@ -97,7 +97,7 @@ export default function GDPRChatbot() {
   const [showSettingsModal, setShowSettingsModal] = useState(false); // Settings modal visibility
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null); // Session being edited
   const [editedTitle, setEditedTitle] = useState<string>(""); // New title for edited session
-  const [showAuthModal, setShowAuthModal] = useState(true); // Auth modal visibility
+  const [showAuthModal, setShowAuthModal] = useState(false); // Auth modal visibility
 
   const [username, setUsername] = useState<string>(""); // Current user's username
 
@@ -166,6 +166,41 @@ export default function GDPRChatbot() {
   function delay(ms: number) {
     return new Promise( resolve => setTimeout(resolve, ms) );
   }
+
+  /**
+   * Checks if token is valid and sets wheather login window appears
+   */
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem("token");
+      console.log(token)
+      if (!token) {
+        setShowAuthModal(true);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) throw new Error("Token invalid");
+
+        const data = await res.json();
+
+        // token valid
+        // setUsername(data.username);
+        setShowAuthModal(false);
+      } catch (err) {
+        // Token expired or invalid
+        localStorage.removeItem("token");
+        setShowAuthModal(true);
+      }
+    };
+    checkAuth();
+  }, []);
 
   /**
    * Load Messages from Backend
