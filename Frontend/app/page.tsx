@@ -753,13 +753,21 @@ export default function GDPRChatbot() {
                       )}
                     </div>
 
-                    <div className="flex justify-center pt-4">
+                    <div className="p-4 flex flex-col items-center justify-center gap-3 w-full max-w-xs mx-auto">
                       <Button
                         onClick={createNewSession}
-                        className="bg-sidebar hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black dark:bg-primary dark:hover:bg-accent"
+                        className="w-full bg-sidebar hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black dark:bg-primary dark:hover:bg-accent"
                       >
                         <MessageSquare className="w-4 h-4 mr-2" />
-                        Create Chat
+                        New Chat
+                      </Button>
+
+                      <Button
+                        onClick={createNewFolder}
+                        className="w-full bg-sidebar hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black dark:bg-primary dark:hover:bg-accent"
+                      >
+                        <Folder className="w-4 h-4 mr-2" />
+                        New Folder
                       </Button>
                     </div>
                   </>
