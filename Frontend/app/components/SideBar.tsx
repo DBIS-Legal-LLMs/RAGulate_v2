@@ -332,9 +332,8 @@ export default function Sidebar({
                 onClick={() => setActiveFolderId(folder.id)}
                 className={`ml-4 p-2 rounded cursor-pointer flex mt-1
                   ${
-                    activeFolderId === folder.id ||
-                    editingFolderId === folder.id
-                      ? "bg-none"
+                    activeFolderId === folder.id
+                      ? "bg-accent text-black"
                       : "hover:bg-primary"
                   }
                 `}
