@@ -87,7 +87,7 @@ async def delete_folder(
     chat_service: ChatService = Depends(get_chat_service)
 ):
     try:
-        await folder_service.delete_folder(owner_id=current_user.id, folder_id=folder_id, chat_service=chat_service)
+        await folder_service.delete_folder(owner_id=current_user.id, folder_id=folder_id)
         return {"status": "ok"}
     except ValueError as e:
         code = str(e)
