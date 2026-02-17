@@ -107,6 +107,9 @@ export default function Sidebar({
   const sessionsByFolder = (folderId: string) =>
     sessions.filter((s) => s.folderId === folderId);
 
+  const foldersByFolder = (folderId: string) =>
+    folders.filter((s) => s.parentId === folderId);
+
   return (
     <div
       className={`bg-sidebar flex flex-col transition-all duration-300 
@@ -258,16 +261,16 @@ export default function Sidebar({
               <div
                 key={session.id}
                 onClick={() => setActiveSessionId(session.id)}
-                className={`ml-4 p-2 rounded cursor-pointer
+                className={`ml-4 p-2 rounded cursor-pointer flex mt-1
                   ${
                     activeSessionId === session.id ||
                     editingSessionId === session.id
-                      ? "bg-accent dark:text-black"
+                      ? "bg-none"
                       : "hover:bg-primary"
                   }
                 `}
               >
-                <MessageSquare className="w-4 h-4 mr-2 shrink-0" />
+                <MessageSquare className="w-4 h-4 mr-2 shrink-0 mt-1" />
                 {session.isDraft && editingSessionId === session.id ? (
                   <input
                     autoFocus
@@ -316,6 +319,74 @@ export default function Sidebar({
                     onClick={(e) => {
                       e.stopPropagation(); // verhindert, dass der Folder selektiert wird
                       onDeleteSession(session.id);
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+
+            {/* Folders in Folder */}
+            {foldersByFolder(folder.id).map((folder) => (
+              <div
+                key={folder.id}
+                onClick={() => setActiveFolderId(folder.id)}
+                className={`ml-4 p-2 rounded cursor-pointer flex mt-1
+                  ${
+                    activeFolderId === folder.id
+                      ? "bg-accent text-black"
+                      : "hover:bg-primary"
+                  }
+                `}
+              >
+                <Folder className="w-4 h-4 mr-2 shrink-0 mt-1" />
+                {folder.isDraft && editingFolderId === folder.id ? (
+                  <input
+                    autoFocus
+                    value={folder.name}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      onUpdateDraftFolderName(folder.id, value);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && folder.name.trim()) {
+                        onConfirmCreateFolder(
+                          folder.id,
+                          folder.name,
+                          folder.parentId,
+                        );
+                      }
+
+                      if (e.key === "Escape") {
+                        onCancelDraftFolder(folder.id);
+                        setEditingFolderId(null);
+                        setActiveFolderId(null);
+                        onUpdateDraftFolderName(folder.id, "");
+                      }
+                    }}
+                    onBlur={() => {
+                      if (folder.name.trim()) {
+                        onConfirmCreateFolder(
+                          folder.id,
+                          folder.name,
+                          folder.parentId,
+                        );
+                      } else {
+                        onCancelDraftFolder(folder.id);
+                        setEditingFolderId(null);
+                      }
+                    }}
+                    className="w-full bg-transparent border-b border-accent outline-none px-1"
+                    placeholder="Folder name"
+                  />
+                ) : (
+                  <span>{folder.name}</span>
+                )}
+                {activeFolderId === folder.id && !folder.isDraft && (
+                  <X
+                    className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2 mt-1"
+                    onClick={(e) => {
+                      e.stopPropagation(); // verhindert, dass der Folder selektiert wird
+                      onDeleteFolder(folder.id);
                     }}
                   />
                 )}

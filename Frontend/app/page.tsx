@@ -91,6 +91,8 @@ export default function GDPRChatbot() {
 
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
 
+  const [isSessionLoading, setIsSessionLoading] = useState(false);
+
   // UI References and state
   const messagesEndRef = useRef<HTMLDivElement>(null); // For auto-scrolling
   const [showProfileModal, setShowProfileModal] = useState(false); // Profile modal visibility
@@ -119,8 +121,8 @@ export default function GDPRChatbot() {
   };
 
   const onCancelDraftSession = (id: string) => {
-    setSessions((prev) => prev.filter((f) => f.id !== id))
-  }
+    setSessions((prev) => prev.filter((f) => f.id !== id));
+  };
 
   /**
    * Transforms a raw message object from the API into the frontend Message format
@@ -164,7 +166,7 @@ export default function GDPRChatbot() {
    * @param ms time in ms
    */
   function delay(ms: number) {
-    return new Promise( resolve => setTimeout(resolve, ms) );
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -172,11 +174,12 @@ export default function GDPRChatbot() {
    */
   useEffect(() => {
     if (!activeSessionId) {
-      setMessages([])
+      setMessages([]);
       return;
-    } 
+    }
 
     const loadMessages = async () => {
+      setIsSessionLoading(true);
       const token = localStorage.getItem("token");
       const res = await fetch(
         `${BACKEND_URL}/api/chat/sessions/${activeSessionId}`,
@@ -184,12 +187,13 @@ export default function GDPRChatbot() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
       const data = await res.json();
       console.log(data.messages);
 
       setMessages((data.messages || []).map(transformMessage));
+      setIsSessionLoading(false);
     };
     loadMessages();
   }, [activeSessionId]);
@@ -230,7 +234,7 @@ export default function GDPRChatbot() {
           body: JSON.stringify({
             content: input,
           }),
-        }
+        },
       );
 
       if (!res.ok) throw new Error("Failed to send message");
@@ -293,7 +297,7 @@ export default function GDPRChatbot() {
    * Creates new Draft Session, this is only used for Frontend, is confirmed later
    */
   const createNewSession = () => {
-    const tempId = `draft-${Date.now()}`
+    const tempId = `draft-${Date.now()}`;
 
     const draftSession: UISession = {
       id: tempId,
@@ -301,11 +305,11 @@ export default function GDPRChatbot() {
       folderId: activeFolderId ?? null,
       createdAt: new Date(),
       isDraft: true,
-    }
+    };
 
-    setSessions((prev) => [draftSession,...prev])
-    setEditingSessionId(tempId)
-  }
+    setSessions((prev) => [draftSession, ...prev]);
+    setEditingSessionId(tempId);
+  };
 
   /**
    * Confirms the Session, sends a POST reuqest to the Backend to fully create the Session
@@ -315,11 +319,11 @@ export default function GDPRChatbot() {
    */
   const confirmCreateSession = async (
     tempId: string,
-    name:string,
-    parentId: string | null
+    name: string,
+    parentId: string | null,
   ) => {
-    console.log(name)
-    console.log(parentId)
+    console.log(name);
+    console.log(parentId);
     const token = localStorage.getItem("token");
     const res = await fetch(`${BACKEND_URL}/api/chat/sessions`, {
       method: "POST",
@@ -329,7 +333,7 @@ export default function GDPRChatbot() {
       },
       body: JSON.stringify({
         title: name,
-        folder_id: parentId
+        folder_id: parentId,
       }),
     });
 
@@ -354,12 +358,12 @@ export default function GDPRChatbot() {
         isDraft: false,
       };
 
-      return [confirmedSession,...withoutDraft];
+      return [confirmedSession, ...withoutDraft];
     });
 
     setEditingSessionId(null);
     setActiveSessionId(session.id);
-  }
+  };
 
   /**
    * Create new Draft Folder, this is only used for Frontend, is confirmed later
@@ -376,7 +380,7 @@ export default function GDPRChatbot() {
       isDraft: true,
     };
 
-    setFolders((prev) => [draftFolder,...prev]);
+    setFolders((prev) => [draftFolder, ...prev]);
     setEditingFolderId(tempId);
     setActiveSessionId(null);
   };
@@ -390,7 +394,7 @@ export default function GDPRChatbot() {
   const confirmCreateFolder = async (
     tempId: string,
     name: string,
-    parentId: string | null
+    parentId: string | null,
   ) => {
     const token = localStorage.getItem("token");
 
@@ -421,14 +425,14 @@ export default function GDPRChatbot() {
       prev.map((f) =>
         f.id === tempId
           ? {
-              ...f, 
-              id: folder.id, 
+              ...f,
+              id: folder.id,
               name: folder.name,
               parentId: folder.parent_id,
               isDraft: false,
             }
-          : f
-      )
+          : f,
+      ),
     );
 
     setEditingFolderId(null);
@@ -454,7 +458,7 @@ export default function GDPRChatbot() {
 
       if (!res.ok) {
         alert(
-          "Ordner konnte nicht gelöscht werden, evtl. ist Ordner nicht leer"
+          "Ordner konnte nicht gelöscht werden, evtl. ist Ordner nicht leer",
         );
         return;
       }
@@ -477,31 +481,29 @@ export default function GDPRChatbot() {
   const deleteSession = async (sessionID: string) => {
     const token = localStorage.getItem("token");
 
-    if(!confirm("Willst du diesen Chat wirklich löschen?")) return;
+    if (!confirm("Willst du diesen Chat wirklich löschen?")) return;
 
     try {
       const res = await fetch(`${BACKEND_URL}/api/chat/sessions/${sessionID}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
-        }
+        },
       });
 
       if (!res.ok) {
-        alert(
-          "Chat konnte nicht gelöscht werden."
-        );
+        alert("Chat konnte nicht gelöscht werden.");
         return;
       }
       // remove Chat from State
       setSessions((prev) => prev.filter((f) => f.id !== sessionID));
 
-      if (activeSessionId === sessionID) setActiveSessionId(null)
+      if (activeSessionId === sessionID) setActiveSessionId(null);
     } catch (error) {
       console.error(error);
-      alert("Fehler beim Löschen des Chats")
+      alert("Fehler beim Löschen des Chats");
     }
-  }
+  };
 
   /**
    * Loads Sidebar content. Contains Sessions and Folders
@@ -550,7 +552,7 @@ export default function GDPRChatbot() {
    */
   const handleLoginSuccess = async (
     _sessions: any,
-    usernameFromAuth: string
+    usernameFromAuth: string,
   ) => {
     // RESET OLD USER STATE
     setFolders([]);
@@ -565,6 +567,15 @@ export default function GDPRChatbot() {
     setUsername(usernameFromAuth);
     setShowAuthModal(false);
   };
+
+  const activeFolder = folders.find((f) => f.id === activeFolderId);
+
+  const sessionsInActiveFolder = sessions.filter(
+    (s) => s.folderId === activeFolderId,
+  );
+  const foldersinActiveFolder = folders.filter(
+    (s) => s.parentId === activeFolderId,
+  );
 
   return (
     <ThemeProvider>
@@ -641,11 +652,16 @@ export default function GDPRChatbot() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button variant="ghost" className="hover:bg-accent hover:text-black" onClick={() => setShowGraph(true)}>
+                  <Button
+                    variant="ghost"
+                    className="hover:bg-accent hover:text-black"
+                    onClick={() => setShowGraph(true)}
+                  >
                     Graph
                   </Button>
                   <Button
-                    variant="ghost" className="hover:bg-accent hover:text-black"
+                    variant="ghost"
+                    className="hover:bg-accent hover:text-black"
                     onClick={() => setShowDocuments(true)}
                   >
                     Documents
@@ -669,26 +685,78 @@ export default function GDPRChatbot() {
             - Auto-scroll behavior
           */}
             <ScrollArea className="flex-1 p-4 rounded-tl-2xl bg-chat">
-              <div className="max-w-4xl mx-auto space-y-4">
-                {messages.length === 0 && (
-                  <div className="text-center py-12">
-                    <Shield className="w-12 h-12 text-accent mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold mb-2">
-                      Welcome to the RAGulate GDPR Assistant
-                    </h2>
-                    <p className="text-gray-600 mb-4">
-                      I'm here to help you understand and comply with GDPR
-                      regulations.
-                    </p>
-                  </div>
-                )}
+              <div className="max-w-4xl mx-auto space-y-6">
+                {/* ================= FOLDER VIEW ================= */}
+                {activeFolderId && !activeSessionId && activeFolder && (
+                  <>
+                    <div className="text-center py-6">
+                      <h2 className="text-4xl font-semibold">
+                        {activeFolder.name}
+                      </h2>
+                    </div>
 
-                {(!activeSessionId || editingSessionId) && (
-                  <div className="flex justify-center">
-                    <div className="p-4 flex flex-col items-center gap-3 w-full max-w-xs" >
-                      <Button 
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-500">
+                        {foldersinActiveFolder.length} Ordner in diesem Ordner
+                      </p>
+                      {foldersinActiveFolder.map((folder) => (
+                        <Card
+                          key={folder.id}
+                          className="p-4 cursor-pointer bg-sidebar hover:bg-accent hover:text-black transition border-none"
+                          onClick={() => setActiveFolderId(folder.id)}
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="flex font-medium">
+                              <Folder className="w-4 h-4 mr-2 mt-1" />
+                              {folder.name || "Untitled Chat"}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {folder.createdAt.toLocaleDateString()}
+                            </span>
+                          </div>
+                        </Card>
+                      ))}
+
+                      {foldersinActiveFolder.length === 0 && (
+                        <p className="text-center text-gray-500 py-4">
+                          Noch keine Ordner in diesem Ordner
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-500">
+                        {sessionsInActiveFolder.length} Chats in diesem Ordner
+                      </p>
+                      {sessionsInActiveFolder.map((session) => (
+                        <Card
+                          key={session.id}
+                          className="p-4 cursor-pointer bg-sidebar hover:bg-accent hover:text-black transition border-none"
+                          onClick={() => setActiveSessionId(session.id)}
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="flex font-medium">
+                              <MessageSquare className="w-4 h-4 mr-2 mt-1" />
+                              {session.title || "Untitled Chat"}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {session.createdAt.toLocaleDateString()}
+                            </span>
+                          </div>
+                        </Card>
+                      ))}
+
+                      {sessionsInActiveFolder.length === 0 && (
+                        <p className="text-center text-gray-500 py-4">
+                          Noch keine Chats in diesem Ordner
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="p-4 flex flex-col items-center justify-center gap-3 w-full max-w-xs mx-auto">
+                      <Button
                         onClick={createNewSession}
-                        className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black " 
+                        className="w-full bg-sidebar hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black dark:bg-primary dark:hover:bg-accent"
                       >
                         <MessageSquare className="w-4 h-4 mr-2" />
                         New Chat
@@ -696,7 +764,101 @@ export default function GDPRChatbot() {
 
                       <Button
                         onClick={createNewFolder}
-                        className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black"
+                        className="w-full bg-sidebar hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black dark:bg-primary dark:hover:bg-accent"
+                      >
+                        <Folder className="w-4 h-4 mr-2" />
+                        New Folder
+                      </Button>
+                    </div>
+                  </>
+                )}
+
+                {/* ================= CHAT VIEW ================= */}
+                {activeSessionId && (
+                  <>
+                    {/*Session Loader */}
+                    {isSessionLoading && (
+                      <div className="flex justify-center py-12">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+                          <p className="text-gray-500 text-sm">
+                            Loading chat...
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/*Messages */}
+                    {!isSessionLoading && messages.length > 0 && (
+                      <>
+                        {messages.map((message) => (
+                          <ChatMessage key={message.id} message={message} />
+                        ))}
+                      </>
+                    )}
+
+                    {/*Empty Chat Welcome */}
+                    {!isSessionLoading && messages.length === 0 && (
+                      <div className="text-center py-12">
+                        <Shield className="w-12 h-12 text-accent mx-auto mb-4" />
+                        <h2 className="text-xl font-semibold mb-2">
+                          Welcome to the RAGulate GDPR Assistant
+                        </h2>
+                        <p className="text-gray-600 mb-4">
+                          I'm here to help you understand and comply with GDPR
+                          regulations.
+                        </p>
+                      </div>
+                    )}
+                    {isLoading && (
+                      <div className="flex justify-start">
+                        <div className="bg-gray-100 rounded-lg p-4 max-w-xs">
+                          <div className="flex space-x-1">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                            <div
+                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                              style={{ animationDelay: "0.1s" }}
+                            ></div>
+                            <div
+                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                              style={{ animationDelay: "0.2s" }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* ================= DEFAULT VIEW ================= */}
+                {!activeFolderId && !activeSessionId && (
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="text-center py-12">
+                      <Shield className="w-12 h-12 text-accent mx-auto mb-4" />
+                      <h2 className="text-xl font-semibold mb-2">
+                        Welcome to the RAGulate GDPR Assistant
+                      </h2>
+                      <p className="text-gray-600 mb-4">
+                        I'm here to help you understand and comply with GDPR
+                        regulations.
+                      </p>
+                      <p className="text-gray-600 mb-4">
+                        Select a chat from the side or create a new chat
+                      </p>
+                    </div>
+
+                    <div className="p-4 flex flex-col items-center gap-3 w-full max-w-xs">
+                      <Button
+                        onClick={createNewSession}
+                        className="w-full bg-sidebar hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black dark:bg-primary dark:hover:bg-accent"
+                      >
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        New Chat
+                      </Button>
+
+                      <Button
+                        onClick={createNewFolder}
+                        className="w-full bg-sidebar hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black dark:bg-primary dark:hover:bg-accent"
                       >
                         <Folder className="w-4 h-4 mr-2" />
                         New Folder
@@ -705,27 +867,6 @@ export default function GDPRChatbot() {
                   </div>
                 )}
 
-                {messages.map((message) => (
-                  <ChatMessage key={message.id} message={message} />
-                ))}
-
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-100 rounded-lg p-4 max-w-xs">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                          style={{ animationDelay: "0.1s" }}
-                        ></div>
-                        <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                          style={{ animationDelay: "0.2s" }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
@@ -739,43 +880,42 @@ export default function GDPRChatbot() {
             - Responsive layout with max width
             - Submit handling with error prevention
           */}
-          {activeSessionId && !editingSessionId &&(
-            <div className="bg-chat p-4">
-              <div className="max-w-4xl mx-auto mb-5">
-                <form onSubmit={handleSubmit} className="flex items-end">
-                  <div className="flex-1 relative ">
-                    <Input
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      placeholder="Ask about GDPR compliance, data protection, or upload documents for review..."
-                      className="pr-12 min-h-[44px] resize-none bg-secondary dark:bg-primary border-sidebar-border"
-                      disabled={isLoading}
-                    />
+            {activeSessionId && !editingSessionId && (
+              <div className="bg-chat p-4">
+                <div className="max-w-4xl mx-auto mb-5">
+                  <form onSubmit={handleSubmit} className="flex items-end">
+                    <div className="flex-1 relative ">
+                      <Input
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        placeholder="Ask about GDPR compliance, data protection, or upload documents for review..."
+                        className="pr-12 min-h-[44px] resize-none bg-secondary dark:bg-primary border-sidebar-border"
+                        disabled={isLoading}
+                      />
 
-                    {/* Button inside input */}
-                    <button
-                      type="submit"
-                      disabled={isLoading || !input.trim()}
-                      className="
+                      {/* Button inside input */}
+                      <button
+                        type="submit"
+                        disabled={isLoading || !input.trim()}
+                        className="
                         absolute right-2 top-1/2 -translate-y-1/2 
                         p-2 rounded-md 
                         bg-white dark:bg-sidebar hover:bg-accent dark:hover:bg-accent dark:hover:text-black
                         text-invert
                       "
-                    >
-                      <Send className="w-4 h-4" />
-                    </button>
-                  </div>
-                </form>
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </form>
 
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  Upload documents for GDPR compliance review or ask questions
-                  about data protection regulations
-                </p>
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    Upload documents for GDPR compliance review or ask questions
+                    about data protection regulations
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-
+            )}
           </div>
 
           {showProfileModal && (
