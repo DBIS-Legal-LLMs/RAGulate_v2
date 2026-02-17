@@ -11,15 +11,22 @@ from ...models.folder import (
     FolderPublic
 )
 from ...services.folder_service import FolderService
+from ...services.chat_service import ChatService
 
 router = APIRouter(prefix="/folders", tags=["folders"])
 
+def get_chat_service(db = Depends(get_db)) -> ChatService:
+    return ChatService(db)
 
 def get_folder_service(db = Depends(get_db)) -> FolderService:
     return FolderService(db)
 
 
-@router.post("", response_model=FolderPublic, status_code=status.HTTP_201_CREATED)
+@router.post(
+        "", 
+        response_model=FolderPublic, 
+        status_code=status.HTTP_201_CREATED,
+        )
 async def create_folder(
     data: FolderCreate,
     current_user: UserInDB = Depends(get_current_user),
@@ -37,16 +44,20 @@ async def create_folder(
     except ValueError as e:
         code = str(e)
         if code == "PARENT_NOT_FOUND":
-            raise HTTPException(status_code=404, detail="Parent folder not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent folder not found")
         if code == "MAX_DEPTH_EXCEEDED":
-            raise HTTPException(status_code=400, detail="Max folder depth is 3")
+            raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail="Max folder depth is 3")
         if code == "FOLDER_NAME_EXISTS":
-            raise HTTPException(status_code=400, detail="Folder name already exists")
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Folder name already exists")
         
-        raise HTTPException(status_code=400, detail="[UNKNOWN ERROR] Could not create folder")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="[UNKNOWN ERROR] Could not create folder")
     
 
-@router.get("list", response_model=list[FolderPublic], status_code=status.HTTP_200_OK)
+@router.get(
+        "list", 
+        response_model=list[FolderPublic], 
+        status_code=status.HTTP_200_OK
+        )
 async def list_folders(
     parent_id: Optional[str] = None,
     current_user: UserInDB = Depends(get_current_user),
@@ -65,20 +76,24 @@ async def list_folders(
     ]
 
 
-@router.delete("/{folder_id}", status_code=status.HTTP_200_OK)
+@router.delete(
+        "/{folder_id}", 
+        status_code=status.HTTP_200_OK,
+        )
 async def delete_folder(
     folder_id: str,
     current_user: UserInDB = Depends(get_current_user),
     folder_service: FolderService = Depends(get_folder_service),
+    chat_service: ChatService = Depends(get_chat_service)
 ):
     try:
-        await folder_service.delete_folder(owner_id=current_user.id, folder_id=folder_id)
+        await folder_service.delete_folder(owner_id=current_user.id, folder_id=folder_id, chat_service=chat_service)
         return {"status": "ok"}
     except ValueError as e:
         code = str(e)
         if code == "FOLDER_NOT_EMPTY":
-            raise HTTPException(status_code=400, detail="Folder not empty")
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Folder not empty")
         if code == "FOLDER_NOT_FOUND":
-            raise HTTPException(status_code=404, detail="Folder not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
         
-        raise HTTPException(status_code=400, detail="[UNKNOWN ERROR] Could not delete folder")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="[UNKNOWN ERROR] Could not delete folder")

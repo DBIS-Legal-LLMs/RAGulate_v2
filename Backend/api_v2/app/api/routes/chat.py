@@ -23,7 +23,7 @@ def get_chat_service(db = Depends(get_db)) -> ChatService:
     return ChatService(db)
 
 
-# ----- Sessions -----
+# ----- Chats -----
 
 @router.post(
     "",
@@ -45,7 +45,11 @@ async def create_chat(
     )
 
 
-@router.get("list", response_model= list[ChatSessionPublic],)
+@router.get(
+        "list", 
+        response_model= list[ChatSessionPublic],
+        status_code= status.HTTP_200_OK,
+        )
 async def list_chats(
     parent_id: Optional[str] = None,
     current_user: UserInDB = Depends(get_current_user),
@@ -65,8 +69,9 @@ async def list_chats(
 
 
 @router.get(
-    "/{chat_id}",
-    response_model= ChatSessionWithMessages,
+        "/{chat_id}",
+        response_model= ChatSessionWithMessages,
+        status_code= status.HTTP_200_OK,
 )
 async def get_chat(
     chat_id: str,
@@ -78,15 +83,16 @@ async def get_chat(
     if not result:
         raise HTTPException(
             status_code= status.HTTP_404_NOT_FOUND,
-            detail= "Session not found",
+            detail= "Chat not found",
         )
     
     return result
 
+
 @router.delete(
-    "/{chat_id}",
-    status_code= status.HTTP_204_NO_CONTENT,
-)
+        "/{chat_id}", 
+        status_code= status.HTTP_200_OK,
+        )
 async def delete_chat(
     chat_id: str,
     current_user: UserInDB = Depends(get_current_user),
@@ -94,19 +100,20 @@ async def delete_chat(
 ):
     try:
         await chat_service.delete_chat(current_user, chat_id)
+        return {"status": "ok"}
     except ValueError:
         raise HTTPException(
             status_code= status.HTTP_404_NOT_FOUND,
-            detail= "Session not found",
+            detail= "Chat not found",
         )
 
 
 # ----- Messages -----
 
 @router.post(
-    "/{chat_id}/messages",
-    response_model= ChatTurnPublic,
-    status_code= status.HTTP_201_CREATED,
+        "/{chat_id}/messages",
+        response_model= ChatTurnPublic,
+        status_code= status.HTTP_200_OK,
 )
 async def post_messages(
     chat_id: str,
@@ -131,7 +138,7 @@ async def post_messages(
     except ValueError:
         raise HTTPException(
             status_code= status.HTTP_404_NOT_FOUND,
-            detail= "Session not found",
+            detail= "Chat not found",
         )
     
     return turn
