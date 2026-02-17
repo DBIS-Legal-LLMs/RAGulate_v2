@@ -77,13 +77,19 @@ class FolderService:
         doc["_id"] = str(result.inserted_id)
         return FolderInDB(**doc)
     
-    async def delete_folder(self, owner_id: str, folder_id: str) -> None:
+    async def delete_folder(
+            self, 
+            owner_id: str, 
+            folder_id: str,
+    ) -> None:
+        '''
         # delete only if empty (no subfolders)
         child = await self.collection.find_one(
             {"owner_id": owner_id, "parent_id": folder_id}
         )
         if child:
             raise ValueError("FOLDER_NOT_EMPTY")
+        '''
         
         res = await self.collection.delete_one(
             {"_id": ObjectId(folder_id), "owner_id": owner_id}
