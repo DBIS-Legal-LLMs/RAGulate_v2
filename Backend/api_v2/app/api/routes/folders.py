@@ -46,7 +46,7 @@ async def create_folder(
         raise HTTPException(status_code=400, detail="[UNKNOWN ERROR] Could not create folder")
     
 
-@router.get("list", response_model=list[FolderPublic])
+@router.get("list", response_model=list[FolderPublic], status_code=status.HTTP_200_OK)
 async def list_folders(
     parent_id: Optional[str] = None,
     current_user: UserInDB = Depends(get_current_user),
@@ -65,7 +65,7 @@ async def list_folders(
     ]
 
 
-@router.delete("/{folder_id}")
+@router.delete("/{folder_id}", status_code=status.HTTP_200_OK)
 async def delete_folder(
     folder_id: str,
     current_user: UserInDB = Depends(get_current_user),

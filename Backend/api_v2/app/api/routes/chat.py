@@ -1,5 +1,7 @@
 # Backend/api_v2/app/api/router/chat.py
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ...core.deps import get_current_user, get_db
@@ -24,16 +26,16 @@ def get_chat_service(db = Depends(get_db)) -> ChatService:
 # ----- Sessions -----
 
 @router.post(
-    "/sessions",
+    "",
     response_model= ChatSessionPublic,
     status_code= status.HTTP_201_CREATED,
 )
-async def create_session(
+async def create_chat(
     data: ChatSessionCreate,
     current_user: UserInDB = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
-    session = await chat_service.create_session(current_user, data)
+    session = await chat_service.create_chat(current_user, data)
     return ChatSessionPublic(
         id= session.id,
         title= session.title,
@@ -43,15 +45,13 @@ async def create_session(
     )
 
 
-@router.get(
-    "/sessions",
-    response_model= list[ChatSessionPublic],
-)
-async def list_sessions(
+@router.get("list", response_model= list[ChatSessionPublic],)
+async def list_chats(
+    parent_id: Optional[str] = None,
     current_user: UserInDB = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
-    sessions = await chat_service.list_sessions(current_user)
+    sessions = await chat_service.list_chats(user=current_user, folder_id=parent_id)
     return [
         ChatSessionPublic(
             id= s.id,
@@ -65,15 +65,15 @@ async def list_sessions(
 
 
 @router.get(
-    "/sessions/{session_id}",
+    "/{chat_id}",
     response_model= ChatSessionWithMessages,
 )
-async def get_session(
-    session_id: str,
+async def get_chat(
+    chat_id: str,
     current_user: UserInDB = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
-    result = await chat_service.get_session_with_messages(current_user, session_id)
+    result = await chat_service.get_chat_with_messages(current_user, chat_id)
 
     if not result:
         raise HTTPException(
@@ -84,16 +84,16 @@ async def get_session(
     return result
 
 @router.delete(
-    "/sessions/{session_id}",
+    "/{chat_id}",
     status_code= status.HTTP_204_NO_CONTENT,
 )
-async def delete_session(
-    session_id: str,
+async def delete_chat(
+    chat_id: str,
     current_user: UserInDB = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
     try:
-        await chat_service.delete_session(current_user, session_id)
+        await chat_service.delete_chat(current_user, chat_id)
     except ValueError:
         raise HTTPException(
             status_code= status.HTTP_404_NOT_FOUND,
@@ -104,12 +104,12 @@ async def delete_session(
 # ----- Messages -----
 
 @router.post(
-    "/sessions/{session_id}/messages",
+    "/{chat_id}/messages",
     response_model= ChatTurnPublic,
     status_code= status.HTTP_201_CREATED,
 )
 async def post_messages(
-    session_id: str,
+    chat_id: str,
     data: MessageCreate,
     current_user: UserInDB = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
@@ -118,14 +118,14 @@ async def post_messages(
     try:
         # turn = await chat_service.chat_with_rag(
         #     user= current_user,
-        #     session_id= session_id,
+        #     chat_id= chat_id,
         #     data= data,
         # )
         
         # Echo Chat ohne RAG
         turn = await chat_service.chat_echo(
             user= current_user,
-            session_id= session_id,
+            chat_id= chat_id,
             data= data,
         )
     except ValueError:
