@@ -125,7 +125,7 @@ async def post_messages(
         # Echo Chat ohne RAG
         turn = await chat_service.chat_echo(
             user= current_user,
-            chat_id= chat_id,
+            session_id= chat_id,
             data= data,
         )
     except ValueError:
