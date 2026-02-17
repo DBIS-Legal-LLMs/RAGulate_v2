@@ -29,7 +29,7 @@ class ChatService:
         self._db = db
 
     @property
-    def sessions(self):
+    def chats(self):
         return self._db[SESSIONS_COLLECTION]
     
     @property
@@ -60,7 +60,7 @@ class ChatService:
             "created_at": now,
             "updated_at": now,
         }
-        result = await self.sessions.insert_one(doc)
+        result = await self.chats.insert_one(doc)
         doc["_id"] = str(result.inserted_id)
         
         return ChatSessionInDB(**doc)
@@ -75,7 +75,7 @@ class ChatService:
         if folder_id is not None:
             query["folder_id"] = folder_id # None = Root, without explicit folder
 
-        cursor = self.sessions.find(query).sort("updated_at", -1)
+        cursor = self.chats.find(query).sort("updated_at", -1)
         docs: list[ChatSessionInDB] = []
         async for doc in cursor:
             doc["_id"] = str(doc["_id"])
@@ -87,10 +87,10 @@ class ChatService:
     async def get_chat_for_user(
             self, 
             user: UserInDB, 
-            session_id: str
+            chat_id: str
             ) -> Optional[ChatSessionInDB]:
-        doc = await self.sessions.find_one(
-            {"_id": ObjectId(session_id), "user_id": user.id}
+        doc = await self.chats.find_one(
+            {"_id": ObjectId(chat_id), "user_id": user.id}
         )
         if not doc:
             return None
@@ -102,17 +102,17 @@ class ChatService:
     async def delete_chat(
             self, 
             user: UserInDB,
-            session_id: str
+            chat_id: str
     ) -> None:
-        session = await self.get_chat_for_user(user, session_id)
-        if not session:
+        chatsession = await self.get_chat_for_user(user, chat_id)
+        if not chatsession:
             raise ValueError("Session not found or not owned by user")
         
         # Session löschen
-        await self.sessions.delete_one({"_id": ObjectId(session_id)})
+        await self.chats.delete_one({"_id": ObjectId(chat_id)})
 
         # Alle zugehörigen Messages löschen
-        await self.messages.delete_many({"session_id": session_id})
+        await self.messages.delete_many({"session_id": chat_id})
     
 
     # ----- Messages -----
@@ -163,7 +163,7 @@ class ChatService:
         doc["_id"] = str(result.inserted_id)
 
         # Session updaten
-        await self.sessions.update_one(
+        await self.chats.update_one(
             {"_id": ObjectId(session_id)},
             {"$set": {"updated_at": now}},
         )
@@ -251,7 +251,7 @@ class ChatService:
         assistant_msg = MessageInDB(**assistant_doc)
 
         # Session-Updated Timestamp aktualisieren
-        await self.sessions.update_one(
+        await self.chats.update_one(
             {"_id": ObjectId(session_id)},
             {"$set": {"updated_at": now_assistant}},
         )
@@ -333,7 +333,7 @@ class ChatService:
         assistant_msg = MessageInDB(**assistant_doc)
 
         # Session-Updated Timestamp aktualisieren
-        await self.sessions.update_one(
+        await self.chats.update_one(
             {"_id": ObjectId(session_id)},
             {"$set": {"updated_at": now_assistant}},
         )
