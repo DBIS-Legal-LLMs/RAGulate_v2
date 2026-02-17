@@ -1,5 +1,7 @@
 # Backend/api_v2/app/api/router/chat.py
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ...core.deps import get_current_user, get_db
@@ -14,7 +16,7 @@ from ...models.chat import (
 )
 from ...services.chat_service import ChatService
 
-router = APIRouter(prefix="", tags=["chat"])
+router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 def get_chat_service(db = Depends(get_db)) -> ChatService:
@@ -24,7 +26,7 @@ def get_chat_service(db = Depends(get_db)) -> ChatService:
 # ----- Sessions -----
 
 @router.post(
-    "/chat",
+    "",
     response_model= ChatSessionPublic,
     status_code= status.HTTP_201_CREATED,
 )
@@ -43,15 +45,13 @@ async def create_chat(
     )
 
 
-@router.get(
-    "/chats",
-    response_model= list[ChatSessionPublic],
-)
+@router.get("list", response_model= list[ChatSessionPublic],)
 async def list_chats(
+    parent_id: Optional[str] = None,
     current_user: UserInDB = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
-    sessions = await chat_service.list_chats(current_user)
+    sessions = await chat_service.list_chats(user=current_user, folder_id=parent_id)
     return [
         ChatSessionPublic(
             id= s.id,
@@ -65,7 +65,7 @@ async def list_chats(
 
 
 @router.get(
-    "/chat/{chat_id}",
+    "/{chat_id}",
     response_model= ChatSessionWithMessages,
 )
 async def get_chat(
@@ -84,7 +84,7 @@ async def get_chat(
     return result
 
 @router.delete(
-    "/chat/{chat_id}",
+    "/{chat_id}",
     status_code= status.HTTP_204_NO_CONTENT,
 )
 async def delete_chat(
@@ -104,7 +104,7 @@ async def delete_chat(
 # ----- Messages -----
 
 @router.post(
-    "/chat/{chat_id}/messages",
+    "/{chat_id}/messages",
     response_model= ChatTurnPublic,
     status_code= status.HTTP_201_CREATED,
 )

@@ -55,7 +55,8 @@ class ChatService:
 
         doc = {
             "user_id": user.id,
-            "title": data.title or "Neue Sitzung",
+            "folder_id": folder_id,
+            "title": data.title or "Neuer Chat",
             "created_at": now,
             "updated_at": now,
         }
