@@ -38,7 +38,7 @@ async def create_folder(
         return FolderPublic(
             id= f.id,
             name= f.name,
-            parent_folder_id= f.parent_id,
+            parent_folder_id= f.parent_folder_id,
             depth= f.depth,
             created_at= f.created_at,
         )
