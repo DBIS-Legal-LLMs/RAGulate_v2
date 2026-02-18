@@ -137,7 +137,7 @@ class ChatService:
         if not chat:
             return []
         
-        query = {"session_id": chat_id, "user_id": user.id}
+        query = {"chat_id": chat_id, "user_id": user.id}
         cursor = self.messages.find(query).sort("created_at", 1)
 
         entries: list[MessageInDB] = []
