@@ -231,7 +231,7 @@ class ChatService:
         # 1) Session checken
         session = await self.get_chat_for_user(user, session_id)
         if not session:
-            raise ValueError("Session not found or not owned by user")
+            raise ValueError(errors.CHAT_100_NOT_FOUND)
         
         now = datetime.now(timezone.utc)
 
