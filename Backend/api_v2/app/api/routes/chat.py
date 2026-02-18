@@ -164,8 +164,13 @@ async def post_messages(
         )
         return turn
     except ValueError as code:
-        #if code == errors.UNKNOWN_ERROR_0
+        if code == errors.CHAT_100_NOT_FOUND:
+            raise HTTPException(
+                status_code= status.HTTP_404_NOT_FOUND,
+                detail= "Chat not found",
+            )
+        #if code == errors.UNKNOWN_ERROR_0:
         raise HTTPException(
-            status_code= status.HTTP_404_NOT_FOUND,
+            status_code= status.HTTP_400_BAD_REQUEST,
             detail= "[UNKNOWN ERROR] Could not post message",
         )
