@@ -237,7 +237,7 @@ class ChatService:
 
         # 2) User-Message speichern
         user_doc = {
-            "session_id": session_id,
+            "chat_id": session_id,
             "user_id": user.id,
             "role": "user",
             "content": data.content,
