@@ -250,7 +250,7 @@ class ChatService:
         # 3) Assitant-Message (Echo) speichern
         now_assistant = datetime.now(timezone.utc)
         assistant_doc = {
-            "session_id": session_id,
+            "chat_id": session_id,
             "user_id": user.id,
             "role": "assistant",
             "content": data.content,  # Echo
@@ -294,7 +294,7 @@ class ChatService:
 
         # 2) User-Message speichern
         user_doc = {
-            "session_id": session_id,
+            "chat_id": session_id,
             "user_id": user.id,
             "role": "user",
             "content": data.content,
@@ -332,7 +332,7 @@ class ChatService:
         # 5) Assitant-Message speichern
         now_assistant = datetime.now(timezone.utc)
         assistant_doc = {
-            "session_id": session_id,
+            "chat_id": session_id,
             "user_id": user.id,
             "role": "assistant",
             "content": rag_answer,
