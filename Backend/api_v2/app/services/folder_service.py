@@ -43,7 +43,7 @@ class FolderService:
     ) -> List[FolderInDB]:
         try:
             query = {"owner_id": user.id, 
-                    "parent_id": folder_id}
+                    "parent_folder_id": folder_id}
             cursor = self.folders.find(query).sort("created_at", 1)
 
             entries: List[FolderInDB] = []
