@@ -172,5 +172,5 @@ async def post_messages(
         #if code == errors.UNKNOWN_ERROR_0:
         raise HTTPException(
             status_code= status.HTTP_400_BAD_REQUEST,
-            detail= "[UNKNOWN ERROR] Could not post message",
+            detail= "[UNKNOWN ERROR] Could not post message -> " + str(code),
         )
