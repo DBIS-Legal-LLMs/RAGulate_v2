@@ -20,7 +20,7 @@ from ..models.chat import (
     )
 
 from .rag_service import run_rag_query, LLMProviderName, DEFAULT_MODEL
-from .folder_service import FolderService
+#from .folder_service import FolderService
 
 SESSIONS_COLLECTION = "chat_sessions"
 MESSAGES_COLLECTION = "chat_messages"
@@ -69,6 +69,7 @@ class ChatService:
         # time
         now = datetime.now(timezone.utc)
 
+        """
         folder_id = data.folder_id
         if folder_id:
             folder_service = FolderService(self._db)
@@ -77,11 +78,12 @@ class ChatService:
                     folder_id=folder_id
             )
             if not folder:
-                raise ValueError(errors.CHAT_100_NOT_FOUND)
+                raise ValueError(errors.FOLDER_1000_NOT_FOUND)
+        """
 
         doc = {
             "user_id": user.id,
-            "folder_id": folder_id,
+            "folder_id": data.folder_id,
             "title": data.title or "Neuer Chat",
             "created_at": now,
             "updated_at": now,
