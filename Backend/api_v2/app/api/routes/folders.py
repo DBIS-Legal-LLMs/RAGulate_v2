@@ -34,7 +34,7 @@ async def create_folder(
     folder_service: FolderService = Depends(get_folder_service),
 ):
     try:
-        f = await folder_service.create_folder(owner_id=current_user.id, folder_in=data)
+        f = await folder_service.create_folder(user=current_user, folder_in=data)
         return FolderPublic(
             id= f.id,
             name= f.name,
