@@ -6,6 +6,7 @@ from typing import List, Optional
 from bson import ObjectId
 from pymongo.asynchronous.database import AsyncDatabase
 
+from ..core import errors
 from ..models.user import UserInDB
 from ..models.chat import (
     ChatSessionCreate,
@@ -37,21 +38,46 @@ class ChatService:
         return self._db[MESSAGES_COLLECTION]
     
 
-    # ----- Sessions -----
+    # ----- Chats -----
+    
+    async def list_chats(
+            self, 
+            user: UserInDB,
+            folder_id: Optional[str] = None
+    ) -> list[ChatSessionInDB]:
+        try:
+            query = {"user_id": user.id}
+            if folder_id is not None:
+                query["folder_id"] = folder_id # None = Root, without explicit folder
+            cursor = self.chats.find(query).sort("updated_at", -1)
+
+            entries: list[ChatSessionInDB] = []
+            async for doc in cursor:
+                doc["_id"] = str(doc["_id"])
+                entries.append(ChatSessionInDB(**doc)) 
+
+            return entries
+        except TypeError:
+            raise ValueError(errors.UNKNOWN_ERROR_0)
+
 
     async def create_chat(
             self, 
             user: UserInDB, 
             data: ChatSessionCreate
     ) -> ChatSessionInDB:
+        # time
         now = datetime.now(timezone.utc)
 
         folder_id = data.folder_id
         if folder_id:
             folder_service = FolderService(self._db)
-            folder = await folder_service.get_by_id(folder_id=folder_id, owner_id=user.id)
+            folder = await folder_service.get_by_id(
+                    user=user,
+                    folder_id=folder_id
+            )
             if not folder:
-                raise ValueError("Folder not found or not owned by user")
+                raise ValueError(errors.CHAT_100_NOT_FOUND)
 
         doc = {
             "user_id": user.id,
@@ -66,34 +92,17 @@ class ChatService:
         return ChatSessionInDB(**doc)
     
 
-    async def list_chats(
-            self, 
-            user: UserInDB,
-            folder_id: str | None = None
-    ) -> list[ChatSessionInDB]:
-        query = {"user_id": user.id}
-        if folder_id is not None:
-            query["folder_id"] = folder_id # None = Root, without explicit folder
-
-        cursor = self.chats.find(query).sort("updated_at", -1)
-        docs: list[ChatSessionInDB] = []
-        async for doc in cursor:
-            doc["_id"] = str(doc["_id"])
-            docs.append(ChatSessionInDB(**doc))
-
-        return docs
-    
-
     async def get_chat_for_user(
             self, 
             user: UserInDB, 
             chat_id: str
-            ) -> Optional[ChatSessionInDB]:
+    ) -> Optional[ChatSessionInDB]:
         doc = await self.chats.find_one(
             {"_id": ObjectId(chat_id), "user_id": user.id}
         )
         if not doc:
-            return None
+            raise ValueError(errors.CHAT_100_NOT_FOUND)
+        
         doc["_id"] = str(doc["_id"])
 
         return ChatSessionInDB(**doc)
@@ -104,9 +113,8 @@ class ChatService:
             user: UserInDB,
             chat_id: str
     ) -> None:
-        chatsession = await self.get_chat_for_user(user, chat_id)
-        if not chatsession:
-            raise ValueError("Session not found or not owned by user")
+        # ensure chat exists & belongs to user
+        await self.get_chat_for_user(user, chat_id)
         
         # Session löschen
         await self.chats.delete_one({"_id": ObjectId(chat_id)})
@@ -120,40 +128,38 @@ class ChatService:
     async def list_messages_in_chat(
             self, 
             user: UserInDB, 
-            session_id: str
+            chat_id: str
     ) -> list[MessageInDB]:
-        # Ensure session belongs to user
-        session = await self.get_chat_for_user(user, session_id)
-        if not session:
+        # ensure chat exists & belongs to user
+        chat = await self.get_chat_for_user(user, chat_id)
+        if not chat:
             return []
         
-        cursor = (
-            self.messages.find({"session_id": session_id, "user_id": user.id})
-            .sort("created_at", 1)
-        )
-        docs: list[MessageInDB] = []
+        query = {"session_id": chat_id, "user_id": user.id}
+        cursor = self.messages.find(query).sort("created_at", 1)
+
+        entries: list[MessageInDB] = []
         async for doc in cursor:
             doc["_id"] = str(doc["_id"])
-            docs.append(MessageInDB(**doc))
+            entries.append(MessageInDB(**doc))
 
-        return docs
+        return entries
     
 
     async def add_message(
             self,
             user: UserInDB,
-            session_id: str,
+            chat_id: str,
             role: str,
             data: MessageCreate,
     ) -> MessageInDB:
-        # ensure session exists & belongs to user
-        session = await self.get_chat_for_user(user, session_id)
-        if not session:
-            raise ValueError("Session not found or not owned by user")
+        # ensure chat exists & belongs to user
+        await self.get_chat_for_user(user, chat_id)
         
         now = datetime.now(timezone.utc)
+
         doc = {
-            "session_id": session_id,
+            "session_id": chat_id,
             "user_id": user.id,
             "role": role,
             "content": data.content,
@@ -162,9 +168,9 @@ class ChatService:
         result = await self.messages.insert_one(doc)
         doc["_id"] = str(result.inserted_id)
 
-        # Session updaten
+        # Update chat updated_at time
         await self.chats.update_one(
-            {"_id": ObjectId(session_id)},
+            {"_id": ObjectId(chat_id)},
             {"$set": {"updated_at": now}},
         )
 
@@ -174,25 +180,27 @@ class ChatService:
     async def get_chat_with_messages(
             self,
             user: UserInDB, 
-            session_id: str
+            chat_id: str
     ) -> Optional[ChatSessionWithMessages]:
-        session = await self.get_chat_for_user(user, session_id)
-        if not session:
-            return None
-        msgs = await self.list_messages_in_chat(user, session_id)
+        # ensure chat exists & belongs to user
+        chat = await self.get_chat_for_user(user, chat_id)
 
-        session_public = ChatSessionPublic(
-            id= session.id,
-            title= session.title,
-            folder_id= session.folder_id,
-            created_at= session.created_at,
-            updated_at= session.updated_at,
+        # load chat
+        chat_session_public = ChatSessionPublic(
+            id= chat.id,
+            title= chat.title,
+            folder_id= chat.folder_id,
+            created_at= chat.created_at,
+            updated_at= chat.updated_at,
         )
+        
+        # load messages from chat
+        msgs = await self.list_messages_in_chat(user, chat_id)
 
         messages_public = [
             MessagePublic(
                 id= m.id,
-                session_id= m.session_id,
+                chat_id= m.chat_id,
                 role= m.role,
                 content= m.content,
                 created_at= m.created_at,
@@ -201,7 +209,7 @@ class ChatService:
         ]
 
         return ChatSessionWithMessages(
-            session= session_public,
+            chat= chat_session_public,
             messages= messages_public,
         )
     

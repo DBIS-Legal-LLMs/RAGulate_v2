@@ -75,20 +75,24 @@ async def list_folders(
     current_user: UserInDB = Depends(get_current_user),
     folder_service: FolderService = Depends(get_folder_service),
 ):
-    folders = await folder_service.list_folders(
-            user=current_user, 
-            folder_id=parent_id
-    )
-    return [
-        FolderPublic(
-            id= f.id,
-            name= f.name,
-            parent_folder_id= f.parent_id,
-            depth= f.depth,
-            created_at= f.created_at,
+    try:
+        folders = await folder_service.list_folders(
+                user=current_user, 
+                folder_id=parent_id
         )
-        for f in folders
-    ]
+        return [
+            FolderPublic(
+                id= f.id,
+                name= f.name,
+                parent_folder_id= f.parent_id,
+                depth= f.depth,
+                created_at= f.created_at,
+            )
+            for f in folders
+        ]
+    except ValueError as code:
+        #if code == errors.UNKNOWN_ERROR_0
+        raise ValueError("[UNKNOWN ERROR] Can't list folders")
 
 
 @router.delete(
@@ -99,9 +103,14 @@ async def delete_folder(
     folder_id: str,
     current_user: UserInDB = Depends(get_current_user),
     folder_service: FolderService = Depends(get_folder_service),
+    chat_service: ChatService = Depends(get_chat_service)
 ):
     try:
-        await folder_service.delete_folder(owner_id=current_user.id, folder_id=folder_id)
+        await folder_service.delete_folder(
+                current_user=current_user.id, 
+                folder_id=folder_id,
+                chat_service=chat_service,
+        )
         return {"status": "ok"}
     except ValueError as code:
         if code == errors.FOLDER_1000_NOT_FOUND:
