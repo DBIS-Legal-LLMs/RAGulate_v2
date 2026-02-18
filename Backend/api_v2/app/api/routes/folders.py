@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ...core.deps import get_current_user, get_db
+from ...core import errors
 from ...models.user import UserInDB
 from ...models.folder import (
     FolderCreate, 
@@ -37,20 +38,31 @@ async def create_folder(
         return FolderPublic(
             id= f.id,
             name= f.name,
-            parent_id= f.parent_id,
+            parent_folder_id= f.parent_id,
             depth= f.depth,
             created_at= f.created_at,
         )
-    except ValueError as e:
-        code = str(e)
-        if code == "PARENT_NOT_FOUND":
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent folder not found")
-        if code == "MAX_DEPTH_EXCEEDED":
-            raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail="Max folder depth is 3")
-        if code == "FOLDER_NAME_EXISTS":
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Folder name already exists")
-        
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="[UNKNOWN ERROR] Could not create folder")
+    except ValueError as code:
+        if code == errors.FOLDER_1000_NOT_FOUND:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail="Parent folder not found"
+            )
+        if code == errors.FOLDER_1001_NAME_EXISTS:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, 
+                detail="Folder name already exists"
+            )
+        if code == errors.FOLDER_1002_MAX_DEPTH_EXCEEDED:
+            raise HTTPException(
+                status_code=status.HTTP_405_METHOD_NOT_ALLOWED, 
+                detail="Max folder depth is 3"
+            )
+        #if code == errors.UNKNOWN_ERROR_0
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="[UNKNOWN ERROR] Could not create folder"
+        )
     
 
 @router.get(
@@ -63,17 +75,24 @@ async def list_folders(
     current_user: UserInDB = Depends(get_current_user),
     folder_service: FolderService = Depends(get_folder_service),
 ):
-    folders = await folder_service.list_folders(owner_id=current_user.id, parent_id=parent_id)
-    return [
-        FolderPublic(
-            id= f.id,
-            name= f.name,
-            parent_id= f.parent_id,
-            depth= f.depth,
-            created_at= f.created_at,
+    try:
+        folders = await folder_service.list_folders(
+                user=current_user, 
+                folder_id=parent_id
         )
-        for f in folders
-    ]
+        return [
+            FolderPublic(
+                id= f.id,
+                name= f.name,
+                parent_folder_id= f.parent_id,
+                depth= f.depth,
+                created_at= f.created_at,
+            )
+            for f in folders
+        ]
+    except ValueError as code:
+        #if code == errors.UNKNOWN_ERROR_0
+        raise ValueError("[UNKNOWN ERROR] Can't list folders")
 
 
 @router.delete(
@@ -87,13 +106,20 @@ async def delete_folder(
     chat_service: ChatService = Depends(get_chat_service)
 ):
     try:
-        await folder_service.delete_folder(owner_id=current_user.id, folder_id=folder_id)
+        await folder_service.delete_folder(
+                current_user=current_user.id, 
+                folder_id=folder_id,
+                chat_service=chat_service,
+        )
         return {"status": "ok"}
-    except ValueError as e:
-        code = str(e)
-        if code == "FOLDER_NOT_EMPTY":
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Folder not empty")
-        if code == "FOLDER_NOT_FOUND":
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
-        
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="[UNKNOWN ERROR] Could not delete folder")
+    except ValueError as code:
+        if code == errors.FOLDER_1000_NOT_FOUND:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail="Folder not found"
+            )
+        #if code == errors.UNKNOWN_ERROR_0
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="[UNKNOWN ERROR] Could not delete folder"
+        )
