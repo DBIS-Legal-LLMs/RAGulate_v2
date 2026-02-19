@@ -68,8 +68,8 @@ class FolderService:
         parent_depth = 0
         if folder_in.parent_folder_id:
             parent = await self.get_by_id(
-                    folder_id=folder_in.parent_folder_id, 
-                    owner_id=user.id
+                    user=user,
+                    folder_id=folder_in.parent_folder_id
             )
             if not parent:
                 raise ValueError(errors.FOLDER_1000_NOT_FOUND)
