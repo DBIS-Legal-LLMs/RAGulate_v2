@@ -68,8 +68,8 @@ class FolderService:
         parent_depth = 0
         if folder_in.parent_folder_id:
             parent = await self.get_by_id(
-                    folder_id=folder_in.parent_folder_id, 
-                    owner_id=user.id
+                    user=user,
+                    folder_id=folder_in.parent_folder_id
             )
             if not parent:
                 raise ValueError(errors.FOLDER_1000_NOT_FOUND)
@@ -81,8 +81,8 @@ class FolderService:
         
         doc = {
             "owner_id": user.id,
-            "name": folder_in.name,
-            "parent_id": folder_in.parent_folder_id,
+            "title": folder_in.title,
+            "parent_folder_id": folder_in.parent_folder_id,
             "depth": depth,
             "created_at": now,
         }
@@ -108,27 +108,18 @@ class FolderService:
 
     async def delete_folder(
             self, 
-            current_user: UserInDB, 
+            user: UserInDB, 
             folder_id: str,
             chat_service: ChatService
     ) -> None:
-        '''
-        # delete only if empty (no subfolders)
-        child = await self.collection.find_one(
-            {"owner_id": owner_id, "parent_id": folder_id}
-        )
-        if child:
-            raise ValueError("FOLDER_NOT_EMPTY")
-        '''
         # Find all child-chats and delete each of them
         query = {"folder_id": folder_id}
         child_chats = self.chats.find(query)
         async for cc in child_chats:
             try:
                 await chat_service.delete_chat(
-                    chat_id=str(cc["_id"]),
-                    user=current_user,
-                    chat_service=chat_service
+                    user=user,
+                    chat_id=str(cc["_id"])
                 )
             except ValueError:
                 continue   
@@ -139,9 +130,16 @@ class FolderService:
         async for cf in child_folders:
             try:
                 await self.delete_folder(
-                    current_user=current_user,
+                    user=user,
                     folder_id=str(cf["_id"]),
                     chat_service=chat_service
                 )
             except ValueError:
                 continue
+        
+        # In the end, delete the folder we are currently in
+        await self.folders.delete_one(
+            {"_id": ObjectId(folder_id),
+             "owner_id": user.id}
+        )
+        return
