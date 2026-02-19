@@ -108,7 +108,7 @@ class FolderService:
 
     async def delete_folder(
             self, 
-            current_user: UserInDB, 
+            user: UserInDB, 
             folder_id: str,
             chat_service: ChatService
     ) -> None:
@@ -119,7 +119,7 @@ class FolderService:
             try:
                 await chat_service.delete_chat(
                     chat_id=str(cc["_id"]),
-                    user=current_user,
+                    user=user,
                     chat_service=chat_service
                 )
             except ValueError:
@@ -131,7 +131,7 @@ class FolderService:
         async for cf in child_folders:
             try:
                 await self.delete_folder(
-                    current_user=current_user,
+                    user=user,
                     folder_id=str(cf["_id"]),
                     chat_service=chat_service
                 )
@@ -141,6 +141,6 @@ class FolderService:
         # In the end, delete the folder we are currently in
         await self.folders.delete_one(
             {"_id": ObjectId(folder_id),
-             "owner_id": current_user.id}
+             "owner_id": user.id}
         )
         return

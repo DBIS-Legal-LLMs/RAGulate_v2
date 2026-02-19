@@ -107,7 +107,7 @@ async def delete_folder(
 ):
     try:
         await folder_service.delete_folder(
-                current_user=current_user.id, 
+                user=current_user, 
                 folder_id=folder_id,
                 chat_service=chat_service,
         )
