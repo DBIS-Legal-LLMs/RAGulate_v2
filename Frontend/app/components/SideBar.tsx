@@ -15,8 +15,8 @@ import Image from "next/image";
 
 interface UIFolder {
   id: string;
-  name: string;
-  parentId: string | null;
+  title: string;
+  parent_folder_id: string | null;
   depth: number;
   createdAt: Date;
   isDraft?: boolean;
@@ -45,12 +45,12 @@ interface SidebarProps {
   onNewFolder: () => void;
   onConfirmCreateFolder: (
     tempId: string,
-    name: string,
-    parentId: string | null,
+    title: string,
+    parent_folder_id: string | null,
   ) => void;
   editingFolderId: string | null;
   setEditingFolderId: (id: string | null) => void;
-  onUpdateDraftFolderName: (id: string, name: string) => void;
+  onUpdateDraftFolderName: (id: string, title: string) => void;
   onCancelDraftFolder: (id: string) => void;
   onDeleteFolder: (folderId: string) => void;
   onDeleteSession: (sessionID: string) => void;
@@ -88,14 +88,8 @@ export default function Sidebar({
   onCancelDraftSession,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
 
-  const topLevelFolders = folders
-    .filter((f) => f.parentId === null)
-    .sort((a, b) => {
-      if (a.isDraft && !b.isDraft) return -1; // Draft nach unten
-      if (!a.isDraft && b.isDraft) return 1; // Normale nach oben
-      return 0;
-    });
   const topLevelSessions = sessions
     .filter((s) => s.folderId === null)
     .sort((a, b) => {
@@ -104,11 +98,106 @@ export default function Sidebar({
       return 0;
     });
 
-  const sessionsByFolder = (folderId: string) =>
-    sessions.filter((s) => s.folderId === folderId);
+  /**
+   * Renders folders recursevly, expands folder that are clicked on and collapses when presses on open folder
+   * @param parent_folder_id
+   * @param level Indicates level in tree with 0 being root
+   * @returns All Folders that are open/collapsed
+   */
+  const renderFolders = (parent_folder_id: string | null, level = 0) => {
+    return folders
+      .filter((f) => f.parent_folder_id === parent_folder_id)
+      .sort((a, b) => {
+        if (a.isDraft && !b.isDraft) return -1;
+        if (!a.isDraft && b.isDraft) return 1;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      })
+      .map((folder) => (
+        <div key={folder.id} style={{ marginLeft: level * 16 }}>
+          {/* Folder Header */}
+          <div
+            onClick={() => {
+              setActiveFolderId(folder.id);
+              setActiveSessionId(null);
+              // indicated that on click the folder should be marked as open/collapsed, so it is (not) rendered
+              if (true) {
+                setOpenFolders((prev) => ({
+                  ...prev,
+                  [folder.id]: !prev[folder.id],
+                }));
+              }
+            }}
+            className={`p-3 font-semibold cursor-pointer rounded flex items-center
+              ${
+                activeFolderId === folder.id
+                  ? "bg-accent dark:text-black"
+                  : "hover:bg-primary"
+              }
+            `}
+          >
+            <Folder className="w-4 h-4 mr-2 shrink-0" />
+            {folder.isDraft && editingFolderId === folder.id ? (
+              <input
+                autoFocus
+                value={folder.title}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  onUpdateDraftFolderName(folder.id, value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && folder.title.trim()) {
+                    onConfirmCreateFolder(
+                      folder.id,
+                      folder.title,
+                      folder.parent_folder_id,
+                    );
+                  }
 
-  const foldersByFolder = (folderId: string) =>
-    folders.filter((s) => s.parentId === folderId);
+                  if (e.key === "Escape") {
+                    onCancelDraftFolder(folder.id);
+                    setEditingFolderId(null);
+                    setActiveFolderId(null);
+                  }
+                }}
+                onBlur={() => {
+                  if (folder.title.trim()) {
+                    onConfirmCreateFolder(
+                      folder.id,
+                      folder.title,
+                      folder.parent_folder_id,
+                    );
+                    setEditingFolderId(null);
+                  } else if (level === 0) {
+                    // if root folder is blurred a placeholder name is given
+                    onConfirmCreateFolder(
+                      folder.id,
+                      "New Folder",
+                      folder.parent_folder_id,
+                    );
+                    setEditingFolderId(null);
+                  }
+                }}
+                className="w-full bg-transparent border-b border-accent outline-none px-1"
+                placeholder="Folder name"
+              />
+            ) : (
+              <span>{folder.title}</span>
+            )}
+            {activeFolderId === folder.id && !folder.isDraft && (
+              <X
+                className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
+                onClick={(e) => {
+                  e.stopPropagation(); // verhindert, dass der Folder selektiert wird
+                  onDeleteFolder(folder.id);
+                }}
+              />
+            )}
+          </div>
+          {(folder.isDraft || openFolders[folder.id]) &&
+            renderFolders(folder.id, level + 1)}
+        </div>
+      ));
+  };
 
   return (
     <div
@@ -183,217 +272,7 @@ export default function Sidebar({
         )}
 
         {/* Folders */}
-        {topLevelFolders.map((folder) => (
-          <div key={folder.id} className="mt-2">
-            {/* Folder Header */}
-            <div
-              onClick={() => {
-                if (folder.isDraft) return;
-                setActiveFolderId(folder.id);
-                setActiveSessionId(null);
-                console.log(folder.id);
-              }}
-              className={`p-3 font-semibold cursor-pointer rounded flex items-center
-                ${collapsed ? " hidden" : "p-3"}
-                ${
-                  activeFolderId === folder.id || editingFolderId === folder.id
-                    ? "bg-accent dark:text-black"
-                    : "hover:bg-primary"
-                }
-              `}
-            >
-              <Folder className="w-4 h-4 mr-2 shrink-0" />
-              {folder.isDraft && editingFolderId === folder.id ? (
-                <input
-                  autoFocus
-                  value={folder.name}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    onUpdateDraftFolderName(folder.id, value);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && folder.name.trim()) {
-                      onConfirmCreateFolder(
-                        folder.id,
-                        folder.name,
-                        folder.parentId,
-                      );
-                    }
-
-                    if (e.key === "Escape") {
-                      onCancelDraftFolder(folder.id);
-                      setEditingFolderId(null);
-                      setActiveFolderId(null);
-                      onUpdateDraftFolderName(folder.id, "");
-                    }
-                  }}
-                  onBlur={() => {
-                    if (folder.name.trim()) {
-                      onConfirmCreateFolder(
-                        folder.id,
-                        folder.name,
-                        folder.parentId,
-                      );
-                    } else {
-                      onCancelDraftFolder(folder.id);
-                      setEditingFolderId(null);
-                    }
-                  }}
-                  className="w-full bg-transparent border-b border-accent outline-none px-1"
-                  placeholder="Folder name"
-                />
-              ) : (
-                <span>{folder.name}</span>
-              )}
-              {activeFolderId === folder.id && !folder.isDraft && (
-                <X
-                  className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
-                  onClick={(e) => {
-                    e.stopPropagation(); // verhindert, dass der Folder selektiert wird
-                    onDeleteFolder(folder.id);
-                  }}
-                />
-              )}
-            </div>
-
-            {/* Sessions in Folder */}
-            {sessionsByFolder(folder.id).map((session) => (
-              <div
-                key={session.id}
-                onClick={() => setActiveSessionId(session.id)}
-                className={`ml-4 p-2 rounded cursor-pointer flex mt-1
-                  ${
-                    activeSessionId === session.id ||
-                    editingSessionId === session.id
-                      ? "bg-none"
-                      : "hover:bg-primary"
-                  }
-                `}
-              >
-                <MessageSquare className="w-4 h-4 mr-2 shrink-0 mt-1" />
-                {session.isDraft && editingSessionId === session.id ? (
-                  <input
-                    autoFocus
-                    value={editedTitle}
-                    onChange={(e) => setEditedTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && editedTitle.trim()) {
-                        onConfirmCreateSession(
-                          session.id,
-                          editedTitle,
-                          session.folderId,
-                        );
-                        setEditedTitle("");
-                      }
-
-                      if (e.key === "Escape") {
-                        onCancelDraftSession(session.id);
-                        setEditingSessionId(null);
-                        setActiveSessionId(null);
-                        setEditedTitle("");
-                      }
-                    }}
-                    onBlur={() => {
-                      if (editedTitle.trim()) {
-                        onConfirmCreateSession(
-                          session.id,
-                          editedTitle,
-                          session.folderId,
-                        );
-                      } else {
-                        onCancelDraftSession(session.id);
-                        setActiveSessionId(null);
-                      }
-                      setEditingSessionId(null);
-                      setEditedTitle("");
-                    }}
-                    className="w-full bg-transparent border-b border-accent outline-none px-1"
-                    placeholder="Chat name"
-                  />
-                ) : (
-                  <span>{session.title}</span>
-                )}
-                {activeSessionId === session.id && !session.isDraft && (
-                  <X
-                    className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
-                    onClick={(e) => {
-                      e.stopPropagation(); // verhindert, dass der Folder selektiert wird
-                      onDeleteSession(session.id);
-                    }}
-                  />
-                )}
-              </div>
-            ))}
-
-            {/* Folders in Folder */}
-            {foldersByFolder(folder.id).map((folder) => (
-              <div
-                key={folder.id}
-                onClick={() => setActiveFolderId(folder.id)}
-                className={`ml-4 p-2 rounded cursor-pointer flex mt-1
-                  ${
-                    activeFolderId === folder.id
-                      ? "bg-accent text-black"
-                      : "hover:bg-primary"
-                  }
-                `}
-              >
-                <Folder className="w-4 h-4 mr-2 shrink-0 mt-1" />
-                {folder.isDraft && editingFolderId === folder.id ? (
-                  <input
-                    autoFocus
-                    value={folder.name}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      onUpdateDraftFolderName(folder.id, value);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && folder.name.trim()) {
-                        onConfirmCreateFolder(
-                          folder.id,
-                          folder.name,
-                          folder.parentId,
-                        );
-                      }
-
-                      if (e.key === "Escape") {
-                        onCancelDraftFolder(folder.id);
-                        setEditingFolderId(null);
-                        setActiveFolderId(null);
-                        onUpdateDraftFolderName(folder.id, "");
-                      }
-                    }}
-                    onBlur={() => {
-                      if (folder.name.trim()) {
-                        onConfirmCreateFolder(
-                          folder.id,
-                          folder.name,
-                          folder.parentId,
-                        );
-                      } else {
-                        onCancelDraftFolder(folder.id);
-                        setEditingFolderId(null);
-                      }
-                    }}
-                    className="w-full bg-transparent border-b border-accent outline-none px-1"
-                    placeholder="Folder name"
-                  />
-                ) : (
-                  <span>{folder.name}</span>
-                )}
-                {activeFolderId === folder.id && !folder.isDraft && (
-                  <X
-                    className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2 mt-1"
-                    onClick={(e) => {
-                      e.stopPropagation(); // verhindert, dass der Folder selektiert wird
-                      onDeleteFolder(folder.id);
-                    }}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        ))}
+        {renderFolders(null)}
 
         {!collapsed && (
           <div className="mb-2 mt-4 text-gray-500 dark:text-gray-400">
