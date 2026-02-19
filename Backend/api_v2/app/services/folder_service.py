@@ -122,11 +122,11 @@ class FolderService:
         '''
         # Find all child-chats and delete each of them
         query = {"folder_id": folder_id}
-        child_chats = await self.chats.find(query)
-        for cc in child_chats:
+        child_chats = self.chats.find(query)
+        async for cc in child_chats:
             try:
                 await chat_service.delete_chat(
-                    chat_id=ObjectId(cc["_id"]),
+                    chat_id=str(cc["_id"]),
                     user=current_user,
                     chat_service=chat_service
                 )
@@ -135,12 +135,12 @@ class FolderService:
 
         # Find all child-folders and delete each of them
         query = {"parent_folder_id": folder_id}
-        child_folders = await self.folders.find(query)
-        for cf in child_folders:
+        child_folders = self.folders.find(query)
+        async for cf in child_folders:
             try:
                 await self.delete_folder(
                     current_user=current_user,
-                    folder_id=ObjectId(cf["_id"]),
+                    folder_id=str(cf["_id"]),
                     chat_service=chat_service
                 )
             except ValueError:
