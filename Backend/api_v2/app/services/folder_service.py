@@ -118,9 +118,8 @@ class FolderService:
         async for cc in child_chats:
             try:
                 await chat_service.delete_chat(
-                    chat_id=str(cc["_id"]),
                     user=user,
-                    chat_service=chat_service
+                    chat_id=str(cc["_id"])
                 )
             except ValueError:
                 continue   
