@@ -81,8 +81,8 @@ class FolderService:
         
         doc = {
             "owner_id": user.id,
-            "name": folder_in.name,
-            "parent_id": folder_in.parent_folder_id,
+            "title": folder_in.title,
+            "parent_folder_id": folder_in.parent_folder_id,
             "depth": depth,
             "created_at": now,
         }

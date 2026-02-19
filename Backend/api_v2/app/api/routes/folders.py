@@ -37,7 +37,7 @@ async def create_folder(
         f = await folder_service.create_folder(user=current_user, folder_in=data)
         return FolderPublic(
             id= f.id,
-            name= f.name,
+            title= f.title,
             parent_folder_id= f.parent_folder_id,
             depth= f.depth,
             created_at= f.created_at,
@@ -83,7 +83,7 @@ async def list_folders(
         return [
             FolderPublic(
                 id= f.id,
-                name= f.name,
+                title= f.title,
                 parent_folder_id= f.parent_folder_id,
                 depth= f.depth,
                 created_at= f.created_at,
