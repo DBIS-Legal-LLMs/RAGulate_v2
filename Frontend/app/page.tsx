@@ -494,6 +494,7 @@ export default function GDPRChatbot() {
 
     setEditingFolderId(null);
     setActiveFolderId(folder.id);
+    setActiveSessionId(null);
   };
 
   /**
