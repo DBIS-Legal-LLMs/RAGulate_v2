@@ -118,11 +118,11 @@ class ChatService:
         # ensure chat exists & belongs to user
         await self.get_chat_for_user(user, chat_id)
         
-        # Session löschen
+        # Chat löschen
         await self.chats.delete_one({"_id": ObjectId(chat_id)})
 
         # Alle zugehörigen Messages löschen
-        await self.messages.delete_many({"session_id": chat_id})
+        await self.messages.delete_many({"chat_id": chat_id})
     
 
     # ----- Messages -----

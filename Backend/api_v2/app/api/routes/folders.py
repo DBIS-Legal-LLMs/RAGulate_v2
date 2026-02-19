@@ -71,14 +71,14 @@ async def create_folder(
         status_code=status.HTTP_200_OK
         )
 async def list_folders(
-    parent_id: Optional[str] = None,
+    parent_folder_id: Optional[str] = None,
     current_user: UserInDB = Depends(get_current_user),
     folder_service: FolderService = Depends(get_folder_service),
 ):
     try:
         folders = await folder_service.list_folders(
                 user=current_user, 
-                folder_id=parent_id
+                folder_id=parent_folder_id
         )
         return [
             FolderPublic(
