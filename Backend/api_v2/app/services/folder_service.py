@@ -112,14 +112,6 @@ class FolderService:
             folder_id: str,
             chat_service: ChatService
     ) -> None:
-        '''
-        # delete only if empty (no subfolders)
-        child = await self.collection.find_one(
-            {"owner_id": owner_id, "parent_id": folder_id}
-        )
-        if child:
-            raise ValueError("FOLDER_NOT_EMPTY")
-        '''
         # Find all child-chats and delete each of them
         query = {"folder_id": folder_id}
         child_chats = self.chats.find(query)
@@ -145,3 +137,10 @@ class FolderService:
                 )
             except ValueError:
                 continue
+        
+        # In the end, delete the folder we are currently in
+        await self.folders.delete_one(
+            {"_id": ObjectId(folder_id),
+             "owner_id": current_user.id}
+        )
+        return
