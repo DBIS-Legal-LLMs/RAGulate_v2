@@ -15,8 +15,8 @@ import Image from "next/image";
 
 interface UIFolder {
   id: string;
-  name: string;
-  parentId: string | null;
+  title: string;
+  parent_folder_id: string | null;
   depth: number;
   createdAt: Date;
   isDraft?: boolean;
@@ -45,12 +45,12 @@ interface SidebarProps {
   onNewFolder: () => void;
   onConfirmCreateFolder: (
     tempId: string,
-    name: string,
-    parentId: string | null,
+    title: string,
+    parent_folder_id: string | null,
   ) => void;
   editingFolderId: string | null;
   setEditingFolderId: (id: string | null) => void;
-  onUpdateDraftFolderName: (id: string, name: string) => void;
+  onUpdateDraftFolderName: (id: string, title: string) => void;
   onCancelDraftFolder: (id: string) => void;
   onDeleteFolder: (folderId: string) => void;
   onDeleteSession: (sessionID: string) => void;
@@ -100,13 +100,13 @@ export default function Sidebar({
 
   /**
    * Renders folders recursevly, expands folder that are clicked on and collapses when presses on open folder
-   * @param parentId 
+   * @param parent_folder_id
    * @param level Indicates level in tree with 0 being root
    * @returns All Folders that are open/collapsed
    */
-  const renderFolders = (parentId: string | null, level = 0) => {
+  const renderFolders = (parent_folder_id: string | null, level = 0) => {
     return folders
-      .filter((f) => f.parentId === parentId)
+      .filter((f) => f.parent_folder_id === parent_folder_id)
       .sort((a, b) => {
         if (a.isDraft && !b.isDraft) return -1;
         if (!a.isDraft && b.isDraft) return 1;
@@ -117,15 +117,15 @@ export default function Sidebar({
           {/* Folder Header */}
           <div
             onClick={() => {
-            setActiveFolderId(folder.id);
-            setActiveSessionId(null);
-            // indicated that on click the folder should be marked as open/collapsed, so it is (not) rendered
-            if (true) {
-              setOpenFolders(prev => ({
-                ...prev,
-                [folder.id]: !prev[folder.id],
-              }));
-            }
+              setActiveFolderId(folder.id);
+              setActiveSessionId(null);
+              // indicated that on click the folder should be marked as open/collapsed, so it is (not) rendered
+              if (true) {
+                setOpenFolders((prev) => ({
+                  ...prev,
+                  [folder.id]: !prev[folder.id],
+                }));
+              }
             }}
             className={`p-3 font-semibold cursor-pointer rounded flex items-center
               ${
@@ -139,17 +139,17 @@ export default function Sidebar({
             {folder.isDraft && editingFolderId === folder.id ? (
               <input
                 autoFocus
-                value={folder.name}
+                value={folder.title}
                 onChange={(e) => {
                   const value = e.target.value;
                   onUpdateDraftFolderName(folder.id, value);
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && folder.name.trim()) {
+                  if (e.key === "Enter" && folder.title.trim()) {
                     onConfirmCreateFolder(
                       folder.id,
-                      folder.name,
-                      folder.parentId
+                      folder.title,
+                      folder.parent_folder_id,
                     );
                   }
 
@@ -160,19 +160,19 @@ export default function Sidebar({
                   }
                 }}
                 onBlur={() => {
-                  if (folder.name.trim()) {
+                  if (folder.title.trim()) {
                     onConfirmCreateFolder(
                       folder.id,
-                      folder.name,
-                      folder.parentId
+                      folder.title,
+                      folder.parent_folder_id,
                     );
                     setEditingFolderId(null);
                   } else if (level === 0) {
-                      // if root folder is blurred a placeholder name is given
-                      onConfirmCreateFolder(
+                    // if root folder is blurred a placeholder name is given
+                    onConfirmCreateFolder(
                       folder.id,
                       "New Folder",
-                      folder.parentId
+                      folder.parent_folder_id,
                     );
                     setEditingFolderId(null);
                   }
@@ -181,19 +181,20 @@ export default function Sidebar({
                 placeholder="Folder name"
               />
             ) : (
-              <span>{folder.name}</span>
+              <span>{folder.title}</span>
             )}
-              {activeFolderId === folder.id && !folder.isDraft && (
-                <X
-                  className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
-                  onClick={(e) => {
-                    e.stopPropagation(); // verhindert, dass der Folder selektiert wird
-                    onDeleteFolder(folder.id);
-                  }}
-                />
-              )}
+            {activeFolderId === folder.id && !folder.isDraft && (
+              <X
+                className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-2"
+                onClick={(e) => {
+                  e.stopPropagation(); // verhindert, dass der Folder selektiert wird
+                  onDeleteFolder(folder.id);
+                }}
+              />
+            )}
           </div>
-            {(folder.isDraft || openFolders[folder.id]) && renderFolders(folder.id, level + 1)}
+          {(folder.isDraft || openFolders[folder.id]) &&
+            renderFolders(folder.id, level + 1)}
         </div>
       ));
   };

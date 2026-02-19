@@ -57,8 +57,8 @@ interface Message {
 
 interface UIFolder {
   id: string;
-  name: string;
-  parentId: string | null;
+  title: string;
+  parent_folder_id: string | null;
   depth: number;
   createdAt: Date;
   isDraft?: boolean;
@@ -108,8 +108,8 @@ export default function GDPRChatbot() {
   const [showDocuments, setShowDocuments] = useState(false); // Documents modal visibility
 
   /* Helper Functions */
-  const onUpdateDraftFolderName = (id: string, name: string) => {
-    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
+  const onUpdateDraftFolderName = (id: string, title: string) => {
+    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, title } : f)));
   };
 
   const onCancelDraftFolder = (id: string) => {
@@ -181,14 +181,11 @@ export default function GDPRChatbot() {
     const loadMessages = async () => {
       setIsSessionLoading(true);
       const token = localStorage.getItem("token");
-      const res = await fetch(
-        `${BACKEND_URL}/api/chat/${activeSessionId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      const res = await fetch(`${BACKEND_URL}/api/chat/${activeSessionId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
+      });
       const data = await res.json();
       console.log(data.messages);
 
@@ -273,7 +270,7 @@ export default function GDPRChatbot() {
     const url = new URL(`${BACKEND_URL}/api/folderslist`);
 
     if (parent_id) {
-      url.searchParams.append("parent_id", parent_id);
+      url.searchParams.append("parent_folder_id", parent_id);
     }
     const res = await fetch(url.toString(), {
       headers: {
@@ -301,7 +298,7 @@ export default function GDPRChatbot() {
 
     /* Load subfolder */
     const folderUrl = new URL(`${BACKEND_URL}/api/folderslist`);
-    if (folderId) folderUrl.searchParams.append("parent_id", folderId);
+    if (folderId) folderUrl.searchParams.append("parent_folder_id", folderId);
 
     const folderRes = await fetch(folderUrl.toString(), {
       headers: { Authorization: `Bearer ${token}` },
@@ -311,8 +308,8 @@ export default function GDPRChatbot() {
 
     const uiFolders: UIFolder[] = rawFolders.map((f: any) => ({
       id: f.id,
-      name: f.name,
-      parentId: f.parent_id,
+      title: f.title,
+      parent_folder_id: f.parent_folder_id,
       depth: f.depth,
       createdAt: new Date(f.created_at),
     }));
@@ -333,11 +330,13 @@ export default function GDPRChatbot() {
       folderId: s.folder_id,
       createdAt: new Date(s.created_at),
     }));
-    setFolders(prev => {
-      const filtered = prev.filter(f => f.isDraft || f.parentId !== activeFolderId);
+    setFolders((prev) => {
+      const filtered = prev.filter(
+        (f) => f.isDraft || f.parent_folder_id !== activeFolderId,
+      );
       return [...filtered, ...uiFolders];
     });
-    setSessions(uiSessions)
+    setSessions(uiSessions);
   };
 
   /**
@@ -382,8 +381,8 @@ export default function GDPRChatbot() {
     name: string,
     parentId: string | null,
   ) => {
-    console.log(name);
-    console.log(parentId);
+    // console.log(name);
+    // console.log(parentId);
     const token = localStorage.getItem("token");
     const res = await fetch(`${BACKEND_URL}/api/chat/`, {
       method: "POST",
@@ -433,8 +432,8 @@ export default function GDPRChatbot() {
 
     const draftFolder: UIFolder = {
       id: tempId,
-      name: "",
-      parentId: activeFolderId ?? null,
+      title: "",
+      parent_folder_id: activeFolderId ?? null,
       depth: 0,
       createdAt: new Date(),
       isDraft: true,
@@ -450,12 +449,12 @@ export default function GDPRChatbot() {
    * Confirms the Folder, sends a POST reuqest to the Backend to fully create the Folder
    * @param tempId ID from Draft Folder
    * @param name name of Folder
-   * @param parentId which folder it belongs to, none for root folder
+   * @param parent_folder_id which folder it belongs to, none for root folder
    */
   const confirmCreateFolder = async (
     tempId: string,
-    name: string,
-    parentId: string | null,
+    title: string,
+    parent_folder_id: string | null,
   ) => {
     const token = localStorage.getItem("token");
 
@@ -466,8 +465,8 @@ export default function GDPRChatbot() {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        name,
-        parent_id: parentId,
+        title,
+        parent_folder_id,
       }),
     });
 
@@ -478,7 +477,6 @@ export default function GDPRChatbot() {
       alert("Folder konnte nicht erstellt werden (Name evtl. schon vergeben)");
       return;
     }
-
     const folder = await res.json();
     setFolders((prev) =>
       prev.map((f) =>
@@ -486,8 +484,8 @@ export default function GDPRChatbot() {
           ? {
               ...f,
               id: folder.id,
-              name: folder.name,
-              parentId: folder.parent_id,
+              title: folder.title,
+              parent_folder_id: folder.parent_folder_id,
               isDraft: false,
             }
           : f,
@@ -576,8 +574,8 @@ export default function GDPRChatbot() {
       console.log(rawFolders);
       const uiFolders: UIFolder[] = rawFolders.map((f: any) => ({
         id: f.id,
-        name: f.name,
-        parentId: f.parent_id,
+        title: f.title,
+        parent_folder_id: f.parent_folder_id,
         depth: f.depth,
         createdAt: new Date(f.created_at),
       }));
@@ -632,7 +630,7 @@ export default function GDPRChatbot() {
     (s) => s.folderId === activeFolderId,
   );
   const foldersinActiveFolder = folders.filter(
-    f => f.parentId === activeFolderId
+    (f) => f.parent_folder_id === activeFolderId,
   );
 
   return (
@@ -749,7 +747,7 @@ export default function GDPRChatbot() {
                   <>
                     <div className="text-center py-6">
                       <h2 className="text-4xl font-semibold">
-                        {activeFolder.name}
+                        {activeFolder.title}
                       </h2>
                     </div>
 
@@ -758,67 +756,72 @@ export default function GDPRChatbot() {
                         {foldersinActiveFolder.length} Ordner in diesem Ordner
                       </p>
                       {/* Displays Subfolders for Active Folder */}
-                      {foldersinActiveFolder.sort((a, b) => {
-                        // Drafts on top
-                        if (a.isDraft && !b.isDraft) return -1;
-                        if (!a.isDraft && b.isDraft) return 1;
-                        return b.createdAt.getTime() - a.createdAt.getTime();
-                      }).map((folder) => (
-                        <Card
-                          key={folder.id}
-                          className="p-4 cursor-pointer bg-sidebar hover:bg-accent hover:text-black transition border-none"
-                          onClick={() => setActiveFolderId(folder.id)}
-                        >
-                          {folder.isDraft && editingFolderId === folder.id ? (
-                            <input
-                              autoFocus
-                              value={folder.name}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                onUpdateDraftFolderName(folder.id, value);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && folder.name.trim()) {
-                                  confirmCreateFolder(
-                                    folder.id,
-                                    folder.name,
-                                    folder.parentId
-                                  );
-                                }
-                                if (e.key === "Escape") {
-                                  onCancelDraftFolder(folder.id);
+                      {foldersinActiveFolder
+                        .sort((a, b) => {
+                          // Drafts on top
+                          if (a.isDraft && !b.isDraft) return -1;
+                          if (!a.isDraft && b.isDraft) return 1;
+                          return b.createdAt.getTime() - a.createdAt.getTime();
+                        })
+                        .map((folder) => (
+                          <Card
+                            key={folder.id}
+                            className="p-4 cursor-pointer bg-sidebar hover:bg-accent hover:text-black transition border-none"
+                            onClick={() => setActiveFolderId(folder.id)}
+                          >
+                            {folder.isDraft && editingFolderId === folder.id ? (
+                              <input
+                                autoFocus
+                                value={folder.title}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  onUpdateDraftFolderName(folder.id, value);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (
+                                    e.key === "Enter" &&
+                                    folder.title.trim()
+                                  ) {
+                                    confirmCreateFolder(
+                                      folder.id,
+                                      folder.title,
+                                      folder.parent_folder_id,
+                                    );
+                                  }
+                                  if (e.key === "Escape") {
+                                    onCancelDraftFolder(folder.id);
+                                    setEditingFolderId(null);
+                                    // setActiveFolderId(null);
+                                  }
+                                }}
+                                onBlur={() => {
+                                  if (folder.title.trim()) {
+                                    confirmCreateFolder(
+                                      folder.id,
+                                      folder.title,
+                                      folder.parent_folder_id,
+                                    );
+                                  } else {
+                                    onCancelDraftFolder(folder.id);
+                                  }
                                   setEditingFolderId(null);
-                                  // setActiveFolderId(null);
-                                }
-                              }}
-                              onBlur={() => {
-                                if (folder.name.trim()) {
-                                  confirmCreateFolder(
-                                    folder.id,
-                                    folder.name,
-                                    folder.parentId
-                                  );
-                                } else {
-                                  onCancelDraftFolder(folder.id);
-                                }
-                                setEditingFolderId(null);
-                              }}
-                              className="w-full bg-transparent border-b border-accent outline-none px-1"
-                              placeholder="Folder name"
-                            />
-                          ) : (
-                          <div className="flex justify-between items-center">
-                            <span className="flex font-medium">
-                              <Folder className="w-4 h-4 mr-2 mt-1" />
-                              {folder.name || "Untitled Chat"}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {folder.createdAt.toLocaleDateString()}
-                            </span>
-                          </div>
-                          )}
-                        </Card>
-                      ))}
+                                }}
+                                className="w-full bg-transparent border-b border-accent outline-none px-1"
+                                placeholder="Folder name"
+                              />
+                            ) : (
+                              <div className="flex justify-between items-center">
+                                <span className="flex font-medium">
+                                  <Folder className="w-4 h-4 mr-2 mt-1" />
+                                  {folder.title || "Untitled Chat"}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {folder.createdAt.toLocaleDateString()}
+                                </span>
+                              </div>
+                            )}
+                          </Card>
+                        ))}
 
                       {foldersinActiveFolder.length === 0 && (
                         <p className="text-center text-gray-500 py-4">
@@ -837,7 +840,8 @@ export default function GDPRChatbot() {
                           className="p-4 cursor-pointer bg-sidebar hover:bg-accent hover:text-black transition border-none"
                           onClick={() => setActiveSessionId(session.id)}
                         >
-                          {session.isDraft && editingSessionId === session.id ? (
+                          {session.isDraft &&
+                          editingSessionId === session.id ? (
                             <input
                               autoFocus
                               value={editedTitle}
