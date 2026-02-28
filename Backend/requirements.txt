@@ -80,6 +80,7 @@ packaging==25.0
 pandas==2.2.3
 passlib==1.7.4
 pdfminer.six==20191110
+pdfplumber==0.11.4
 pillow==12.0.0
 pipmaster==1.0.9
 propcache==0.4.1

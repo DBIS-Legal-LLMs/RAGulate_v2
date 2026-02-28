@@ -19,6 +19,7 @@ from ..config import get_settings
 
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
+import networkx as nx
 
 settings = get_settings()
 
@@ -342,3 +343,35 @@ def get_supported_models() -> Dict[LLMProviderName, List[str]]:
     welche Provider/Modelle zur Auswahl stehen.
     """
     return SUPPORTED_MODELS
+
+def get_graph_data() -> dict:
+    graph_path = os.path.join(WORKING_DIR, "graph_chunk_entity_relation.graphml")
+
+    if not os.path.exists(graph_path):
+        return {"nodes": [], "edges": [], "node_count": 0, "edge_count": 0}
+
+    G = nx.read_graphml(graph_path)
+
+    nodes = [
+        {
+            "id": node_id,
+            "label": data.get("entity_name", node_id),
+            "type": data.get("entity_type", "UNKNOWN"),
+            "description": data.get("description", ""),
+        }
+        for node_id, data in G.nodes(data=True)
+    ]
+
+    edges = [
+        {
+            "id": f"{u}-{v}",
+            "source": u,
+            "target": v,
+            "label": data.get("keywords", ""),
+            "weight": float(data.get("weight", 1.0)),
+            "description": data.get("description", ""),
+        }
+        for u, v, data in G.edges(data=True)
+    ]
+
+    return {"nodes": nodes, "edges": edges, "node_count": len(nodes), "edge_count": len(edges)}
