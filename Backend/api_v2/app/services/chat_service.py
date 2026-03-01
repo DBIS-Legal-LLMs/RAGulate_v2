@@ -9,8 +9,8 @@ from bson import ObjectId
 from pymongo.asynchronous.database import AsyncDatabase
 
 from ..core import errors
-from ..models.user import UserInDB
-from ..models.chat import (
+from ..models.user_models import UserInDB
+from ..models.chat_models import (
     ChatSessionCreate,
     ChatSessionInDB,
     ChatSessionPublic,
