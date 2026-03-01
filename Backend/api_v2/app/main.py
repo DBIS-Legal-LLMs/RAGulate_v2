@@ -4,10 +4,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api.routes.health import router as health_router
-from .api.routes.auth import router as auth_router
-from .api.routes.chat import router as chat_router
-from .api.routes.llm_models import router as models_router
-from .api.routes.folders import router as folder_router
+from .api.routes.auth_routes import router as auth_router
+from .api.routes.chat_routes import router as chat_router
+from .api.routes.llm_models_routes import router as models_router
+from .api.routes.folders_routes import router as folder_router
 
 from contextlib import asynccontextmanager
 
