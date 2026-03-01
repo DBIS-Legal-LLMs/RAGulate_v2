@@ -92,6 +92,26 @@ class ChatService:
         doc["_id"] = str(doc["_id"])
         return ChatSessionInDB(**doc)
     
+
+    async def move_chat(
+            self,
+            user: UserInDB,
+            chat_id: str,
+            new_folder_id: Optional[str],
+    ) -> ChatSessionInDB:
+        # Ensure chat exists & belongs to user
+        chat = await self.get_chat_for_user(user, chat_id)
+
+        # Update folder_id
+        await self.chats.update_one(
+            {"_id": ObjectId(chat_id)},
+            {"$set": {"folder_id": new_folder_id}},
+        )
+
+        # Return updated chat
+        updated = await self.get_chat_for_user(user, chat_id)
+        return updated
+    
     
     async def delete_chat(
             self, 
