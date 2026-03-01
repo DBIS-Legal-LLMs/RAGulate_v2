@@ -93,6 +93,47 @@ async def list_folders(
     except ValueError as code:
         #if code == errors.UNKNOWN_ERROR_0
         raise ValueError("[UNKNOWN ERROR] Can't list folders")
+    
+
+@router.put(
+        "/{folder_id}/move",
+        response_model=FolderPublic,
+        status_code=status.HTTP_200_OK,
+)
+async def move_folder(
+    folder_id: str,
+    new_parent_id: Optional[str] = None,
+    current_user: UserInDB = Depends(get_current_user),
+    folder_service: FolderService = Depends(get_folder_service),
+):
+    try:
+        updated = await folder_service.move_folder(
+            user=current_user,
+            folder_id=folder_id,
+            new_parent_id=new_parent_id,
+        )
+        return FolderPublic(
+            id=updated.id,
+            title=updated.title,
+            parent_folder_id=updated.parent_folder_id,
+            depth=updated.depth,
+            created_at=updated.created_at,
+        )
+    except ValueError as code:
+        if code == errors.FOLDER_1000_NOT_FOUND:
+            raise HTTPException(
+                status_code=404, 
+                detail="Folder not found"
+            )
+        if code == errors.FOLDER_1002_MAX_DEPTH_EXCEEDED:
+            raise HTTPException(
+                status_code=405, 
+                detail="Max depth exceeded"
+            )
+        raise HTTPException(
+            status_code=400, 
+            detail="Could not move folder"
+        )
 
 
 @router.delete(

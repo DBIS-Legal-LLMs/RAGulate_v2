@@ -9,8 +9,8 @@ from bson import ObjectId
 from pymongo.asynchronous.database import AsyncDatabase
 
 from ..core import errors
-from ..models.user import UserInDB
-from ..models.folder import (
+from ..models.user_models import UserInDB
+from ..models.folder_models import (
     FolderCreate, 
     FolderInDB,
     )
@@ -54,6 +54,21 @@ class FolderService:
             return entries
         except TypeError:
             raise ValueError(errors.UNKNOWN_ERROR_0)
+
+
+    async def get_by_id(
+            self, 
+            user: UserInDB,
+            folder_id: str
+    ) -> Optional[FolderInDB]:
+        doc = await self.folders.find_one(
+            {"_id": ObjectId(folder_id), "owner_id": user.id}
+        )
+        if not doc:
+            raise ValueError(errors.FOLDER_1000_NOT_FOUND)
+        
+        doc["_id"] = str(doc["_id"])
+        return FolderInDB(**doc)
     
 
     async def create_folder(
@@ -71,8 +86,6 @@ class FolderService:
                     user=user,
                     folder_id=folder_in.parent_folder_id
             )
-            if not parent:
-                raise ValueError(errors.FOLDER_1000_NOT_FOUND)
             parent_depth = parent.depth
 
         depth = parent_depth + 1
@@ -88,22 +101,88 @@ class FolderService:
         }
         result = await self.folders.insert_one(doc)
         doc["_id"] = str(result.inserted_id)
-
         return FolderInDB(**doc)
+    
+    
+    async def update_depth(
+            self,
+            folder_id: str,
+            parent_depth: int,
 
-
-    async def get_by_id(
-            self, 
-            user: UserInDB,
-            folder_id: str
-    ) -> Optional[FolderInDB]:
-        doc = await self.folders.find_one(
-            {"_id": ObjectId(folder_id), "owner_id": user.id}
+    ):
+        new_depth = parent_depth + 1
+        # Update this folder
+        await self.folders.update_one(
+            {"_id": ObjectId(folder_id)},
+            {"$set": {"depth": new_depth}},
         )
-        if not doc:
-            return None
-        doc["_id"] = str(doc["_id"])
-        return FolderInDB(**doc)
+
+        # Update children aswell
+        query = {"parent_folder_id": folder_id}
+        child_folders = self.folders.find(query)
+        async for cf in child_folders:
+            self.update_depth(
+                folder_id=str(cf["_id"]),
+                parent_depth=new_depth
+            )
+    
+
+    async def move_folder(
+            self,
+            user: UserInDB,
+            folder_id: str,
+            new_parent_id: Optional[str],
+    ) -> FolderInDB:
+        # Ensure folder exists
+        folder = await self.get_by_id(user, folder_id)
+
+        # Prevent moving into same parent again
+        if folder["parent_folder_id"] == new_parent_id:
+            raise ValueError(errors.FOLDER_1003_BOOTSTRAP_PARADOX)
+        
+        # Prevent moving into itself
+        if folder_id == new_parent_id:
+            raise ValueError(errors.FOLDER_1003_BOOTSTRAP_PARADOX)
+        
+        # Prevent moving into own child
+        query = {"parent_folder_id": folder_id}
+        child_folders = self.folders.find(query)
+        async for cf in child_folders:
+            if cf["parent_folder_id"] == folder_id:
+                raise ValueError(errors.FOLDER_1003_BOOTSTRAP_PARADOX)
+
+        # Determine depth (no parent -> 0 + 1, parent -> parent + 1)
+        parent_depth = 0
+        if new_parent_id:
+            parent = await self.get_by_id(user, new_parent_id)
+            parent_depth = parent.depth
+
+        # Depth >= 4
+        new_depth = parent_depth + 1
+        if new_depth > MAX_FOLDER_DEPTH:
+            raise ValueError(errors.FOLDER_1002_MAX_DEPTH_EXCEEDED)
+        
+        # Update this folder
+        await self.folders.update_one(
+            {"_id": ObjectId(folder_id)},
+            {"$set": 
+                {
+                    "parent_folder_id": new_parent_id,
+                    "depth": new_depth
+                }
+            },
+        )
+
+        # Update children depths (recursively)
+        query = {"parent_folder_id": folder_id}
+        child_folders = self.folders.find(query)
+        async for cf in child_folders:
+            self.update_depth(
+                folder_id=str(cf["_id"]),
+                parent_depth=new_depth
+            )
+
+        return await self.get_by_id(user, folder_id)
     
 
     async def delete_folder(
