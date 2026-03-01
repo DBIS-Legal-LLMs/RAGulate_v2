@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from ...core.deps import get_current_user, get_db
 from ...core import errors
-from ...models.user import UserInDB
-from ...models.folder import (
+from ...models.user_models import UserInDB
+from ...models.folder_models import (
     FolderCreate, 
     FolderPublic
 )

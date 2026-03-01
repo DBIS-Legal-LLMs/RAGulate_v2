@@ -7,8 +7,8 @@ from fastapi.responses import StreamingResponse
 
 from ...core.deps import get_current_user, get_db
 from ...core import errors
-from ...models.user import UserInDB
-from ...models.chat import (
+from ...models.user_models import UserInDB
+from ...models.chat_models import (
     ChatSessionCreate,
     ChatSessionPublic,
     ChatSessionWithMessages,
