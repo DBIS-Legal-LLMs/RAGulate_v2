@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from ..services.rag_service import get_graph_data
+from ...services.rag_service import get_graph_data
 
 router = APIRouter(prefix="/graph", tags=["graph"])
 

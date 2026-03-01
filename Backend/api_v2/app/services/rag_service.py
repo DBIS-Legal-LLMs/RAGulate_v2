@@ -86,13 +86,18 @@ def _get_embedding_models():
 
 
 async def _embedding_func(texts: List[str]):
-    """Async-Wrapper um hf_embed, damit wir es in LightRAG nutzen können."""
     tokenizer, model = _get_embedding_models()
+    
+    def _embed():
+        import torch
+        inputs = tokenizer(texts, padding=True, truncation=True, return_tensors="pt", max_length=512)
+        with torch.no_grad():
+            outputs = model(**inputs)
+        embeddings = outputs.last_hidden_state.mean(dim=1)
+        return embeddings.cpu().numpy()
+    
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(
-        None,
-        lambda: hf_embed(texts, tokenizer=tokenizer, embed_model=model),
-    )
+    return await loop.run_in_executor(None, _embed)
 
 
 EMBEDDING_WRAPPER = EmbeddingFunc(

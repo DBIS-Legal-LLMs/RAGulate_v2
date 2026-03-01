@@ -12,6 +12,7 @@ def _extract_text(file_bytes: bytes) -> str:
             page_text = page.extract_text()
             if page_text:
                 text += page_text + "\n"
+    print(text)
     return text
 
 async def _process(job_id: str, text: str, provider: LLMProviderName, model_id: str):
