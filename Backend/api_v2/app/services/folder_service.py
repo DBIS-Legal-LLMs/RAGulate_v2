@@ -121,7 +121,7 @@ class FolderService:
         query = {"parent_folder_id": folder_id}
         child_folders = self.folders.find(query)
         async for cf in child_folders:
-            self.update_depth(
+            await self.update_depth(
                 folder_id=str(cf["_id"]),
                 parent_depth=new_depth
             )
@@ -137,7 +137,7 @@ class FolderService:
         folder = await self.get_by_id(user, folder_id)
 
         # Prevent moving into same parent again
-        if folder["parent_folder_id"] == new_parent_id:
+        if folder.parent_folder_id == new_parent_id:
             raise ValueError(errors.FOLDER_1003_BOOTSTRAP_PARADOX)
         
         # Prevent moving into itself
@@ -148,7 +148,7 @@ class FolderService:
         query = {"parent_folder_id": folder_id}
         child_folders = self.folders.find(query)
         async for cf in child_folders:
-            if cf["parent_folder_id"] == folder_id:
+            if cf["_id"] == new_parent_id:
                 raise ValueError(errors.FOLDER_1003_BOOTSTRAP_PARADOX)
 
         # Determine depth (no parent -> 0 + 1, parent -> parent + 1)
@@ -177,7 +177,7 @@ class FolderService:
         query = {"parent_folder_id": folder_id}
         child_folders = self.folders.find(query)
         async for cf in child_folders:
-            self.update_depth(
+            await self.update_depth(
                 folder_id=str(cf["_id"]),
                 parent_depth=new_depth
             )
