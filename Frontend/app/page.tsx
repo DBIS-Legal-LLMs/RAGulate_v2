@@ -563,6 +563,14 @@ export default function GDPRChatbot() {
     }
   };
 
+  const moveFolder = async (folderId: string, newFolderId: string | null) => {
+    console.log(folderId, newFolderId);
+  };
+
+  const moveSession = async (sessionId: string, newFolderId: string | null) => {
+    console.log(sessionId, newFolderId);
+  };
+
   /**
    * Loads Sidebar content. Contains Sessions and Folders
    */
@@ -678,6 +686,8 @@ export default function GDPRChatbot() {
             onCancelDraftSession={onCancelDraftSession}
             onUpdateDraftSessionName={onUpdateDraftSessionName}
             onDeleteSession={deleteSession}
+            onMoveFolder={moveFolder}
+            onMoveSession={moveSession}
           />
 
           {/* 

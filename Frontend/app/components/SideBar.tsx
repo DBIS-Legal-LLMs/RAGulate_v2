@@ -61,6 +61,8 @@ interface SidebarProps {
   ) => void;
   onUpdateDraftSessionName: (id: string, name: string) => void;
   onCancelDraftSession: (id: string) => void;
+  onMoveFolder: (folderId: string, newParentFolderId: string | null) => void;
+  onMoveSession: (sessionId: string, newFolderId: string | null) => void;
 }
 
 export default function Sidebar({
@@ -86,9 +88,16 @@ export default function Sidebar({
   onConfirmCreateSession,
   onUpdateDraftSessionName,
   onCancelDraftSession,
+  onMoveFolder,
+  onMoveSession,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
+  const [draggingItem, setDraggingItem] = useState<{
+    type: "folder" | "session";
+    id: string;
+  } | null>(null);
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
 
   const topLevelSessions = sessions
     .filter((s) => s.folderId === null)
@@ -97,6 +106,13 @@ export default function Sidebar({
       if (!a.isDraft && b.isDraft) return 1; // Normale nach oben
       return 0;
     });
+
+  const isDescendant = (potentialChild: string, parentId: string): boolean => {
+    const children = folders.filter((f) => f.parent_folder_id === parentId);
+    return children.some(
+      (c) => c.id === potentialChild || isDescendant(potentialChild, c.id),
+    );
+  };
 
   /**
    * Renders folders recursevly, expands folder that are clicked on and collapses when presses on open folder
@@ -113,9 +129,59 @@ export default function Sidebar({
         return b.createdAt.getTime() - a.createdAt.getTime();
       })
       .map((folder) => (
-        <div key={folder.id} style={{ marginLeft: level * 16 }}>
+        <div
+          key={folder.id}
+          style={{ marginLeft: level * 16 }}
+          draggable={!folder.isDraft}
+          onDragStart={(e) => {
+            e.stopPropagation();
+            setDraggingItem({ type: "folder", id: folder.id });
+            e.dataTransfer.effectAllowed = "move";
+          }}
+          onDragEnd={() => {
+            setDraggingItem(null);
+            setDragOverFolderId(null);
+          }}
+        >
           {/* Folder Header */}
           <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Nicht auf sich selbst droppen
+              if (draggingItem?.id !== folder.id) {
+                setDragOverFolderId(folder.id);
+                e.dataTransfer.dropEffect = "move";
+              }
+            }}
+            onDragLeave={(e) => {
+              e.stopPropagation();
+              setDragOverFolderId(null);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!draggingItem || draggingItem.id === folder.id) return;
+              if (
+                draggingItem.type === "folder" &&
+                isDescendant(folder.id, draggingItem.id)
+              )
+                return;
+
+              // Hier den API Call auslösen:
+              if (draggingItem.type === "folder") {
+                console.log("Moved Item");
+                console.log(draggingItem.id, folder.id);
+                onMoveFolder(draggingItem.id, folder.id); // neue parent_folder_id
+              } else {
+                console.log("Moved Session");
+                console.log(draggingItem.id, folder.id);
+                onMoveSession(draggingItem.id, folder.id); // neue folderId
+              }
+
+              setDraggingItem(null);
+              setDragOverFolderId(null);
+            }}
             onClick={() => {
               setActiveFolderId(folder.id);
               setActiveSessionId(null);
@@ -128,11 +194,8 @@ export default function Sidebar({
               }
             }}
             className={`p-3 font-semibold cursor-pointer rounded flex items-center
-              ${
-                activeFolderId === folder.id
-                  ? "bg-accent dark:text-black"
-                  : "hover:bg-primary"
-              }
+              ${activeFolderId === folder.id ? "bg-accent dark:text-black" : "hover:bg-primary"}
+              ${dragOverFolderId === folder.id ? "ring-2 ring-blue-400 bg-blue-100 dark:bg-blue-900" : ""}
             `}
           >
             <Folder className="w-4 h-4 mr-2 shrink-0" />
@@ -263,16 +326,62 @@ export default function Sidebar({
         </div>
       )}
 
-      {/* Chat Sessions */}
+      {/* Folders */}
       <ScrollArea className="flex-1 px-2">
         {!collapsed && (
-          <div className="mb-2 mt-4 text-gray-500 dark:text-gray-400">
+          <div
+            className="mb-2 mt-4 text-gray-500 dark:text-gray-400"
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOverFolderId("root");
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                setDragOverFolderId(null);
+              }
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (!draggingItem) return;
+              if (draggingItem.type === "folder") {
+                const folder = folders.find((f) => f.id === draggingItem.id);
+                if (folder?.parent_folder_id === null) return;
+                onMoveFolder(draggingItem.id, null);
+              } else onMoveSession(draggingItem.id, null);
+              setDraggingItem(null);
+              setDragOverFolderId(null);
+            }}
+          >
             <span>Folders</span>
           </div>
         )}
 
-        {/* Folders */}
-        {renderFolders(null)}
+        {/* Root Drop-Zone für Folders */}
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOverFolderId("root");
+          }}
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setDragOverFolderId(null);
+            }
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (!draggingItem) return;
+            if (draggingItem.type === "folder")
+              onMoveFolder(draggingItem.id, null);
+            else onMoveSession(draggingItem.id, null);
+            setDraggingItem(null);
+            setDragOverFolderId(null);
+          }}
+          className={`rounded transition-colors
+            ${dragOverFolderId === "root" ? "ring-2 ring-dashed ring-blue-400" : ""}
+          `}
+        >
+          {renderFolders(null)}
+        </div>
 
         {!collapsed && (
           <div className="mb-2 mt-4 text-gray-500 dark:text-gray-400">
