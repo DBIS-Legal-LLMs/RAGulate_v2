@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
+import { useTranslation } from "react-i18next";
 
 interface UIFolder {
   id: string;
@@ -98,6 +99,7 @@ export default function Sidebar({
     id: string;
   } | null>(null);
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const topLevelSessions = sessions
     .filter((s) => s.folderId === null)
@@ -241,7 +243,7 @@ export default function Sidebar({
                   }
                 }}
                 className="w-full bg-transparent border-b border-accent outline-none px-1"
-                placeholder="Folder name"
+                placeholder={t("sidebar.placeholderFolder")}
               />
             ) : (
               <span>{folder.title}</span>
@@ -275,7 +277,11 @@ export default function Sidebar({
             alt="Logo"
             width={32}
             height={32}
-            className="rounded h-8 w-auto object-contain ml-1 mt-1 dark:invert ease-in-out"
+            className="rounded h-8 w-auto object-contain ml-1 mt-1 dark:invert ease-in-out cursor-pointer"
+            onClick={() => {
+              setActiveFolderId(null);
+              setActiveSessionId(null);
+            }}
           />
         )}
 
@@ -307,7 +313,7 @@ export default function Sidebar({
             className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black "
           >
             <MessageSquare className="w-4 h-4 mr-2" />
-            New Chat
+            {t("sidebar.newChat")}
           </Button>
         </div>
       )}
@@ -321,7 +327,7 @@ export default function Sidebar({
             className="w-full bg-primary hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black"
           >
             <Folder className="w-4 h-4 mr-2" />
-            New Folder
+            {t("sidebar.newFolder")}
           </Button>
         </div>
       )}
@@ -352,40 +358,42 @@ export default function Sidebar({
               setDragOverFolderId(null);
             }}
           >
-            <span>Folders</span>
+            <span>{t("sidebar.folders")}</span>
           </div>
         )}
 
         {/* Root Drop-Zone für Folders */}
-        <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOverFolderId("root");
-          }}
-          onDragLeave={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+        {!collapsed && (
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOverFolderId("root");
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                setDragOverFolderId(null);
+              }
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (!draggingItem) return;
+              if (draggingItem.type === "folder")
+                onMoveFolder(draggingItem.id, null);
+              else onMoveSession(draggingItem.id, null);
+              setDraggingItem(null);
               setDragOverFolderId(null);
-            }
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            if (!draggingItem) return;
-            if (draggingItem.type === "folder")
-              onMoveFolder(draggingItem.id, null);
-            else onMoveSession(draggingItem.id, null);
-            setDraggingItem(null);
-            setDragOverFolderId(null);
-          }}
-          className={`rounded transition-colors
+            }}
+            className={`rounded transition-colors
             ${dragOverFolderId === "root" ? "ring-2 ring-dashed ring-blue-400" : ""}
           `}
-        >
-          {renderFolders(null)}
-        </div>
+          >
+            {renderFolders(null)}
+          </div>
+        )}
 
         {!collapsed && (
           <div className="mb-2 mt-4 text-gray-500 dark:text-gray-400">
-            <span>Chats</span>
+            <span>{t("sidebar.chats")}</span>
           </div>
         )}
 
@@ -447,7 +455,7 @@ export default function Sidebar({
                   setEditedTitle("");
                 }}
                 className="w-full bg-transparent border-b border-accent outline-none px-1"
-                placeholder="Chat name"
+                placeholder={t("sidebar.placeholderChat")}
               />
             ) : (
               <span>{session.title}</span>

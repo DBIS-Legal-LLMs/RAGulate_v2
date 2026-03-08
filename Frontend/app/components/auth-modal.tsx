@@ -1,5 +1,6 @@
-import React, { useEffect,useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FocusScope } from "@radix-ui/react-focus-scope";
+import { useTranslation } from "react-i18next";
 
 const BACKEND_URL = "http://134.60.71.197:8000";
 
@@ -17,6 +18,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
   const [passwordError, setPasswordError] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (mode === "register" && !username) {
@@ -34,23 +36,23 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
     let hasError = false;
     if (!email.trim()) {
       setEmailError(true);
-      setServerError("Please enter email");
+      setServerError(t("auth.errors.enterEmail"));
       hasError = true;
     }
     if (!password.trim()) {
       setPasswordError(true);
-      setServerError("Please enter password");
+      setServerError(t("auth.errors.enterPassword"));
       hasError = true;
     }
     if (mode === "register" && !username.trim()) {
       setUsernameError(true);
-      setServerError("Please enter username");
+      setServerError(t("auth.errors.enterUsername"));
       hasError = true;
     }
 
     if (mode === "register" && !isPasswordValid) {
       setPasswordError(true);
-      setServerError("Password does not meet security requirements.");
+      setServerError(t("auth.errors.passwordInvalid"));
       return;
     }
 
@@ -77,7 +79,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
           localStorage.setItem("token", data.access_token);
           onLoginSuccess(data.sessions, data.user.username);
         } else {
-          setServerError(data.detail || "Login failed");
+          setServerError(data.detail || t("auth.errors.loginFailed"));
         }
       } else {
         const res = await fetch(BACKEND_URL + "/api/auth/register", {
@@ -112,16 +114,14 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
             onLoginSuccess(loginData.sessions, data.user.username);
           } else {
             setMode("login");
-            setServerError(
-              "Registration successful, but login failed. Please try logging in."
-            );
+            setServerError(t("auth.errors.registerSuccessLoginFailed"));
           }
         } else {
-          setServerError(data.detail || "Registration failed");
+          setServerError(data.detail || t("auth.errors.registerFailed"));
         }
       }
     } catch (err) {
-      setServerError("Network error");
+      setServerError(t("auth.errors.networkError"));
     } finally {
       setLoading(false);
     }
@@ -165,15 +165,12 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
 
   const fetchGeneratedUsername = async () => {
     try {
-      const res = await fetch(
-        BACKEND_URL + "/api/auth/register/genuser",
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
+      const res = await fetch(BACKEND_URL + "/api/auth/register/genuser", {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      });
 
       if (!res.ok) {
         throw new Error("Failed to generate username");
@@ -184,7 +181,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
       setUsername(cleanedUsername);
     } catch (err) {
       console.error(err);
-      setServerError("Could not generate username");
+      setServerError(t("auth.errors.usernameGenFailed"));
     }
   };
 
@@ -193,7 +190,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
       <FocusScope trapped>
         <div className="bg-sidebar rounded-lg border border-sidebar-border shadow-lg p-8 w-full max-w-sm relative">
           <h2 className="text-xl font-bold mb-4 text-center">
-            {mode === "login" ? "Login" : "Register"}
+            {mode === "login" ? t("auth.login") : t("auth.register")}
           </h2>
 
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -203,8 +200,8 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
               type="text"
               placeholder={
                 mode === "login"
-                  ? "Email or Username"
-                  : "Email"
+                  ? t("auth.placeholderEmailOrUsername")
+                  : t("auth.placeholderEmail")
               }
               value={email}
               onChange={(e) => {
@@ -223,7 +220,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
               <input
                 tabIndex={0}
                 type="text"
-                placeholder="Username"
+                placeholder={t("auth.placeholderUsername")}
                 value={username}
                 onChange={(e) => {
                   setUsername(e.target.value);
@@ -241,7 +238,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
             <input
               tabIndex={0}
               type="password"
-              placeholder="Password"
+              placeholder={t("auth.placeholderPassword")}
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
@@ -263,23 +260,23 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
               >
                 <PasswordRuleItem
                   valid={passwordValidation.length}
-                  text="At least 8 characters"
+                  text={t("auth.passwordRules.length")}
                 />
                 <PasswordRuleItem
                   valid={passwordValidation.upper}
-                  text="One uppercase letter"
+                  text={t("auth.passwordRules.upper")}
                 />
                 <PasswordRuleItem
                   valid={passwordValidation.lower}
-                  text="One lowercase letter"
+                  text={t("auth.passwordRules.lower")}
                 />
                 <PasswordRuleItem
                   valid={passwordValidation.number}
-                  text="One number"
+                  text={t("auth.passwordRules.number")}
                 />
                 <PasswordRuleItem
                   valid={passwordValidation.special}
-                  text="One special character"
+                  text={t("auth.passwordRules.special")}
                 />
               </ul>
             )}
@@ -291,10 +288,10 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
               disabled={loading}
             >
               {loading
-                ? "Processing..."
+                ? t("auth.processing")
                 : mode === "login"
-                ? "Login"
-                : "Register"}
+                  ? t("auth.login")
+                  : t("auth.register")}
             </button>
           </form>
           {/* Server Error */}
@@ -307,7 +304,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
           <div className="mt-4 text-center">
             {mode === "login" ? (
               <span>
-                Don't have an account?{" "}
+                {t("auth.noAccount")}{" "}
                 <button
                   tabIndex={0}
                   className="text-blue-600 underline"
@@ -321,12 +318,12 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
                   }}
                   type="button"
                 >
-                  Register
+                  {t("auth.register")}
                 </button>
               </span>
             ) : (
               <span>
-                Already have an account?{" "}
+                {t("auth.hasAccount")}{" "}
                 <button
                   tabIndex={0}
                   className="text-blue-600 underline"
@@ -339,7 +336,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
                   }}
                   type="button"
                 >
-                  Login
+                  {t("auth.login")}
                 </button>
               </span>
             )}
