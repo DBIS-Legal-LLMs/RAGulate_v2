@@ -12,7 +12,7 @@
  */
 
 "use client";
-
+import "./i18n";
 import type React from "react";
 
 import { useState, useRef, useEffect } from "react";
@@ -31,6 +31,7 @@ import { AuthModal } from "./components/auth-modal";
 import { GraphOverlay } from "../components/GraphOverlay";
 import { DocumentsModal } from "./components/documents-modal";
 import Sidebar from "./components/SideBar";
+import { useTranslation } from "react-i18next";
 
 /**
  * Backend API endpoint configuration
@@ -106,6 +107,7 @@ export default function GDPRChatbot() {
   // Modal and overlay state
   const [showGraph, setShowGraph] = useState(false); // Knowledge graph visibility
   const [showDocuments, setShowDocuments] = useState(false); // Documents modal visibility
+  const { t } = useTranslation();
 
   /* Helper Functions */
   const onUpdateDraftFolderName = (id: string, title: string) => {
@@ -711,10 +713,10 @@ export default function GDPRChatbot() {
                 <div className="flex items-center space-x-3">
                   <div>
                     <h1 className="text-lg font-semibold">
-                      GDPR Compliance Assistant
+                      {t("header.title")}
                     </h1>
                     <p className="text-sm text-gray-600">
-                      Ask me anything about GDPR regulations and compliance
+                      {t("header.subtitle")}
                     </p>
                   </div>
                 </div>
@@ -724,14 +726,14 @@ export default function GDPRChatbot() {
                     className="hover:bg-accent hover:text-black"
                     onClick={() => setShowGraph(true)}
                   >
-                    Graph
+                    {t("buttons.graph")}
                   </Button>
                   <Button
                     variant="ghost"
                     className="hover:bg-accent hover:text-black"
                     onClick={() => setShowDocuments(true)}
                   >
-                    Documents
+                    {t("buttons.documents")}
                   </Button>
                   <ProfileDropdown
                     username={username}
@@ -764,7 +766,9 @@ export default function GDPRChatbot() {
 
                     <div className="space-y-2">
                       <p className="text-sm text-gray-500">
-                        {foldersinActiveFolder.length} Ordner in diesem Ordner
+                        {t("folder.subfolderCount", {
+                          count: foldersinActiveFolder.length,
+                        })}
                       </p>
                       {/* Displays Subfolders for Active Folder */}
                       {foldersinActiveFolder
@@ -818,13 +822,13 @@ export default function GDPRChatbot() {
                                   setEditingFolderId(null);
                                 }}
                                 className="w-full bg-transparent border-b border-accent outline-none px-1"
-                                placeholder="Folder name"
+                                placeholder={t("folder.placeholderFolder")}
                               />
                             ) : (
                               <div className="flex justify-between items-center">
                                 <span className="flex font-medium">
                                   <Folder className="w-4 h-4 mr-2 mt-1" />
-                                  {folder.title || "Untitled Chat"}
+                                  {folder.title || t("folder.untitledChat")}
                                 </span>
                                 <span className="text-xs text-gray-500">
                                   {folder.createdAt.toLocaleDateString()}
@@ -836,14 +840,17 @@ export default function GDPRChatbot() {
 
                       {foldersinActiveFolder.length === 0 && (
                         <p className="text-center text-gray-500 py-4">
-                          Noch keine Ordner in diesem Ordner
+                          {t("folder.emptyFolders")}
                         </p>
                       )}
                     </div>
 
                     <div className="space-y-2">
                       <p className="text-sm text-gray-500">
-                        {sessionsInActiveFolder.length} Chats in diesem Ordner
+                        {sessionsInActiveFolder.length}{" "}
+                        {t("folder.chatCount", {
+                          count: sessionsInActiveFolder.length,
+                        })}
                       </p>
                       {sessionsInActiveFolder.map((session) => (
                         <Card
@@ -889,13 +896,13 @@ export default function GDPRChatbot() {
                                 setEditedTitle("");
                               }}
                               className="w-full bg-transparent border-b border-accent outline-none px-1"
-                              placeholder="Chat name"
+                              placeholder={t("folder.placeholderChat")}
                             />
                           ) : (
                             <div className="flex justify-between items-center">
                               <span className="flex font-medium">
                                 <MessageSquare className="w-4 h-4 mr-2 mt-1" />
-                                {session.title || "Untitled Chat"}
+                                {session.title || t("folder.untitledChat")}
                               </span>
                               <span className="text-xs text-gray-500">
                                 {session.createdAt.toLocaleDateString()}
@@ -907,7 +914,7 @@ export default function GDPRChatbot() {
 
                       {sessionsInActiveFolder.length === 0 && (
                         <p className="text-center text-gray-500 py-4">
-                          Noch keine Chats in diesem Ordner
+                          {t("folder.emptyChats")}
                         </p>
                       )}
                     </div>
@@ -918,7 +925,7 @@ export default function GDPRChatbot() {
                         className="w-full bg-sidebar hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black dark:bg-primary dark:hover:bg-accent"
                       >
                         <MessageSquare className="w-4 h-4 mr-2" />
-                        New Chat
+                        {t("buttons.newChat")}
                       </Button>
 
                       <Button
@@ -926,7 +933,7 @@ export default function GDPRChatbot() {
                         className="w-full bg-sidebar hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black dark:bg-primary dark:hover:bg-accent"
                       >
                         <Folder className="w-4 h-4 mr-2" />
-                        New Folder
+                        {t("buttons.newFolder")}
                       </Button>
                     </div>
                   </>
@@ -941,7 +948,7 @@ export default function GDPRChatbot() {
                         <div className="flex flex-col items-center gap-3">
                           <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
                           <p className="text-gray-500 text-sm">
-                            Loading chat...
+                            {t("chat.loading")}
                           </p>
                         </div>
                       </div>
@@ -961,11 +968,10 @@ export default function GDPRChatbot() {
                       <div className="text-center py-12">
                         <Shield className="w-12 h-12 text-accent mx-auto mb-4" />
                         <h2 className="text-xl font-semibold mb-2">
-                          Welcome to the RAGulate GDPR Assistant
+                          {t("welcome.title")}
                         </h2>
                         <p className="text-gray-600 mb-4">
-                          I'm here to help you understand and comply with GDPR
-                          regulations.
+                          {t("welcome.subtitle")}
                         </p>
                       </div>
                     )}
@@ -995,14 +1001,13 @@ export default function GDPRChatbot() {
                     <div className="text-center py-12">
                       <Shield className="w-12 h-12 text-accent mx-auto mb-4" />
                       <h2 className="text-xl font-semibold mb-2">
-                        Welcome to the RAGulate GDPR Assistant
+                        {t("welcome.title")}
                       </h2>
                       <p className="text-gray-600 mb-4">
-                        I'm here to help you understand and comply with GDPR
-                        regulations.
+                        {t("welcome.subtitle")}
                       </p>
                       <p className="text-gray-600 mb-4">
-                        Select a chat from the side or create a new chat
+                        {t("welcome.selectChat")}
                       </p>
                     </div>
 
@@ -1012,7 +1017,7 @@ export default function GDPRChatbot() {
                         className="w-full bg-sidebar hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black dark:bg-primary dark:hover:bg-accent"
                       >
                         <MessageSquare className="w-4 h-4 mr-2" />
-                        New Chat
+                        {t("buttons.newChat")}
                       </Button>
 
                       <Button
@@ -1020,7 +1025,7 @@ export default function GDPRChatbot() {
                         className="w-full bg-sidebar hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black dark:bg-primary dark:hover:bg-accent"
                       >
                         <Folder className="w-4 h-4 mr-2" />
-                        New Folder
+                        {t("buttons.newFolder")}
                       </Button>
                     </div>
                   </div>
@@ -1047,7 +1052,7 @@ export default function GDPRChatbot() {
                       <Input
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Ask about GDPR compliance, data protection, or upload documents for review..."
+                        placeholder={t("chat.inputPlaceholder")}
                         className="pr-12 min-h-[44px] resize-none bg-secondary dark:bg-primary border-sidebar-border"
                         disabled={isLoading}
                       />
@@ -1069,8 +1074,7 @@ export default function GDPRChatbot() {
                   </form>
 
                   <p className="text-xs text-gray-500 mt-2 text-center">
-                    Upload documents for GDPR compliance review or ask questions
-                    about data protection regulations
+                    {t("chat.inputHint")}
                   </p>
                 </div>
               </div>

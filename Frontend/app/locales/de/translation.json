@@ -1,0 +1,75 @@
+{
+  "header": {
+    "title": "GDPR Compliance Assistent",
+    "subtitle": "Stell mir Fragen zur DSGVO und Compliance"
+  },
+  "buttons": {
+    "graph": "Graph",
+    "documents": "Dokumente",
+    "newChat": "Neuer Chat",
+    "newFolder": "Neuer Ordner"
+  },
+  "folder": {
+    "subfolderCount": "{{count}} Ordner in diesem Ordner",
+    "chatCount": "{{count}} Chats in diesem Ordner",
+    "emptyFolders": "Noch keine Ordner in diesem Ordner",
+    "emptyChats": "Noch keine Chats in diesem Ordner",
+    "untitledChat": "Unbenannter Chat",
+    "placeholderFolder": "Ordnername",
+    "placeholderChat": "Chatname"
+  },
+  "welcome": {
+    "title": "Willkommen beim RAGulate DSGVO-Assistenten",
+    "subtitle": "Ich helfe dir, die DSGVO-Vorschriften zu verstehen und einzuhalten.",
+    "selectChat": "Wähle einen Chat aus der Seitenleiste oder erstelle einen neuen"
+  },
+  "chat": {
+    "loading": "Chat wird geladen...",
+    "inputPlaceholder": "Frag nach DSGVO-Compliance, Datenschutz oder lade Dokumente zur Überprüfung hoch...",
+    "inputHint": "Lade Dokumente zur DSGVO-Prüfung hoch oder stelle Fragen zu Datenschutzvorschriften"
+  },
+  "sidebar": {
+    "newChat": "Neuer Chat",
+    "newFolder": "Neuer Ordner",
+    "folders": "Ordner",
+    "chats": "Chats",
+    "placeholderFolder": "Ordnername",
+    "placeholderChat": "Chatname"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "register": "Registrieren",
+    "processing": "Wird verarbeitet...",
+    "placeholderEmailOrUsername": "E-Mail oder Benutzername",
+    "placeholderEmail": "E-Mail",
+    "placeholderUsername": "Benutzername",
+    "placeholderPassword": "Passwort",
+    "noAccount": "Noch kein Konto?",
+    "hasAccount": "Bereits ein Konto?",
+    "passwordRules": {
+      "length": "Mindestens 8 Zeichen",
+      "upper": "Ein Großbuchstabe",
+      "lower": "Ein Kleinbuchstabe",
+      "number": "Eine Zahl",
+      "special": "Ein Sonderzeichen"
+    },
+    "errors": {
+      "enterEmail": "Bitte E-Mail eingeben",
+      "enterPassword": "Bitte Passwort eingeben",
+      "enterUsername": "Bitte Benutzernamen eingeben",
+      "passwordInvalid": "Passwort erfüllt nicht die Sicherheitsanforderungen.",
+      "loginFailed": "Anmeldung fehlgeschlagen",
+      "registerFailed": "Registrierung fehlgeschlagen",
+      "registerSuccessLoginFailed": "Registrierung erfolgreich, aber Anmeldung fehlgeschlagen. Bitte manuell anmelden.",
+      "networkError": "Netzwerkfehler",
+      "usernameGenFailed": "Benutzername konnte nicht generiert werden"
+    }
+  },
+  "profile": {
+    "profile": "Profil",
+    "settings": "Einstellungen",
+    "theme": "Design",
+    "light": "Hell",
+    "dark": "Dunkel"
+  }
+}

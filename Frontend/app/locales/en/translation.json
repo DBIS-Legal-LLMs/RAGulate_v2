@@ -1,0 +1,75 @@
+{
+  "header": {
+    "title": "GDPR Compliance Assistant",
+    "subtitle": "Ask me anything about GDPR regulations and compliance"
+  },
+  "buttons": {
+    "graph": "Graph",
+    "documents": "Documents",
+    "newChat": "New Chat",
+    "newFolder": "New Folder"
+  },
+  "folder": {
+    "subfolderCount": "{{count}} folders in this folder",
+    "chatCount": "{{count}} chats in this folder",
+    "emptyFolders": "No folders in this folder yet",
+    "emptyChats": "No chats in this folder yet",
+    "untitledChat": "Untitled Chat",
+    "placeholderFolder": "Folder name",
+    "placeholderChat": "Chat name"
+  },
+  "welcome": {
+    "title": "Welcome to the RAGulate GDPR Assistant",
+    "subtitle": "I'm here to help you understand and comply with GDPR regulations.",
+    "selectChat": "Select a chat from the side or create a new chat"
+  },
+  "chat": {
+    "loading": "Loading chat...",
+    "inputPlaceholder": "Ask about GDPR compliance, data protection, or upload documents for review...",
+    "inputHint": "Upload documents for GDPR compliance review or ask questions about data protection regulations"
+  },
+  "sidebar": {
+    "newChat": "New Chat",
+    "newFolder": "New Folder",
+    "folders": "Folders",
+    "chats": "Chats",
+    "placeholderFolder": "Folder name",
+    "placeholderChat": "Chat name"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "processing": "Processing...",
+    "placeholderEmailOrUsername": "Email or Username",
+    "placeholderEmail": "Email",
+    "placeholderUsername": "Username",
+    "placeholderPassword": "Password",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "passwordRules": {
+      "length": "At least 8 characters",
+      "upper": "One uppercase letter",
+      "lower": "One lowercase letter",
+      "number": "One number",
+      "special": "One special character"
+    },
+    "errors": {
+      "enterEmail": "Please enter email",
+      "enterPassword": "Please enter password",
+      "enterUsername": "Please enter username",
+      "passwordInvalid": "Password does not meet security requirements.",
+      "loginFailed": "Login failed",
+      "registerFailed": "Registration failed",
+      "registerSuccessLoginFailed": "Registration successful, but login failed. Please try logging in.",
+      "networkError": "Network error",
+      "usernameGenFailed": "Could not generate username"
+    }
+  },
+  "profile": {
+    "profile": "Profile",
+    "settings": "Settings",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark"
+  }
+}
