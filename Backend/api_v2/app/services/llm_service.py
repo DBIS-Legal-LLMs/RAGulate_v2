@@ -13,21 +13,18 @@ settings = get_settings()
 
 LLMProviderName = Literal["openrouter", "ollama"]
 
-SUPPORTED_MODELS: Dict[LLMProviderName, List[str]] = {
+SUPPORTED_MODELS: Dict[str, List[str]] = {
     "openrouter": [
-        # Platzhalter / später konkretisieren
-        "openai/gpt-4o-mini",
+        # OpenRouter model id's
+        "mistralai/mistral-small-3.1-24b-instruct:free",
     ],
     "ollama": [
-        # Lokale Testmodelle
-        "llama3:8b",
-        "mistral:7b",
+        # local installed ollama models
+        "qwen3.5:4b",
     ],
 }
 
-DEFAULT_MODEL: Dict[LLMProviderName, str] = {
-    provider: models[0] for provider, models in SUPPORTED_MODELS.items()
-}
+DEFAULT_MODEL: Dict[str, str] = {"openrouter": "mistralai/mistral-small-3.1-24b-instruct:free"}
 
 _openrouter_client: Optional[OpenAI] = None
 
