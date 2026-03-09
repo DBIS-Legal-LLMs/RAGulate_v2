@@ -148,8 +148,15 @@ class FolderService:
         query = {"parent_folder_id": folder_id}
         child_folders = self.folders.find(query)
         async for cf in child_folders:
-            if cf["_id"] == new_parent_id:
+            child_id = str(cf["_id"])
+            if child_id == new_parent_id:
                 raise ValueError(errors.FOLDER_1003_BOOTSTRAP_PARADOX)
+            query = {"parent_folder_id": child_id}
+            grandchild_folders = self.folders.find(query)
+            async for gcf in grandchild_folders:
+                grandchild_id = str(cf["_id"])
+                if grandchild_id == new_parent_id:
+                    raise ValueError(errors.FOLDER_1003_BOOTSTRAP_PARADOX)
 
         # Determine depth (no parent -> 0 + 1, parent -> parent + 1)
         parent_depth = 0
