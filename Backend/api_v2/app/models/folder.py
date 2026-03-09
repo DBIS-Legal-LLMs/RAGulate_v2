@@ -5,8 +5,8 @@ from datetime import datetime
 from typing import Optional
 
 class FolderBase(BaseModel):
-    name: str = Field(min_length=1, max_length=60)
-    parent_id: Optional[str] = None # None => Root
+    title: str = Field(min_length=1, max_length=60)
+    parent_folder_id: Optional[str] = None # None => Root
 
 class FolderCreate(FolderBase):
     pass

@@ -1,3 +1,4 @@
+import { formatChatTimestamp } from "@/components/FormatDate";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   User,
@@ -15,8 +16,8 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  timestamp: Date;
-  files?: File[];
+  created_at: Date;
+  userName?: string;
 }
 
 interface ChatMessageProps {
@@ -78,7 +79,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 : "bg-secondary dark:bg-primary"
             }`}
           >
-            {message.files && message.files.length > 0 && (
+            {/* {message.files && message.files.length > 0 && (
               <div className="mb-3">
                 <div className="text-sm opacity-75 mb-2">Attached files:</div>
                 <div className="space-y-1">
@@ -96,7 +97,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                   ))}
                 </div>
               </div>
-            )}
+            )} */}
 
             <div className="whitespace-pre-wrap relative">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -143,10 +144,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
               isUser ? "text-right" : "text-left"
             }`}
           >
-            {message.timestamp.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            <span className="text-xs text-muted-foreground">
+              {formatChatTimestamp(message.created_at)}
+            </span>
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 # Backend/api_v2/app/models/chat.py
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -9,16 +9,16 @@ from pydantic import BaseModel, Field
 # ----- Sessions -----
 
 class ChatSessionCreate(BaseModel):
-    title: str | None = None
-    folder_id: str | None = None
+    title: Optional[str] = None
+    folder_id: Optional[str] = None
 
 
 class ChatSessionInDB(BaseModel):
     # MongoDB-ID as String, alias "_id"
-    id: str | None = Field(default=None, alias="_id")
+    id: Optional[str] = Field(default=None, alias="_id")
     user_id: str
-    folder_id: str | None = None
     title: str
+    folder_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -29,7 +29,7 @@ class ChatSessionInDB(BaseModel):
 class ChatSessionPublic(BaseModel):
     id: str
     title: str
-    folder_id: str | None = None
+    folder_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -41,8 +41,8 @@ class MessageCreate(BaseModel):
 
 
 class MessageInDB(BaseModel):
-    id: str | None = Field(default=None, alias="_id")
-    session_id: str
+    id: Optional[str] = Field(default=None, alias="_id")
+    chat_id: str
     user_id: str
     role: Literal["user", "assistant"]
     content: str
@@ -54,7 +54,7 @@ class MessageInDB(BaseModel):
 
 class MessagePublic(BaseModel):
     id: str
-    session_id: str
+    chat_id: str
     role: Literal["user", "assistant"]
     content: str
     created_at: datetime
@@ -66,7 +66,7 @@ class MessagePublic(BaseModel):
     ) -> "MessagePublic":
         return cls(
             id= msg.id,
-            session_id= msg.session_id,
+            chat_id= msg.chat_id,
             role= msg.role,
             content= msg.content,
             created_at= msg.created_at,
@@ -75,8 +75,10 @@ class MessagePublic(BaseModel):
 
 # ----- Kombi View -----
 
+# !!! Currently not used, but maybe interesting/useful later !!!
+
 class ChatSessionWithMessages(BaseModel):
-    session: ChatSessionPublic
+    chat: ChatSessionPublic
     messages: list[MessagePublic]
 
 class ChatTurnPublic(BaseModel):

@@ -124,7 +124,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] w-full overflow-hidden">
+      <DialogContent className="max-w-[95vw] max-h-[95vh] w-full overflow-hidden bg-sidebar dark:bg-sidebar border-none">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-2xl font-bold">Document Information</DialogTitle>

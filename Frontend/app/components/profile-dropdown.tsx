@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { User, Settings, Moon, Sun, Monitor, ChevronDown } from "lucide-react";
 import { useTheme } from "./theme-provider";
+import { useTranslation } from "react-i18next";
 
 interface ProfileDropdownProps {
   username: string;
@@ -21,6 +22,7 @@ export function ProfileDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -112,7 +114,7 @@ export function ProfileDropdown({
                 }}
               >
                 <User className="w-4 h-4 mr-3" />
-                Profile
+                {t("profile.profile")}
               </Button>
 
               <Button
@@ -124,12 +126,12 @@ export function ProfileDropdown({
                 }}
               >
                 <Settings className="w-4 h-4 mr-3" />
-                Settings
+                {t("profile.settings")}
               </Button>
 
               {/* Theme Selector */}
               <div className="px-4 py-2">
-                <p className="text-xs font-medium mb-2">Theme</p>
+                <p className="text-xs font-medium mb-2">{t("profile.theme")}</p>
                 <div className="flex space-x-1">
                   <Button
                     variant={theme === "light" ? "default" : "ghost"}
@@ -140,7 +142,7 @@ export function ProfileDropdown({
                     onClick={() => setTheme("light")}
                   >
                     <Sun className="w-3 h-3 mr-1" />
-                    Light
+                    {t("profile.light")}
                   </Button>
                   <Button
                     variant={theme === "dark" ? "default" : "ghost"}
@@ -151,7 +153,7 @@ export function ProfileDropdown({
                     onClick={() => setTheme("dark")}
                   >
                     <Moon className="w-3 h-3 mr-1" />
-                    Dark
+                    {t("profile.dark")}
                   </Button>
                 </div>
               </div>

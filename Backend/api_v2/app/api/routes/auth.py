@@ -47,9 +47,9 @@ async def register(
                 )
 
         if error == "EMAIL_INVALID":
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="INVALID_EMAIL")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid Email")
         if error == "EMAIL_EXISTS":
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="EMAIL_EXISTS")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists")
         if error == "USERNAME_EXISTS":
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already exists")
 

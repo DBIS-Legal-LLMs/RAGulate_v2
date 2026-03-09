@@ -1,8 +1,11 @@
 # Backend/api_v2/app/api/router/chat.py
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ...core.deps import get_current_user, get_db
+from ...core import errors
 from ...models.user import UserInDB
 from ...models.chat import (
     ChatSessionCreate,
@@ -21,117 +24,153 @@ def get_chat_service(db = Depends(get_db)) -> ChatService:
     return ChatService(db)
 
 
-# ----- Sessions -----
+# ----- Chats -----
 
 @router.post(
-    "/sessions",
+    "",
     response_model= ChatSessionPublic,
     status_code= status.HTTP_201_CREATED,
 )
-async def create_session(
+async def create_chat(
     data: ChatSessionCreate,
     current_user: UserInDB = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
-    session = await chat_service.create_session(current_user, data)
-    return ChatSessionPublic(
-        id= session.id,
-        title= session.title,
-        folder_id=session.folder_id,
-        created_at= session.created_at,
-        updated_at= session.updated_at,
-    )
-
-
-@router.get(
-    "/sessions",
-    response_model= list[ChatSessionPublic],
-)
-async def list_sessions(
-    current_user: UserInDB = Depends(get_current_user),
-    chat_service: ChatService = Depends(get_chat_service),
-):
-    sessions = await chat_service.list_sessions(current_user)
-    return [
-        ChatSessionPublic(
-            id= s.id,
-            title= s.title,
-            folder_id= s.folder_id,
-            created_at= s.created_at,
-            updated_at= s.updated_at,
+    try:
+        session = await chat_service.create_chat(current_user, data)
+        return ChatSessionPublic(
+            id= session.id,
+            title= session.title,
+            folder_id=session.folder_id,
+            created_at= session.created_at,
+            updated_at= session.updated_at,
         )
-        for s in sessions
-    ]
-
-
-@router.get(
-    "/sessions/{session_id}",
-    response_model= ChatSessionWithMessages,
-)
-async def get_session(
-    session_id: str,
-    current_user: UserInDB = Depends(get_current_user),
-    chat_service: ChatService = Depends(get_chat_service),
-):
-    result = await chat_service.get_session_with_messages(current_user, session_id)
-
-    if not result:
+    except ValueError as code:
+        if code =="":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail=""
+            )
+        #if code == errors.UNKNOWN_ERROR_0
         raise HTTPException(
-            status_code= status.HTTP_404_NOT_FOUND,
-            detail= "Session not found",
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="[UNKNOWN ERROR] Could not create chat"
         )
-    
-    return result
 
-@router.delete(
-    "/sessions/{session_id}",
-    status_code= status.HTTP_204_NO_CONTENT,
-)
-async def delete_session(
-    session_id: str,
+
+@router.get(
+        "list", 
+        response_model= list[ChatSessionPublic],
+        status_code= status.HTTP_200_OK,
+        )
+async def list_chats(
+    parent_id: Optional[str] = None,
     current_user: UserInDB = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
     try:
-        await chat_service.delete_session(current_user, session_id)
-    except ValueError:
+        chats = await chat_service.list_chats(
+                user=current_user, 
+                folder_id=parent_id
+        )
+        return [
+            ChatSessionPublic(
+                id= c.id,
+                title= c.title,
+                folder_id= c.folder_id,
+                created_at= c.created_at,
+                updated_at= c.updated_at,
+            )
+            for c in chats
+        ]
+    except ValueError as code:
+        #if code == errors.UNKNOWN_ERROR_0
+        raise ValueError("[UNKNOWN ERROR] Can't list chats")
+
+
+@router.get(
+        "/{chat_id}",
+        response_model= ChatSessionWithMessages,
+        status_code= status.HTTP_200_OK,
+)
+async def get_chat(
+    chat_id: str,
+    current_user: UserInDB = Depends(get_current_user),
+    chat_service: ChatService = Depends(get_chat_service),
+):
+    try:
+        result = await chat_service.get_chat_with_messages(current_user, chat_id)
+        return result
+    except ValueError as code:
+        if code == errors.CHAT_100_NOT_FOUND:
+            raise HTTPException(
+                status_code= status.HTTP_404_NOT_FOUND,
+                detail= "Chat not found",
+            )
+        #if code == errors.UNKNOWN_ERROR_0:
         raise HTTPException(
-            status_code= status.HTTP_404_NOT_FOUND,
-            detail= "Session not found",
+            status_code= status.HTTP_400_BAD_REQUEST,
+            detail= "[UNKNOWN ERROR] Can't get chat",
+        )
+
+
+@router.delete(
+        "/{chat_id}", 
+        status_code= status.HTTP_200_OK,
+        )
+async def delete_chat(
+    chat_id: str,
+    current_user: UserInDB = Depends(get_current_user),
+    chat_service: ChatService = Depends(get_chat_service),
+):
+    try:
+        await chat_service.delete_chat(
+            user=current_user, 
+            chat_id=chat_id,
+        )
+        return {"status": "ok"}
+    except ValueError as code:
+        if code == errors.CHAT_100_NOT_FOUND:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Chat not found"
+            )
+        #if code == errors.UNKNOWN_ERROR_0
+        raise HTTPException(
+            status_code= status.HTTP_400_NOT_FOUND,
+            detail= "[UNKNOWN ERROR] Could not delete chat",
         )
 
 
 # ----- Messages -----
 
 @router.post(
-    "/sessions/{session_id}/messages",
-    response_model= ChatTurnPublic,
-    status_code= status.HTTP_201_CREATED,
+        "/{chat_id}/messages",
+        response_model= ChatTurnPublic,
+        status_code= status.HTTP_200_OK,
 )
 async def post_messages(
-    session_id: str,
+    chat_id: str,
     data: MessageCreate,
     current_user: UserInDB = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
-    # aktuell nur User-Nachrichten speichern
     try:
-        # turn = await chat_service.chat_with_rag(
-        #     user= current_user,
-        #     session_id= session_id,
-        #     data= data,
-        # )
-        
         # Echo Chat ohne RAG
         turn = await chat_service.chat_echo(
             user= current_user,
-            session_id= session_id,
+            session_id= chat_id,
             data= data,
         )
-    except ValueError:
+        return turn
+    except ValueError as code:
+        if code == errors.CHAT_100_NOT_FOUND:
+            raise HTTPException(
+                status_code= status.HTTP_404_NOT_FOUND,
+                detail= "Chat not found",
+            )
+        #if code == errors.UNKNOWN_ERROR_0:
         raise HTTPException(
-            status_code= status.HTTP_404_NOT_FOUND,
-            detail= "Session not found",
+            status_code= status.HTTP_400_BAD_REQUEST,
+            detail= "[UNKNOWN ERROR] Could not post message -> " + str(code),
         )
-    
-    return turn
