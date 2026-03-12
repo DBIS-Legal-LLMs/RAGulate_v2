@@ -129,8 +129,8 @@ async def stream_chat_response(
             print(f"[llm_service] Reason: {exc!r}")
             traceback.print_exc()
  
-    async for chunk in _stream_ollama(messages):
-        yield chunk
+    #async for chunk in _stream_ollama(messages):
+    #    yield chunk
  
  
 def get_active_provider() -> LLMProviderName:
