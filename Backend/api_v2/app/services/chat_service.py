@@ -1,7 +1,8 @@
 # Backend/api_v2/app/services/chat_service.py
 
+import json
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import AsyncGenerator, List, Optional
 
 from bson import ObjectId
 from pymongo.asynchronous.database import AsyncDatabase
@@ -210,21 +211,39 @@ class ChatService:
         )
 
 
-    async def chat_with_llm(
+    async def stream_chat_with_llm(
+            self,
+            user: UserInDB,
+            session_id: str,
+            data: MessageCreate,
+    ) -> AsyncGenerator[str, None]:
+        """
+        Persists the user message, then streams the LLM response as
+        Server-Sent Events (SSE).
+ 
+        SSE event format:
+          data: {"type": "chunk",  "content": "<delta>"}   — one per chunk
+          data: {"type": "done",   "content": "<full>",
+                 "user_message_id": "...",
+                 "assistant_message_id": "..."}             — final event
+ 
+        The full assistant response is persisted to the DB before the
+        "done" event is emitted, so the frontend can safely store the ID.
+        """
+        return self._stream_generator(user, session_id, data)
+    
+
+    async def _stream_generator(
             self,
             user: UserInDB,
             chat_id: str,
             data: MessageCreate,
-    ) -> ChatTurnPublic:
-        """
-        Persists the user message, sends the full conversation history to the
-        LLM, then persists and returns the assistant reply.
-        """
-        await self.get_chat_for_user(user=user, chat_id=chat_id)
-
+    ) -> AsyncGenerator[str, None]:
+        await self.get_chat_for_user(user, chat_id)
+ 
         now = datetime.now(timezone.utc)
-
-        # 1) Persistent user message
+ 
+        # 1) Persist user message
         user_doc = {
             "chat_id": chat_id,
             "user_id": user.id,
@@ -233,43 +252,47 @@ class ChatService:
             "created_at": now,
         }
         result_user = await self.messages.insert_one(user_doc)
-        user_doc["_id"] = str(result_user.inserted_id)
-        user_msg = MessageInDB(**user_doc)
-
-        # 2) Load full history (including the message we just saved)
-        history = await self.list_messages_in_chat(user=user, chat_id=chat_id)
+        user_msg_id = str(result_user.inserted_id)
+        user_doc["_id"] = user_msg_id
+ 
+        # 2) Build conversation history (includes the message we just saved)
+        history = await self.list_messages_in_chat(user, chat_id)
         llm_history = [
             {"role": m.role, "content": m.content}
             for m in history
             if m.role in {"user", "assistant"}
         ]
-
-        # 3) Call LLM
-        answer = await run_rag_query(
+ 
+        # 3) Stream LLM response, forwarding each chunk as an SSE event
+        #    and accumulating the full answer
+        full_answer: List[str] = []
+ 
+        async for chunk in run_rag_query(
             question=data.content,
             history_messages=llm_history,
-        )
-
-        # 4) Persist assistant message (response)
+        ):
+            full_answer.append(chunk)
+            yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"
+ 
+        # 4) Persist the complete assistant message
+        assembled = "".join(full_answer)
         now_assistant = datetime.now(timezone.utc)
         assistant_doc = {
             "chat_id": chat_id,
             "user_id": user.id,
             "role": "assistant",
-            "content": answer,
+            "content": assembled,
             "created_at": now_assistant,
         }
         result_assistant = await self.messages.insert_one(assistant_doc)
-        assistant_doc["_id"] = str(result_assistant.inserted_id)
-        assistant_msg = MessageInDB(**assistant_doc)
-
+        assistant_msg_id = str(result_assistant.inserted_id)
+ 
         # 5) Update session timestamp
         await self.chats.update_one(
             {"_id": ObjectId(chat_id)},
             {"$set": {"updated_at": now_assistant}},
         )
-
-        return ChatTurnPublic(
-            user_message=MessagePublic.from_db(user_msg),
-            assistant_message=MessagePublic.from_db(assistant_msg),
-        )
+ 
+        # 6) Emit the final "done" event with the full text and both IDs
+        yield f"data: {json.dumps({'type': 'done', 'content': assembled, 'user_message_id': user_msg_id, 'assistant_message_id': assistant_msg_id})}\n\n"
+ 

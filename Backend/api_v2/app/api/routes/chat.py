@@ -3,6 +3,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 
 from ...core.deps import get_current_user, get_db
 from ...core import errors
@@ -104,13 +105,38 @@ async def post_message(
     current_user: UserInDB = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
+    """
+    Sends a user message and streams the assistant response as SSE.
+ 
+    Event types emitted:
+      {"type": "chunk",  "content": "<delta>"}
+          — one event per streamed token/chunk
+ 
+      {"type": "done",   "content": "<full response>",
+       "user_message_id": "<id>", "assistant_message_id": "<id>"}
+          — final event, emitted after the full response is persisted to DB
+    """
+    # Validate the chat exists before opening the stream, so we can still
+    # return a proper HTTP 404 instead of an error mid-stream.
     try:
-        return await chat_service.chat_with_llm(
-            user=current_user,
-            chat_id=chat_id,
-            data=data,
-        )
+        await chat_service.get_chat_for_user(user=current_user, chat_id=chat_id)
     except ValueError as exc:
         if str(exc) == str(errors.CHAT_100_NOT_FOUND):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not send message")
+ 
+    generator = chat_service._stream_generator(
+        user=current_user,
+        chat_id=chat_id,
+        data=data,
+    )
+ 
+    return StreamingResponse(
+        generator,
+        media_type="text/event-stream",
+        headers={
+            # Prevent proxies and browsers from buffering the stream
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )

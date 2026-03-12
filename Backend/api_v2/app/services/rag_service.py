@@ -3,16 +3,16 @@
 # Currently a plain LLM chat service.
 # The retrieval pipeline will be added here later without touching anything else.
 
-from typing import Dict, List, Optional
+from typing import AsyncGenerator, Dict, List, Optional
  
-from .llm_service import generate_chat_response
+from .llm_service import stream_chat_response
 
 async def run_rag_query(
     *,
     question: str,
     history_messages: Optional[List[Dict[str, str]]] = None,
     system_prompt: Optional[str] = None,
-) -> str:
+) -> AsyncGenerator[str, None]:
     """
     Build the message list and call the LLM.
  
@@ -30,5 +30,6 @@ async def run_rag_query(
     if history_messages:
         messages.extend(history_messages)
  
-    return await generate_chat_response(messages)
+    async for chunk in stream_chat_response(messages):
+        yield chunk
  
