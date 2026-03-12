@@ -18,7 +18,8 @@ settings = get_settings()
 
 LLMProviderName = Literal["openrouter", "ollama"]
  
-OPENROUTER_MODEL = "mistralai/mistral-small-3.1-24b-instruct:free"
+OPENROUTER_MODEL = "mistralai/ministral-3b-2512"
+OPENROUTER_EMBEDDINGS_MODEL = "mistralai/mistral-embed-2312"
 OLLAMA_MODEL     = "qwen2.5:4b"
 
 
