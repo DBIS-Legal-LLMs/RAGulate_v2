@@ -107,7 +107,7 @@ async def post_message(
     try:
         return await chat_service.chat_with_llm(
             user=current_user,
-            session_id=chat_id,
+            chat_id=chat_id,
             data=data,
         )
     except ValueError as exc:
