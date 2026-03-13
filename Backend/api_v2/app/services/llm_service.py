@@ -19,9 +19,9 @@ settings = get_settings()
  
 LLMProviderName = Literal["openrouter", "ollama"]
  
-OPENROUTER_MODEL = "mistralai/ministral-3b-2512"
-OPENROUTER_EMBEDDINGS_MODEL = "mistralai/mistral-embed-2312"
-OLLAMA_MODEL     = "qwen2.5:4b"
+OPENROUTER_MODEL            = settings.openrouter_model
+OPENROUTER_EMBEDDINGS_MODEL = settings.openrouter_embeddings_model
+OLLAMA_MODEL                = settings.ollama_model 
  
 # ---------------------------------------------------------------------------
 # Internal: OpenRouter via OpenAI SDK (streaming)
