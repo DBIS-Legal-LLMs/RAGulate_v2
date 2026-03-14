@@ -11,6 +11,9 @@ import {
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 
 interface Message {
   id: string;
@@ -52,6 +55,14 @@ export function ChatMessage({ message }: ChatMessageProps) {
     } catch (err) {
       console.error("Error sending feedback:", err);
     }
+  };
+
+  const normalizeLatex = (content: string) => {
+    return content
+      .replace(/\\\[/g, "$$$$") // \[ → $$
+      .replace(/\\\]/g, "$$$$") // \] → $$
+      .replace(/\\\(/g, "$") // \( → $
+      .replace(/\\\)/g, "$"); // \) → $
   };
 
   return (
@@ -100,8 +111,11 @@ export function ChatMessage({ message }: ChatMessageProps) {
             )} */}
 
             <div className="whitespace-pre-wrap relative">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {message.content}
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+              >
+                {normalizeLatex(message.content)}
               </ReactMarkdown>
               {/* Copy and feedback buttons for assistant messages only */}
               {!isUser && (

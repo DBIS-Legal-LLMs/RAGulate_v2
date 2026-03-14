@@ -82,6 +82,8 @@ export default function GDPRChatbot() {
   const [messages, setMessages] = useState<Message[]>([]); // Current conversation messages
   const [input, setInput] = useState(""); // User input field
   const [isLoading, setIsLoading] = useState(false); // Loading state for API calls
+  const abortRef = useRef<AbortController | null>(null);
+  const [streamingEnabled, setStreamingEnabled] = useState(true); //switch for chat streaming or whole
 
   // Session management
   const [folders, setFolders] = useState<UIFolder[]>([]);
@@ -198,14 +200,25 @@ export default function GDPRChatbot() {
   }, [activeSessionId]);
 
   /**
-   * Handles the submission of new chat messages
-   * Sends message to backend API and updates UI with response
+   * Decides weather to stream the answer from the LLM or get the whole, set by a button
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (streamingEnabled) {
+      await handleSubmitStream();
+    } else {
+      await handleSubmitNormal();
+    }
+  };
+
+  /**
+   * Handles the submission of new chat messages via stream
+   * Sends message to backend API and updates UI with chunks send from the backend.
    *
    * @param {React.FormEvent} e - Form submission event
    * @returns {Promise<void>}
    */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmitStream = async () => {
     if (!input.trim() || !activeSessionId) return;
 
     const token = localStorage.getItem("token");
@@ -221,6 +234,143 @@ export default function GDPRChatbot() {
     setInput("");
     setIsLoading(true);
 
+    // Platzhalter für die streaming Antwort
+    const placeholderId = Date.now().toString() + "-assistant";
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: placeholderId,
+        role: "assistant",
+        content: "",
+        created_at: new Date(),
+      },
+    ]);
+
+    abortRef.current = new AbortController();
+
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/chat/${activeSessionId}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            Accept: "text/event-stream",
+          },
+          body: JSON.stringify({ content: input }),
+          signal: abortRef.current.signal,
+        },
+      );
+
+      if (!res.ok) throw new Error("Failed to send message");
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // SSE Events sind durch \n\n getrennt
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+
+        for (const part of parts) {
+          for (const line of part.split("\n")) {
+            if (!line.startsWith("data: ")) continue;
+
+            const data = line.slice(6).trim();
+            if (data === "[DONE]") break;
+
+            try {
+              const parsed = JSON.parse(data);
+
+              if (parsed.type === "done") {
+                // Komplette Antwort vom Backend → Platzhalter überschreiben
+                // Das korrigiert auch einen abgebrochenen Stream automatisch!!!
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === placeholderId
+                      ? { ...m, content: parsed.content } // replaces text at the end
+                      : m,
+                  ),
+                );
+                continue;
+              }
+              const chunk =
+                parsed.choices?.[0]?.delta?.content ??
+                parsed.content ??
+                parsed.text ??
+                "";
+              if (chunk) {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === placeholderId
+                      ? { ...m, content: m.content + chunk }
+                      : m,
+                  ),
+                );
+              }
+            } catch {
+              // rohen Text anhängen
+              if (data) {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === placeholderId
+                      ? { ...m, content: m.content + data }
+                      : m,
+                  ),
+                );
+              }
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      if (error.name === "AbortError") return;
+
+      console.error("Error sending message:", error);
+      // Platzhalter durch Fehlermeldung ersetzen
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === placeholderId
+            ? {
+                ...m,
+                content: t("chat.error"),
+              }
+            : m,
+        ),
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Handles the submission of new chat messages
+   * Sends message to backend API and updates UI with the whole message.
+   *
+   * @param {React.FormEvent} e - Form submission event
+   * @returns {Promise<void>}
+   */
+  const handleSubmitNormal = async () => {
+    if (!input.trim() || !activeSessionId) return;
+    const token = localStorage.getItem("token");
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: input,
+      created_at: new Date(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
+
     try {
       const res = await fetch(
         `${BACKEND_URL}/api/chat/${activeSessionId}/messages`,
@@ -230,35 +380,62 @@ export default function GDPRChatbot() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            content: input,
-          }),
+          body: JSON.stringify({ content: input }),
         },
       );
 
       if (!res.ok) throw new Error("Failed to send message");
-      const data = await res.json();
-      await delay(1000);
 
-      if (data.assistant_message.id) {
-        const assistantMessage: Message = {
-          id: data.assistant_message.id,
-          role: data.assistant_message.role as "assistant",
-          content: data.assistant_message.content,
-          created_at: new Date(data.assistant_message.created_at),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+
+        for (const part of parts) {
+          for (const line of part.split("\n")) {
+            if (!line.startsWith("data: ")) continue;
+            const data = line.slice(6).trim();
+
+            try {
+              const parsed = JSON.parse(data);
+
+              // Wait for data: done, skips the chunks
+              if (parsed.type === "done") {
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: Date.now().toString() + "-assistant",
+                    role: "assistant",
+                    content: parsed.content,
+                    created_at: new Date(),
+                  },
+                ]);
+                return;
+              }
+            } catch {
+              /* ignore chunk Events */
+            }
+          }
+        }
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      const errorMessage: Message = {
-        id: Date.now().toString() + "-error",
-        role: "assistant",
-        content:
-          "Sorry, ich konnte deine Nachricht nicht senden. Bitte versuche es erneut.",
-        created_at: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString() + "-error",
+          role: "assistant",
+          content: t("chat.error"),
+          created_at: new Date(),
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -317,7 +494,7 @@ export default function GDPRChatbot() {
     }));
 
     /* Load Sessions*/
-    const sessionUrl = new URL(`${BACKEND_URL}/api/chatlist/`);
+    const sessionUrl = new URL(`${BACKEND_URL}/api/chat/list/`);
     if (folderId) sessionUrl.searchParams.append("folder_id", folderId);
 
     const sessionRes = await fetch(sessionUrl.toString(), {
@@ -347,7 +524,7 @@ export default function GDPRChatbot() {
   const fetchSessions = async () => {
     const token = localStorage.getItem("token");
 
-    const res = await fetch(`${BACKEND_URL}/api/chatlist/`, {
+    const res = await fetch(`${BACKEND_URL}/api/chat/list/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -975,23 +1152,24 @@ export default function GDPRChatbot() {
                         </p>
                       </div>
                     )}
-                    {isLoading && (
-                      <div className="flex justify-start">
-                        <div className="bg-gray-100 rounded-lg p-4 max-w-xs">
-                          <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                            <div
-                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                              style={{ animationDelay: "0.1s" }}
-                            ></div>
-                            <div
-                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                              style={{ animationDelay: "0.2s" }}
-                            ></div>
+                    {isLoading &&
+                      messages[messages.length - 1]?.role === "user" && (
+                        <div className="flex justify-start">
+                          <div className="bg-gray-100 rounded-lg p-4 max-w-xs">
+                            <div className="flex space-x-1">
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                              <div
+                                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                                style={{ animationDelay: "0.1s" }}
+                              ></div>
+                              <div
+                                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                                style={{ animationDelay: "0.2s" }}
+                              ></div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </>
                 )}
 
@@ -1047,6 +1225,27 @@ export default function GDPRChatbot() {
             {activeSessionId && !editingSessionId && (
               <div className="bg-chat p-4">
                 <div className="max-w-4xl mx-auto mb-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setStreamingEnabled((prev) => !prev)}
+                      className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${
+                        streamingEnabled ? "bg-accent" : "bg-gray-300"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                          streamingEnabled ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                    <span className="text-xs text-gray-500">
+                      {streamingEnabled
+                        ? t("chat.streamingOn")
+                        : t("chat.streamingOff")}
+                    </span>
+                  </div>
+
                   <form onSubmit={handleSubmit} className="flex items-end">
                     <div className="flex-1 relative ">
                       <Input
