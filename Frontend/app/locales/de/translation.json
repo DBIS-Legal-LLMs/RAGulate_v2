@@ -26,7 +26,10 @@
   "chat": {
     "loading": "Chat wird geladen...",
     "inputPlaceholder": "Frag nach DSGVO-Compliance, Datenschutz oder lade Dokumente zur Überprüfung hoch...",
-    "inputHint": "Lade Dokumente zur DSGVO-Prüfung hoch oder stelle Fragen zu Datenschutzvorschriften"
+    "inputHint": "Lade Dokumente zur DSGVO-Prüfung hoch oder stelle Fragen zu Datenschutzvorschriften",
+    "streamingOn": "Streaming an",
+    "streamingOff": "Streaming aus",
+    "error": "Sorry, ich konnte deine Nachricht nicht senden. Bitte versuche es erneut."
   },
   "sidebar": {
     "newChat": "Neuer Chat",

@@ -340,8 +340,7 @@ export default function GDPRChatbot() {
           m.id === placeholderId
             ? {
                 ...m,
-                content:
-                  "Sorry, ich konnte deine Nachricht nicht senden. Bitte versuche es erneut.",
+                content: t("chat.error"),
               }
             : m,
         ),
@@ -433,7 +432,7 @@ export default function GDPRChatbot() {
         {
           id: Date.now().toString() + "-error",
           role: "assistant",
-          content: "Sorry, Fehler beim Senden. Bitte erneut versuchen.",
+          content: t("chat.error"),
           created_at: new Date(),
         },
       ]);
@@ -1241,7 +1240,9 @@ export default function GDPRChatbot() {
                       />
                     </button>
                     <span className="text-xs text-gray-500">
-                      {streamingEnabled ? "Streaming an" : "Streaming aus"}
+                      {streamingEnabled
+                        ? t("chat.streamingOn")
+                        : t("chat.streamingOff")}
                     </span>
                   </div>
 

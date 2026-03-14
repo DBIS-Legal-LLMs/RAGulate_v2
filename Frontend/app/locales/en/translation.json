@@ -26,7 +26,10 @@
   "chat": {
     "loading": "Loading chat...",
     "inputPlaceholder": "Ask about GDPR compliance, data protection, or upload documents for review...",
-    "inputHint": "Upload documents for GDPR compliance review or ask questions about data protection regulations"
+    "inputHint": "Upload documents for GDPR compliance review or ask questions about data protection regulations",
+    "streamingOn": "Streaming on",
+    "streamingOff": "Streaming off",
+    "error": "Sorry, I couldn't send your message. Please try again."
   },
   "sidebar": {
     "newChat": "New Chat",
