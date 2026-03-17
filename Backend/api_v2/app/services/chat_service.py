@@ -112,6 +112,26 @@ class ChatService:
         updated = await self.get_chat_for_user(user, chat_id)
         return updated
     
+
+    async def change_name(
+            self,
+            user: UserInDB,
+            chat_id: str,
+            new_title: str,
+    ) -> ChatSessionInDB:
+        # Ensure chat exists & belongs to user
+        chat = await self.get_chat_for_user(user, chat_id)
+
+        # Update name
+        await self.chats.update_one(
+            {"_id": ObjectId(chat_id)},
+            {"$set": {"title": new_title}},
+        )
+
+        # Return updated chat
+        updated = await self.get_chat_for_user(user, chat_id)
+        return updated
+    
     
     async def delete_chat(
             self, 

@@ -76,14 +76,14 @@ async def get_chat(
         return await chat_service.get_chat_with_messages(current_user, chat_id)
     except ValueError as code:
         if code == errors.CHAT_100_NOT_FOUND:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat to get not found")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not get chat")
     
 
 @router.put("/{chat_id}/move", response_model=ChatSessionPublic, status_code=status.HTTP_200_OK)
 async def move_chat(
     chat_id: str,
-    folder_id: Optional[str] = None,
+    new_folder_id: Optional[str] = None,
     current_user: UserInDB = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
@@ -95,7 +95,7 @@ async def move_chat(
         updated = await chat_service.move_chat(
             user=current_user,
             chat_id=chat_id,
-            new_folder_id=folder_id,
+            new_folder_id=new_folder_id,
         )
         return ChatSessionPublic(
             id=updated.id,
@@ -106,8 +106,34 @@ async def move_chat(
         )
     except ValueError as code:
         if code == errors.CHAT_100_NOT_FOUND:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat to move not found")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not move chat")
+    
+
+@router.put("/{chat_id}/change-name", response_model=ChatSessionPublic, status_code=status.HTTP_200_OK)
+async def change_name(
+    chat_id: str,
+    new_title: str,
+    current_user: UserInDB = Depends(get_current_user),
+    chat_service: ChatService = Depends(get_chat_service),
+):
+    try:
+        updated = await chat_service.change_name(
+            user=current_user,
+            chat_id=chat_id,
+            new_title=new_title,
+        )
+        return ChatSessionPublic(
+            id=updated.id,
+            title=updated.title,
+            folder_id=updated.folder_id,
+            created_at=updated.created_at,
+            updated_at=updated.updated_at,
+        )
+    except ValueError as code:
+        if code == errors.CHAT_100_NOT_FOUND:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat to rename not found")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not rename chat")
 
 
 @router.delete("/{chat_id}", status_code=status.HTTP_200_OK)
@@ -121,7 +147,7 @@ async def delete_chat(
         return {"status": "ok"}
     except ValueError as code:
         if code == errors.CHAT_100_NOT_FOUND:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat to delete not found")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not delete chat")
 
 
