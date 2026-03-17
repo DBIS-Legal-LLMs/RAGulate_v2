@@ -7,17 +7,16 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from ...core.deps import get_current_user, get_db
 from ...core import errors
 from ...models.user_models import UserInDB
-from ...models.folder_models import (
-    FolderCreate, 
-    FolderPublic
-)
+from ...models.folder_models import FolderCreate, FolderPublic
 from ...services.folder_service import FolderService
 from ...services.chat_service import ChatService
 
 router = APIRouter(prefix="/folders", tags=["folders"])
 
+
 def get_chat_service(db = Depends(get_db)) -> ChatService:
     return ChatService(db)
+
 
 def get_folder_service(db = Depends(get_db)) -> FolderService:
     return FolderService(db)
@@ -38,30 +37,18 @@ async def create_folder(
         return FolderPublic(
             id= f.id,
             title= f.title,
-            parent_folder_id= f.parent_folder_id,
-            depth= f.depth,
             created_at= f.created_at,
         )
     except ValueError as code:
-        if code == errors.FOLDER_1000_NOT_FOUND:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
-                detail="Parent folder not found"
-            )
         if code == errors.FOLDER_1001_NAME_EXISTS:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, 
                 detail="Folder name already exists"
             )
-        if code == errors.FOLDER_1002_MAX_DEPTH_EXCEEDED:
-            raise HTTPException(
-                status_code=status.HTTP_405_METHOD_NOT_ALLOWED, 
-                detail="Max folder depth is 3"
-            )
         #if code == errors.UNKNOWN_ERROR_0
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="[UNKNOWN ERROR] Could not create folder"
+            detail="Could not create folder"
         )
     
 
@@ -71,68 +58,24 @@ async def create_folder(
         status_code=status.HTTP_200_OK
         )
 async def list_folders(
-    parent_folder_id: Optional[str] = None,
     current_user: UserInDB = Depends(get_current_user),
     folder_service: FolderService = Depends(get_folder_service),
 ):
     try:
-        folders = await folder_service.list_folders(
-                user=current_user, 
-                folder_id=parent_folder_id
-        )
+        folders = await folder_service.list_folders(user=current_user)
         return [
             FolderPublic(
                 id= f.id,
                 title= f.title,
-                parent_folder_id= f.parent_folder_id,
-                depth= f.depth,
                 created_at= f.created_at,
             )
             for f in folders
         ]
     except ValueError as code:
         #if code == errors.UNKNOWN_ERROR_0
-        raise ValueError("[UNKNOWN ERROR] Can't list folders")
-    
-
-@router.put(
-        "/{folder_id}/move",
-        response_model=FolderPublic,
-        status_code=status.HTTP_200_OK,
-)
-async def move_folder(
-    folder_id: str,
-    new_parent_id: Optional[str] = None,
-    current_user: UserInDB = Depends(get_current_user),
-    folder_service: FolderService = Depends(get_folder_service),
-):
-    try:
-        updated = await folder_service.move_folder(
-            user=current_user,
-            folder_id=folder_id,
-            new_parent_id=new_parent_id,
-        )
-        return FolderPublic(
-            id=updated.id,
-            title=updated.title,
-            parent_folder_id=updated.parent_folder_id,
-            depth=updated.depth,
-            created_at=updated.created_at,
-        )
-    except ValueError as code:
-        if code == errors.FOLDER_1000_NOT_FOUND:
-            raise HTTPException(
-                status_code=404, 
-                detail="Folder not found"
-            )
-        if code == errors.FOLDER_1002_MAX_DEPTH_EXCEEDED:
-            raise HTTPException(
-                status_code=405, 
-                detail="Max depth exceeded"
-            )
         raise HTTPException(
-            status_code=400, 
-            detail="Could not move folder"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Could not list folders",
         )
 
 
@@ -162,5 +105,5 @@ async def delete_folder(
         #if code == errors.UNKNOWN_ERROR_0
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="[UNKNOWN ERROR] Could not delete folder"
+            detail="Could not delete folder"
         )

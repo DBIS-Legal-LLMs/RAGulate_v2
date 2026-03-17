@@ -66,6 +66,21 @@ class FolderService:
         doc["_id"] = str(doc["_id"])
         return FolderInDB(**doc)
     
+    
+    async def get_by_title(
+            self,
+            user: UserInDB,
+            folder_title: str,
+    ) -> FolderInDB:
+        doc = await self.folders.find_one(
+            {"title": folder_title, "owner_id": user.id}
+        )
+        if not doc:
+            return None
+        
+        doc["_id"] = str(doc["_id"])
+        return FolderInDB(**doc)
+    
 
     async def create_folder(
             self, 
@@ -73,6 +88,9 @@ class FolderService:
             folder_in: FolderCreate
     ) -> FolderInDB:
         now = datetime.now(timezone.utc)
+
+        if self.get_by_title(user, folder_in.title):
+            raise ValueError(errors.FOLDER_1001_NAME_EXISTS)
         
         doc = {
             "owner_id": user.id,
