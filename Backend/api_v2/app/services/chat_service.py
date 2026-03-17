@@ -9,8 +9,8 @@ from bson import ObjectId
 from pymongo.asynchronous.database import AsyncDatabase
 
 from ..core import errors
-from ..models.user import UserInDB
-from ..models.chat import (
+from ..models.user_models import UserInDB
+from ..models.chat_models import (
     ChatSessionCreate,
     ChatSessionInDB,
     ChatSessionPublic,
@@ -91,6 +91,26 @@ class ChatService:
             raise ValueError(errors.CHAT_100_NOT_FOUND)
         doc["_id"] = str(doc["_id"])
         return ChatSessionInDB(**doc)
+    
+
+    async def move_chat(
+            self,
+            user: UserInDB,
+            chat_id: str,
+            new_folder_id: Optional[str],
+    ) -> ChatSessionInDB:
+        # Ensure chat exists & belongs to user
+        chat = await self.get_chat_for_user(user, chat_id)
+
+        # Update folder_id
+        await self.chats.update_one(
+            {"_id": ObjectId(chat_id)},
+            {"$set": {"folder_id": new_folder_id}},
+        )
+
+        # Return updated chat
+        updated = await self.get_chat_for_user(user, chat_id)
+        return updated
     
     
     async def delete_chat(

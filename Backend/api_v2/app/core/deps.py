@@ -7,7 +7,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 from ..db.mongo import get_database
 from ..services.user_service import UserService
 from ..core.security import decode_access_token
-from ..models.user import UserInDB
+from ..models.user_models import UserInDB
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 

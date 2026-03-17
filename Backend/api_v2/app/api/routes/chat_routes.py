@@ -7,8 +7,8 @@ from fastapi.responses import StreamingResponse
 
 from ...core.deps import get_current_user, get_db
 from ...core import errors
-from ...models.user import UserInDB
-from ...models.chat import (
+from ...models.user_models import UserInDB
+from ...models.chat_models import (
     ChatSessionCreate,
     ChatSessionPublic,
     ChatSessionWithMessages,
@@ -32,13 +32,13 @@ async def create_chat(
     chat_service: ChatService = Depends(get_chat_service),
 ):
     try:
-        session = await chat_service.create_chat(current_user, data)
+        chat = await chat_service.create_chat(current_user, data)
         return ChatSessionPublic(
-            id=session.id,
-            title=session.title,
-            folder_id=session.folder_id,
-            created_at=session.created_at,
-            updated_at=session.updated_at,
+            id=chat.id,
+            title=chat.title,
+            folder_id=chat.folder_id,
+            created_at=chat.created_at,
+            updated_at=chat.updated_at,
         )
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not create chat")
@@ -74,10 +74,40 @@ async def get_chat(
 ):
     try:
         return await chat_service.get_chat_with_messages(current_user, chat_id)
-    except ValueError as exc:
-        if str(exc) == str(errors.CHAT_100_NOT_FOUND):
+    except ValueError as code:
+        if code == errors.CHAT_100_NOT_FOUND:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not get chat")
+    
+
+@router.put("/{chat_id}/move", response_model=ChatSessionPublic, status_code=status.HTTP_200_OK)
+async def move_chat(
+    chat_id: str,
+    folder_id: Optional[str] = None,
+    current_user: UserInDB = Depends(get_current_user),
+    chat_service: ChatService = Depends(get_chat_service),
+):
+    """
+    Moves a chat into a folder or to the top level.
+    Pass folder_id=<id> to move into a folder, or omit/pass null to  move to top level.
+    """
+    try:
+        updated = await chat_service.move_chat(
+            user=current_user,
+            chat_id=chat_id,
+            new_folder_id=folder_id,
+        )
+        return ChatSessionPublic(
+            id=updated.id,
+            title=updated.title,
+            folder_id=updated.folder_id,
+            created_at=updated.created_at,
+            updated_at=updated.updated_at,
+        )
+    except ValueError as code:
+        if code == errors.CHAT_100_NOT_FOUND:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not move chat")
 
 
 @router.delete("/{chat_id}", status_code=status.HTTP_200_OK)
@@ -89,8 +119,8 @@ async def delete_chat(
     try:
         await chat_service.delete_chat(user=current_user, chat_id=chat_id)
         return {"status": "ok"}
-    except ValueError as exc:
-        if str(exc) == str(errors.CHAT_100_NOT_FOUND):
+    except ValueError as code:
+        if code == errors.CHAT_100_NOT_FOUND:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not delete chat")
 
@@ -126,8 +156,8 @@ async def post_message(
     # return a proper HTTP 404 instead of an error mid-stream.
     try:
         await chat_service.get_chat_for_user(user=current_user, chat_id=chat_id)
-    except ValueError as exc:
-        if str(exc) == str(errors.CHAT_100_NOT_FOUND):
+    except ValueError as code:
+        if code == errors.CHAT_100_NOT_FOUND:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not send message")
  

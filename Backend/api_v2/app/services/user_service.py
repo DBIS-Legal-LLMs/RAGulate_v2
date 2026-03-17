@@ -12,7 +12,7 @@ import time
 import asyncio
 
 from ..data import func
-from ..models.user import UserCreate, UserInDB
+from ..models.user_models import UserCreate, UserInDB
 from ..core.security import hash_password, verify_password
 
 USERS_COLLECTION = "users"
