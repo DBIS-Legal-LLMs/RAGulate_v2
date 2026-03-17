@@ -89,7 +89,8 @@ class FolderService:
     ) -> FolderInDB:
         now = datetime.now(timezone.utc)
 
-        if self.get_by_title(user, folder_in.title):
+        folder = await self.get_by_title(user, folder_in.title)
+        if folder:
             raise ValueError(errors.FOLDER_1001_NAME_EXISTS)
         
         doc = {
