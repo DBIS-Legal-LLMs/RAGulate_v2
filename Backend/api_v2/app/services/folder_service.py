@@ -40,7 +40,7 @@ class FolderService:
     ) -> List[FolderInDB]:
         try:
             query = {"owner_id": user.id}
-            cursor = self.folders.find(query).sort("created_at", 1)
+            cursor = self.folders.find(query).sort("created_at", -1)
 
             entries: List[FolderInDB] = []
             async for doc in cursor:
@@ -101,6 +101,31 @@ class FolderService:
         result = await self.folders.insert_one(doc)
         doc["_id"] = str(result.inserted_id)
         return FolderInDB(**doc)
+    
+
+    async def change_name(
+            self,
+            user: UserInDB,
+            folder_id: str,
+            new_title: str,
+    ) -> FolderInDB:
+        # Ensure folder exists and belongs to user
+        await self.get_by_id(user, folder_id)
+
+        # Ensure folder-title doesn't exist for this user yet
+        folder = await self.get_by_title(user, new_title)
+        if folder:
+            raise ValueError(errors.FOLDER_1001_NAME_EXISTS)
+        
+        # Update title 
+        await self.folders.update_one(
+            {"_id": ObjectId(folder_id)},
+            {"$set": {"title": new_title}},
+        )
+
+        # Return updated folder
+        updated = await self.get_by_id(user, folder_id)
+        return updated
     
 
     async def delete_folder(

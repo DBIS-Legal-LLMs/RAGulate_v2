@@ -77,12 +77,33 @@ async def list_folders(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Could not list folders",
         )
+    
 
-
-@router.delete(
-        "/{folder_id}", 
-        status_code=status.HTTP_200_OK,
+@router.put("/{folder_id}/change-name", response_model=FolderPublic, status_code=status.HTTP_200_OK)
+async def change_name(
+    folder_id: str,
+    new_title: str,
+    current_user: UserInDB = Depends(get_current_user),
+    folder_service: FolderService = Depends(get_folder_service),
+):
+    try:
+        updated = await folder_service.change_name(
+            user=current_user,
+            folder_id=folder_id,
+            new_title=new_title,
         )
+        return FolderPublic(
+            id=updated.id,
+            title=updated.title,
+            created_at=updated.created_at,
+        )
+    except ValueError as code:
+        if code == errors.FOLDER_1000_NOT_FOUND:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder to rename not found")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not rename folder")
+
+
+@router.delete("/{folder_id}", status_code=status.HTTP_200_OK)
 async def delete_folder(
     folder_id: str,
     current_user: UserInDB = Depends(get_current_user),
