@@ -13,7 +13,6 @@ from ...models.chat import (
     ChatSessionPublic,
     ChatSessionWithMessages,
     MessageCreate,
-    ChatTurnPublic
 )
 from ...services.chat_service import ChatService
 
@@ -98,7 +97,7 @@ async def delete_chat(
 
 # ----- Messages -----
 
-@router.post("/{chat_id}/messages", response_model=ChatTurnPublic, status_code=status.HTTP_200_OK)
+@router.post("/{chat_id}/messages", status_code=status.HTTP_200_OK)
 async def post_message(
     chat_id: str,
     data: MessageCreate,
@@ -108,13 +107,20 @@ async def post_message(
     """
     Sends a user message and streams the assistant response as SSE.
  
-    Event types emitted:
+        SSE event types:
       {"type": "chunk",  "content": "<delta>"}
-          — one event per streamed token/chunk
+          — one event per token/chunk as it streams in
  
       {"type": "done",   "content": "<full response>",
        "user_message_id": "<id>", "assistant_message_id": "<id>"}
           — final event, emitted after the full response is persisted to DB
+ 
+      {"type": "error",  "content": "<reason>"}
+          — emitted when the LLM is unavailable or returns an error
+
+    If the client disconnects mid-stream, the backend continues the LLM
+    call and persists the full response to the DB anyway. The frontend can
+    retrieve the completed message via GET /api/chat/{chat_id}.
     """
     # Validate the chat exists before opening the stream, so we can still
     # return a proper HTTP 404 instead of an error mid-stream.

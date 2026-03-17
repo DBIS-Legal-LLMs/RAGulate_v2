@@ -1,5 +1,6 @@
 # Backend/api_v2/app/services/chat_service.py
 
+import asyncio
 import json
 from datetime import datetime, timezone
 from typing import AsyncGenerator, List, Optional
@@ -155,7 +156,7 @@ class ChatService:
         )
     
 
-    # ----- LLM chat -----
+    # ----- LLM Echo Chat -----
 
     async def chat_echo(
             self,
@@ -209,40 +210,29 @@ class ChatService:
             user_message= MessagePublic.from_db(user_msg),
             assistant_message= MessagePublic.from_db(assistant_msg),
         )
-
-
-    async def stream_chat_with_llm(
-            self,
-            user: UserInDB,
-            session_id: str,
-            data: MessageCreate,
-    ) -> AsyncGenerator[str, None]:
-        """
-        Persists the user message, then streams the LLM response as
-        Server-Sent Events (SSE).
- 
-        SSE event format:
-          data: {"type": "chunk",  "content": "<delta>"}   — one per chunk
-          data: {"type": "done",   "content": "<full>",
-                 "user_message_id": "...",
-                 "assistant_message_id": "..."}             — final event
- 
-        The full assistant response is persisted to the DB before the
-        "done" event is emitted, so the frontend can safely store the ID.
-        """
-        return self._stream_generator(user, session_id, data)
     
 
-    async def _stream_generator(
+    # ----- LLM streaming chat -----
+
+
+    async def _run_llm_and_persist(
             self,
             user: UserInDB,
             chat_id: str,
             data: MessageCreate,
-    ) -> AsyncGenerator[str, None]:
-        await self.get_chat_for_user(user, chat_id)
- 
+            chunk_queue: asyncio.Queue,
+    ) -> None:
+        """
+        Runs the full LLM call and persists both messages to the DB.
+        Runs inside asyncio.shield() so client disconnects cannot cancel it.
+
+        Puts each text chunk onto chunk_queue as {"type": "chunk", "content": str}
+        Puts {"type": "done", ...} as the final item.
+        Puts {"type": "error", "content": str} if the LLM call fails.
+        The SSE generator reads from this queue and forwards to the client.
+        """
         now = datetime.now(timezone.utc)
- 
+
         # 1) Persist user message
         user_doc = {
             "chat_id": chat_id,
@@ -253,8 +243,7 @@ class ChatService:
         }
         result_user = await self.messages.insert_one(user_doc)
         user_msg_id = str(result_user.inserted_id)
-        user_doc["_id"] = user_msg_id
- 
+
         # 2) Build conversation history (includes the message we just saved)
         history = await self.list_messages_in_chat(user, chat_id)
         llm_history = [
@@ -262,18 +251,22 @@ class ChatService:
             for m in history
             if m.role in {"user", "assistant"}
         ]
- 
-        # 3) Stream LLM response, forwarding each chunk as an SSE event
-        #    and accumulating the full answer
+
+        # 3) Stream LLM, forward chunks to queue, accumulate full answer
         full_answer: List[str] = []
- 
-        async for chunk in run_rag_query(
-            question=data.content,
-            history_messages=llm_history,
-        ):
-            full_answer.append(chunk)
-            yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"
- 
+        try:
+            async for chunk in run_rag_query(
+                question=data.content,
+                history_messages=llm_history,
+            ):
+                full_answer.append(chunk)
+                await chunk_queue.put({"type": "chunk", "content": chunk})
+
+        except Exception as exc:
+            # LLM failed - surface a clean error event, do not persist
+            await chunk_queue.put({"type": "error", "content": str(exc)})
+            return
+    
         # 4) Persist the complete assistant message
         assembled = "".join(full_answer)
         now_assistant = datetime.now(timezone.utc)
@@ -286,13 +279,63 @@ class ChatService:
         }
         result_assistant = await self.messages.insert_one(assistant_doc)
         assistant_msg_id = str(result_assistant.inserted_id)
- 
+
         # 5) Update session timestamp
         await self.chats.update_one(
             {"_id": ObjectId(chat_id)},
-            {"$set": {"updated_at": now_assistant}},
+            {"$set": {"updated_at": now_assistant}}
         )
+
+        # 6) Signal completion
+        await chunk_queue.put({
+            "type": "done",
+            "content": assembled,
+            "user_message_id": user_msg_id,
+            "assistant_message_id": assistant_msg_id,
+        })
+    
+
+    async def _stream_generator(
+            self,
+            user: UserInDB,
+            chat_id: str,
+            data: MessageCreate,
+    ) -> AsyncGenerator[str, None]:
+        """
+        SSE generator for the route.
  
-        # 6) Emit the final "done" event with the full text and both IDs
-        yield f"data: {json.dumps({'type': 'done', 'content': assembled, 'user_message_id': user_msg_id, 'assistant_message_id': assistant_msg_id})}\n\n"
- 
+        Spawns _run_llm_and_persist as a shielded background task so it
+        completes and writes to the DB even if the client disconnects.
+        This generator just reads from the shared queue and forwards events.
+        Once the client disconnects, this generator is cancelled but the
+        background task keeps running to completion.
+        """
+        chunk_queue: asyncio.Queue = asyncio.Queue()
+
+        # asyncio.shield() prevents the task from being cancelled when the
+        # client disconnects and Starlette cancels the response coroutine.
+        task = asyncio.ensure_future(
+            asyncio.shield(
+                self._run_llm_and_persist(user, chat_id, data, chunk_queue)
+            )
+        )
+
+        try:
+            while True:
+                event = await chunk_queue.get()
+
+                if event["type"] == "chunk":
+                    yield f"data: {json.dumps({'type': 'chunk', 'content': event['content']})}\n\n"
+
+                elif event["type"] == "done":
+                    yield f"data: {json.dumps({'type': 'done', 'content': event['content'], 'user_message_id': event['user_message_id'], 'assistant_message_id': event['assistant_message_id']})}\n\n"
+                    break
+
+                elif event["type"] == "error":
+                    yield f"data: {json.dumps({'type': 'error', 'content': event['content']})}\n\n"
+                    break
+        
+        except asyncio.CancelledError:
+            # Client disconnected — stop forwarding but let the task finish.
+            # The task is shielded so it will keep running and persist to DB.
+            pass
