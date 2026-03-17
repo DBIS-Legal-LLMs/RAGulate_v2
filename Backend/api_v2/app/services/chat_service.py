@@ -122,10 +122,12 @@ class ChatService:
         # Ensure chat exists & belongs to user
         chat = await self.get_chat_for_user(user, chat_id)
 
-        # Update name
+        now = datetime.now(timezone.utc)
+
+        # Update title
         await self.chats.update_one(
             {"_id": ObjectId(chat_id)},
-            {"$set": {"title": new_title}},
+            {"$set": {"title": new_title, "updated_at": now}},
         )
 
         # Return updated chat
