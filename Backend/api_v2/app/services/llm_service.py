@@ -14,7 +14,7 @@ settings = get_settings()
 # Constants
 # ---------------------------------------------------------------------------
  
-LLMProviderName = Literal["openrouter", "ollama"]
+LLMProviderName = Literal["openrouter"]
  
 OPENROUTER_MODEL            = settings.openrouter_model
 OPENROUTER_EMBEDDINGS_MODEL = settings.openrouter_embeddings_model

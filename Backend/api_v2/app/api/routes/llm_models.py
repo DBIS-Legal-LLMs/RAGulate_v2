@@ -6,7 +6,6 @@ from pydantic import BaseModel
 from ...services.llm_service import (
     get_active_provider,
     OPENROUTER_MODEL,
-    OLLAMA_MODEL,
 )
  
 router = APIRouter(prefix="/models", tags=["models"])
