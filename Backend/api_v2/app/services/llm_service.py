@@ -73,3 +73,7 @@ async def stream_chat_response(
 def get_active_provider() -> LLMProviderName:
     """Indicates which provider will handle the next request."""
     return "openrouter" if settings.openrouter_api_key else "no api key provided"
+
+
+def get_active_model() -> str:
+    return OPENROUTER_MODEL if settings.openrouter_api_key else "n/a"

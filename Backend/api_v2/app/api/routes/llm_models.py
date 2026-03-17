@@ -5,7 +5,7 @@ from pydantic import BaseModel
  
 from ...services.llm_service import (
     get_active_provider,
-    OPENROUTER_MODEL,
+    get_active_model,
 )
  
 router = APIRouter(prefix="/models", tags=["models"])
@@ -25,6 +25,5 @@ async def list_models() -> ModelsResponse:
     """
     return ModelsResponse(
         active_provider=get_active_provider(),
-        openrouter_model=OPENROUTER_MODEL,
-        ollama_model=OLLAMA_MODEL,
+        openrouter_model=get_active_model(),
     )
