@@ -6,7 +6,6 @@ from typing import Optional
 
 class FolderBase(BaseModel):
     title: str = Field(min_length=1, max_length=60)
-    parent_folder_id: Optional[str] = None # None => Root
 
 class FolderCreate(FolderBase):
     pass
@@ -14,7 +13,6 @@ class FolderCreate(FolderBase):
 class FolderInDB(FolderBase):
     id: Optional[str] = Field(default=None, alias="_id")
     owner_id: str
-    depth: int
     created_at: datetime
 
     class Config:
@@ -22,5 +20,4 @@ class FolderInDB(FolderBase):
 
 class FolderPublic(FolderBase):
     id: str
-    depth: int
     created_at: datetime
