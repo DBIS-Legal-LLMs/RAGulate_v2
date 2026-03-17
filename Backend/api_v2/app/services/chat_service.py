@@ -1,7 +1,9 @@
 # Backend/api_v2/app/services/chat_service.py
 
+import asyncio
+import json
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import AsyncGenerator, List, Optional
 
 from bson import ObjectId
 from pymongo.asynchronous.database import AsyncDatabase
@@ -17,13 +19,12 @@ from ..models.chat import (
     MessagePublic,
     ChatSessionWithMessages,
     ChatTurnPublic,
-    )
-
-from .rag_service import run_rag_query, LLMProviderName, DEFAULT_MODEL
-#from .folder_service import FolderService
+)
+from .rag_service import run_rag_query
 
 SESSIONS_COLLECTION = "chat_sessions"
 MESSAGES_COLLECTION = "chat_messages"
+
 
 class ChatService:
     def __init__(self, db: AsyncDatabase):
@@ -41,46 +42,31 @@ class ChatService:
     # ----- Chats -----
     
     async def list_chats(
-            self, 
+            self,
             user: UserInDB,
-            folder_id: Optional[str] = None
-    ) -> list[ChatSessionInDB]:
+            folder_id: Optional[str] = None,
+    ) -> List[ChatSessionInDB]:
         try:
             query = {"user_id": user.id}
             if folder_id is not None:
-                query["folder_id"] = folder_id # None = Root, without explicit folder
+                query["folder_id"] = folder_id
             cursor = self.chats.find(query).sort("updated_at", -1)
-
-            entries: list[ChatSessionInDB] = []
+ 
+            entries: List[ChatSessionInDB] = []
             async for doc in cursor:
                 doc["_id"] = str(doc["_id"])
-                entries.append(ChatSessionInDB(**doc)) 
-
+                entries.append(ChatSessionInDB(**doc))
             return entries
         except TypeError:
             raise ValueError(errors.UNKNOWN_ERROR_0)
 
 
     async def create_chat(
-            self, 
-            user: UserInDB, 
-            data: ChatSessionCreate
+            self,
+            user: UserInDB,
+            data: ChatSessionCreate,
     ) -> ChatSessionInDB:
-        # time
         now = datetime.now(timezone.utc)
-
-        """
-        folder_id = data.folder_id
-        if folder_id:
-            folder_service = FolderService(self._db)
-            folder = await folder_service.get_by_id(
-                    user=user,
-                    folder_id=folder_id
-            )
-            if not folder:
-                raise ValueError(errors.FOLDER_1000_NOT_FOUND)
-        """
-
         doc = {
             "user_id": user.id,
             "folder_id": data.folder_id,
@@ -90,23 +76,20 @@ class ChatService:
         }
         result = await self.chats.insert_one(doc)
         doc["_id"] = str(result.inserted_id)
-        
         return ChatSessionInDB(**doc)
     
 
     async def get_chat_for_user(
-            self, 
-            user: UserInDB, 
-            chat_id: str
-    ) -> Optional[ChatSessionInDB]:
+            self,
+            user: UserInDB,
+            chat_id: str,
+    ) -> ChatSessionInDB:
         doc = await self.chats.find_one(
             {"_id": ObjectId(chat_id), "user_id": user.id}
         )
         if not doc:
             raise ValueError(errors.CHAT_100_NOT_FOUND)
-        
         doc["_id"] = str(doc["_id"])
-
         return ChatSessionInDB(**doc)
     
     
@@ -117,111 +100,68 @@ class ChatService:
     ) -> None:
         # ensure chat exists & belongs to user
         await self.get_chat_for_user(user, chat_id)
-        
-        # Chat löschen
+        # delete chat
         await self.chats.delete_one({"_id": ObjectId(chat_id)})
-
-        # Alle zugehörigen Messages löschen
+        # delete all connected messages
         await self.messages.delete_many({"chat_id": chat_id})
     
 
     # ----- Messages -----
 
     async def list_messages_in_chat(
-            self, 
-            user: UserInDB, 
-            chat_id: str
-    ) -> list[MessageInDB]:
-        # ensure chat exists & belongs to user
-        chat = await self.get_chat_for_user(user, chat_id)
-        if not chat:
-            return []
-        
-        query = {"chat_id": chat_id, "user_id": user.id}
-        cursor = self.messages.find(query).sort("created_at", 1)
-
-        entries: list[MessageInDB] = []
-        async for doc in cursor:
-            doc["_id"] = str(doc["_id"])
-            entries.append(MessageInDB(**doc))
-
-        return entries
-    
-
-    async def add_message(
             self,
             user: UserInDB,
             chat_id: str,
-            role: str,
-            data: MessageCreate,
-    ) -> MessageInDB:
-        # ensure chat exists & belongs to user
+    ) -> List[MessageInDB]:
         await self.get_chat_for_user(user, chat_id)
-        
-        now = datetime.now(timezone.utc)
-
-        doc = {
-            "session_id": chat_id,
-            "user_id": user.id,
-            "role": role,
-            "content": data.content,
-            "created_at": now,
-        }
-        result = await self.messages.insert_one(doc)
-        doc["_id"] = str(result.inserted_id)
-
-        # Update chat updated_at time
-        await self.chats.update_one(
-            {"_id": ObjectId(chat_id)},
-            {"$set": {"updated_at": now}},
-        )
-
-        return MessageInDB(**doc)
+ 
+        cursor = self.messages.find(
+            {"chat_id": chat_id, "user_id": user.id}
+        ).sort("created_at", 1)
+ 
+        entries: List[MessageInDB] = []
+        async for doc in cursor:
+            doc["_id"] = str(doc["_id"])
+            entries.append(MessageInDB(**doc))
+        return entries
     
 
     async def get_chat_with_messages(
             self,
-            user: UserInDB, 
-            chat_id: str
-    ) -> Optional[ChatSessionWithMessages]:
-        # ensure chat exists & belongs to user
+            user: UserInDB,
+            chat_id: str,
+    ) -> ChatSessionWithMessages:
         chat = await self.get_chat_for_user(user, chat_id)
-
-        # load chat
-        chat_session_public = ChatSessionPublic(
-            id= chat.id,
-            title= chat.title,
-            folder_id= chat.folder_id,
-            created_at= chat.created_at,
-            updated_at= chat.updated_at,
-        )
-        
-        # load messages from chat
+ 
         msgs = await self.list_messages_in_chat(user, chat_id)
-
-        messages_public = [
-            MessagePublic(
-                id= m.id,
-                chat_id= m.chat_id,
-                role= m.role,
-                content= m.content,
-                created_at= m.created_at,
-            )
-            for m in msgs
-        ]
-
+ 
         return ChatSessionWithMessages(
-            chat= chat_session_public,
-            messages= messages_public,
+            chat=ChatSessionPublic(
+                id=chat.id,
+                title=chat.title,
+                folder_id=chat.folder_id,
+                created_at=chat.created_at,
+                updated_at=chat.updated_at,
+            ),
+            messages=[
+                MessagePublic(
+                    id=m.id,
+                    chat_id=m.chat_id,
+                    role=m.role,
+                    content=m.content,
+                    created_at=m.created_at,
+                )
+                for m in msgs
+            ],
         )
     
 
-    # ----- Chat + LightRAG -----
+    # ----- LLM Echo Chat -----
 
     async def chat_echo(
             self,
             user: UserInDB,
-            session_id: str,
+            chat_id: str,
             data: MessageCreate,
     ) -> ChatTurnPublic:
         """
@@ -229,7 +169,7 @@ class ChatService:
         Speichert die User-Nachricht und antwortet mit der gleichen Nachricht.
         """
         # 1) Session checken
-        session = await self.get_chat_for_user(user, session_id)
+        session = await self.get_chat_for_user(user, chat_id)
         if not session:
             raise ValueError(errors.CHAT_100_NOT_FOUND)
         
@@ -237,7 +177,7 @@ class ChatService:
 
         # 2) User-Message speichern
         user_doc = {
-            "chat_id": session_id,
+            "chat_id": chat_id,
             "user_id": user.id,
             "role": "user",
             "content": data.content,
@@ -250,7 +190,7 @@ class ChatService:
         # 3) Assitant-Message (Echo) speichern
         now_assistant = datetime.now(timezone.utc)
         assistant_doc = {
-            "chat_id": session_id,
+            "chat_id": chat_id,
             "user_id": user.id,
             "role": "assistant",
             "content": data.content,  # Echo
@@ -262,7 +202,7 @@ class ChatService:
 
         # Session-Updated Timestamp aktualisieren
         await self.chats.update_one(
-            {"_id": ObjectId(session_id)},
+            {"_id": ObjectId(chat_id)},
             {"$set": {"updated_at": now_assistant}},
         )
 
@@ -270,85 +210,132 @@ class ChatService:
             user_message= MessagePublic.from_db(user_msg),
             assistant_message= MessagePublic.from_db(assistant_msg),
         )
+    
 
-    async def chat_with_rag(
+    # ----- LLM streaming chat -----
+
+
+    async def _run_llm_and_persist(
             self,
             user: UserInDB,
-            session_id: str,
+            chat_id: str,
             data: MessageCreate,
-    ) -> ChatTurnPublic:
+            chunk_queue: asyncio.Queue,
+    ) -> None:
         """
-        Was passiert hier grob ?
-        1. User-Nachricht speichern
-        2. Historie laden und für LightRAG aufbereiten
-        3. RAG-Query ausführen (Provider + Modell aus User-Settings)
-        4. Assistant-Nachricht speichern
-        5. Beide Nachrichten als ChatTurnPublic zurückgeben
+        Runs the full LLM call and persists both messages to the DB.
+        Runs inside asyncio.shield() so client disconnects cannot cancel it.
+
+        Puts each text chunk onto chunk_queue as {"type": "chunk", "content": str}
+        Puts {"type": "done", ...} as the final item.
+        Puts {"type": "error", "content": str} if the LLM call fails.
+        The SSE generator reads from this queue and forwards to the client.
         """
-        # 1) Session checken
-        session = await self.get_chat_for_user(user, session_id)
-        if not session:
-            raise ValueError("Session not found or not owned by user")
-        
         now = datetime.now(timezone.utc)
 
-        # 2) User-Message speichern
+        # 1) Persist user message
         user_doc = {
-            "chat_id": session_id,
+            "chat_id": chat_id,
             "user_id": user.id,
             "role": "user",
             "content": data.content,
             "created_at": now,
         }
         result_user = await self.messages.insert_one(user_doc)
-        user_doc["_id"] = str(result_user.inserted_id)
-        user_msg = MessageInDB(**user_doc)
+        user_msg_id = str(result_user.inserted_id)
 
-        # 3) Historie laden (inkl. gerade gespeicherter User-Message)
-        history = await self.list_messages_in_chat(user, session_id)
-
-        lightrag_history = [
+        # 2) Build conversation history (includes the message we just saved)
+        history = await self.list_messages_in_chat(user, chat_id)
+        llm_history = [
             {"role": m.role, "content": m.content}
             for m in history
-            if m.role in {"user", "assitant"}
+            if m.role in {"user", "assistant"}
         ]
 
-        # 4) Provider & Modell aus User-Settings oder Defaults bestimmen
-        provider: LLMProviderName = (
-            user.preferred_llm_provider or "huggingface"
-        )
-        model_name: str = user.preferred_model or DEFAULT_MODEL[provider]
+        # 3) Stream LLM, forward chunks to queue, accumulate full answer
+        full_answer: List[str] = []
+        try:
+            async for chunk in run_rag_query(
+                question=data.content,
+                history_messages=llm_history,
+            ):
+                full_answer.append(chunk)
+                await chunk_queue.put({"type": "chunk", "content": chunk})
 
-        rag_answer = await run_rag_query(
-            question= data.content,
-            provider= provider,
-            model= model_name,
-            mode= "hybrid",
-            response_type= "Multiple Paragraphs",
-            user_prompt= None,
-            history_messages= lightrag_history,
-        )
-
-        # 5) Assitant-Message speichern
+        except Exception as exc:
+            # LLM failed - surface a clean error event, do not persist
+            await chunk_queue.put({"type": "error", "content": str(exc)})
+            return
+    
+        # 4) Persist the complete assistant message
+        assembled = "".join(full_answer)
         now_assistant = datetime.now(timezone.utc)
         assistant_doc = {
-            "chat_id": session_id,
+            "chat_id": chat_id,
             "user_id": user.id,
             "role": "assistant",
-            "content": rag_answer,
+            "content": assembled,
             "created_at": now_assistant,
         }
         result_assistant = await self.messages.insert_one(assistant_doc)
-        assistant_doc["_id"] = str(result_assistant.inserted_id)
-        assistant_msg = MessageInDB(**assistant_doc)
+        assistant_msg_id = str(result_assistant.inserted_id)
 
-        # Session-Updated Timestamp aktualisieren
+        # 5) Update session timestamp
         await self.chats.update_one(
-            {"_id": ObjectId(session_id)},
-            {"$set": {"updated_at": now_assistant}},
+            {"_id": ObjectId(chat_id)},
+            {"$set": {"updated_at": now_assistant}}
         )
 
-        return ChatTurnPublic(
-            user_message= MessagePublic.from_db(user_msg),
-            assistant_message= MessagePublic.from_db(assistant_msg),
+        # 6) Signal completion
+        await chunk_queue.put({
+            "type": "done",
+            "content": assembled,
+            "user_message_id": user_msg_id,
+            "assistant_message_id": assistant_msg_id,
+        })
+    
+
+    async def _stream_generator(
+            self,
+            user: UserInDB,
+            chat_id: str,
+            data: MessageCreate,
+    ) -> AsyncGenerator[str, None]:
+        """
+        SSE generator for the route.
+ 
+        Spawns _run_llm_and_persist as a shielded background task so it
+        completes and writes to the DB even if the client disconnects.
+        This generator just reads from the shared queue and forwards events.
+        Once the client disconnects, this generator is cancelled but the
+        background task keeps running to completion.
+        """
+        chunk_queue: asyncio.Queue = asyncio.Queue()
+
+        # asyncio.shield() prevents the task from being cancelled when the
+        # client disconnects and Starlette cancels the response coroutine.
+        task = asyncio.ensure_future(
+            asyncio.shield(
+                self._run_llm_and_persist(user, chat_id, data, chunk_queue)
+            )
         )
+
+        try:
+            while True:
+                event = await chunk_queue.get()
+
+                if event["type"] == "chunk":
+                    yield f"data: {json.dumps({'type': 'chunk', 'content': event['content']})}\n\n"
+
+                elif event["type"] == "done":
+                    yield f"data: {json.dumps({'type': 'done', 'content': event['content'], 'user_message_id': event['user_message_id'], 'assistant_message_id': event['assistant_message_id']})}\n\n"
+                    break
+
+                elif event["type"] == "error":
+                    yield f"data: {json.dumps({'type': 'error', 'content': event['content']})}\n\n"
+                    break
+        
+        except asyncio.CancelledError:
+            # Client disconnected — stop forwarding but let the task finish.
+            # The task is shielded so it will keep running and persist to DB.
+            pass

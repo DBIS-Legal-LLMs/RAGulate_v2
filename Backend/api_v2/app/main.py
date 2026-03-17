@@ -87,7 +87,7 @@ def debug_config():
     settings = get_settings()
     return {
         "openrouter": bool(settings.openrouter_api_key),
-        "huggingface": bool(settings.huggingface_api_key),
+        "key": settings.openrouter_api_key,
         "ollama_base_url": bool(settings.ollama_base_url),
         "mongo_url": settings.mongo_url,
         "mongo_db": settings.mongo_db_name
