@@ -11,6 +11,7 @@ import random
 import time
 import asyncio
 
+from ..core import errors
 from ..data import func
 from ..models.user_models import UserCreate, UserInDB
 from ..core.security import hash_password, verify_password
@@ -50,7 +51,7 @@ class UserService:
         self._db = db
 
     @property
-    def collection(self):
+    def users(self):
         return self._db[USERS_COLLECTION]
 
     # ----- CREATE USER -----
@@ -70,7 +71,7 @@ class UserService:
         # Username prüfen
         username = user_in.username
         if username:
-            username_exists = await self.collection.find_one({"username": username})
+            username_exists = await self.users.find_one({"username": username})
             if username_exists:
                 raise ValueError("USERNAME_EXISTS")
         else:
@@ -94,7 +95,7 @@ class UserService:
             "created_at": datetime.now(timezone.utc),
         }
 
-        result = await self.collection.insert_one(doc)
+        result = await self.users.insert_one(doc)
         doc["_id"] = str(result.inserted_id)
         return UserInDB(**doc)
     
@@ -102,7 +103,7 @@ class UserService:
         start = time.monotonic()
         while True:
             candidate = _generate_random_username_base()
-            existing = await self.collection.find_one({"username": candidate})
+            existing = await self.users.find_one({"username": candidate})
             if not existing:
                 return candidate
             if time.monotonic() - start > 15:
@@ -111,21 +112,21 @@ class UserService:
 
     # ----- GET USER -----
     async def get_by_email(self, email: str) -> Optional[UserInDB]:
-        doc = await self.collection.find_one({"email": email})
+        doc = await self.users.find_one({"email": email})
         if not doc:
             return None
         doc["_id"] = str(doc["_id"])
         return UserInDB(**doc)
 
     async def get_by_id(self, user_id: str) -> Optional[UserInDB]:
-        doc = await self.collection.find_one({"_id": ObjectId(user_id)})
+        doc = await self.users.find_one({"_id": ObjectId(user_id)})
         if not doc:
             return None
         doc["_id"] = str(doc["_id"])
         return UserInDB(**doc)
     
     async def get_by_username(self, username: str) -> Optional[UserInDB]:
-        doc = await self.collection.find_one({"username": username})
+        doc = await self.users.find_one({"username": username})
         if not doc:
             return None
         doc["_id"] = str(doc["_id"])
@@ -142,3 +143,22 @@ class UserService:
         if not verify_password(password, user.password_hash):
             return None
         return user
+
+
+    # ----- CHANGE USERNAME -----
+    async def change_username(
+            self, 
+            user: UserInDB,
+            new_username: str,
+    ) -> UserInDB:
+        u = await self.get_by_username(new_username)
+        if u:
+            raise ValueError(errors.USER_11_USERNAME_EXISTS)
+        
+        await self.users.update_one(
+            {"_id": ObjectId(user.id)},
+            {"$set": {"username": new_username}},
+        )
+
+        updated = await self.get_by_id(user_id=user.id)
+        return updated
