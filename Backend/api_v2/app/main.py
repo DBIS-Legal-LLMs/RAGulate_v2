@@ -8,6 +8,7 @@ from .api.routes.auth_routes import router as auth_router
 from .api.routes.chat_routes import router as chat_router
 from .api.routes.llm_models_routes import router as models_router
 from .api.routes.folders_routes import router as folder_router
+from .api.routes.user_routes import router as user_router
 
 from contextlib import asynccontextmanager
 
@@ -47,6 +48,8 @@ def create_app() -> FastAPI:
     app.include_router(models_router, prefix="/api")
     # Folder Router
     app.include_router(folder_router, prefix="/api")
+    # User Router
+    app.include_router(user_router, prefix="/api")
 
     return app
 

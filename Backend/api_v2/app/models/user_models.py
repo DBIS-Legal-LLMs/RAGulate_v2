@@ -18,7 +18,7 @@ class UserInDB(UserBase):
     password_hash: str
     role: Literal["user", "admin"] = "user"
     preferred_llm_provider: str | None = None      # "huggingface" | "openrouter" | "ollama"
-    preferred_model: str | None = None             # "hf_model"    | "or_model"   | "ollama_model"
+    preferred_model: str | None = None
     created_at: datetime
 
     class Config:
