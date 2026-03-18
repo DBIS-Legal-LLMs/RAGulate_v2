@@ -37,4 +37,6 @@ async def change_username(
             created_at=user.created_at,
         )
     except ValueError as code:
-        raise HTTPException()
+        if code == errors.USER_11_USERNAME_EXISTS:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User to rename not found")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not change username")
