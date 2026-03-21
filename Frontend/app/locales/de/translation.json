@@ -78,5 +78,6 @@
   "moveSession": {
   "errorMove": "Chat konnte nicht verschoben werden.",
   "errorGeneral": "Fehler beim Verschieben des Chats."
-}
+  },
+  "rename": { "error": "Umbenennen fehlgeschlagen." }
 }
