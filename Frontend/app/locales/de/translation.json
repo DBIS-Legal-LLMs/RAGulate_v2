@@ -74,5 +74,9 @@
     "theme": "Design",
     "light": "Hell",
     "dark": "Dunkel"
-  }
+  },
+  "moveSession": {
+  "errorMove": "Chat konnte nicht verschoben werden.",
+  "errorGeneral": "Fehler beim Verschieben des Chats."
+}
 }

@@ -74,5 +74,9 @@
     "theme": "Theme",
     "light": "Light",
     "dark": "Dark"
-  }
+  },
+  "moveSession": {
+  "errorMove": "Chat could not be moved.",
+  "errorGeneral": "Error while moving the chat."
+}
 }
