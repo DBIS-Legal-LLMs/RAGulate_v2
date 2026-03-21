@@ -59,8 +59,6 @@ interface Message {
 interface UIFolder {
   id: string;
   title: string;
-  parent_folder_id: string | null;
-  depth: number;
   createdAt: Date;
   isDraft?: boolean;
 }
@@ -93,6 +91,7 @@ export default function GDPRChatbot() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [draggingSessionId, setDraggingSessionId] = useState<string | null>(null);
 
   const [isSessionLoading, setIsSessionLoading] = useState(false);
 
@@ -488,8 +487,6 @@ export default function GDPRChatbot() {
     const uiFolders: UIFolder[] = rawFolders.map((f: any) => ({
       id: f.id,
       title: f.title,
-      parent_folder_id: f.parent_folder_id,
-      depth: f.depth,
       createdAt: new Date(f.created_at),
     }));
 
@@ -509,12 +506,7 @@ export default function GDPRChatbot() {
       folderId: s.folder_id,
       createdAt: new Date(s.created_at),
     }));
-    setFolders((prev) => {
-      const filtered = prev.filter(
-        (f) => f.isDraft || f.parent_folder_id !== activeFolderId,
-      );
-      return [...filtered, ...uiFolders];
-    });
+    setFolders(uiFolders);
     setSessions(uiSessions);
   };
 
@@ -612,8 +604,6 @@ export default function GDPRChatbot() {
     const draftFolder: UIFolder = {
       id: tempId,
       title: "",
-      parent_folder_id: activeFolderId ?? null,
-      depth: 0,
       createdAt: new Date(),
       isDraft: true,
     };
@@ -633,7 +623,6 @@ export default function GDPRChatbot() {
   const confirmCreateFolder = async (
     tempId: string,
     title: string,
-    parent_folder_id: string | null,
   ) => {
     const token = localStorage.getItem("token");
 
@@ -645,7 +634,6 @@ export default function GDPRChatbot() {
       },
       body: JSON.stringify({
         title,
-        parent_folder_id,
       }),
     });
 
@@ -746,9 +734,42 @@ export default function GDPRChatbot() {
     console.log(folderId, newFolderId);
   };
 
-  const moveSession = async (sessionId: string, newFolderId: string | null) => {
-    console.log(sessionId, newFolderId);
-  };
+const moveSession = async (sessionId: string, newFolderId: string | null) => {
+  const token = localStorage.getItem("token");
+
+  const url = new URL(`${BACKEND_URL}/api/chat/${sessionId}/move`);
+  if (newFolderId) url.searchParams.append("new_folder_id", newFolderId);
+
+  try {
+    const res = await fetch(url.toString(), {
+      method: "PUT",
+      headers: {
+        accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      alert(t("moveSession.errorMove"));
+      return;
+    }
+
+    const updated = await res.json();
+
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId
+          ? { ...s, folderId: updated.folder_id ?? null }
+          : s,
+      ),
+    );
+    setActiveFolderId(updated.folder_id ?? null);
+    setActiveSessionId(null);
+  } catch (error) {
+    console.error("Fehler beim Verschieben des Chats:", error);
+    alert(t("moveSession.errorGeneral"));
+  }
+};
 
   /**
    * Loads Sidebar content. Contains Sessions and Folders
@@ -763,8 +784,6 @@ export default function GDPRChatbot() {
       const uiFolders: UIFolder[] = rawFolders.map((f: any) => ({
         id: f.id,
         title: f.title,
-        parent_folder_id: f.parent_folder_id,
-        depth: f.depth,
         createdAt: new Date(f.created_at),
       }));
 
@@ -817,9 +836,6 @@ export default function GDPRChatbot() {
   const sessionsInActiveFolder = sessions.filter(
     (s) => s.folderId === activeFolderId,
   );
-  const foldersinActiveFolder = folders.filter(
-    (f) => f.parent_folder_id === activeFolderId,
-  );
 
   return (
     <ThemeProvider>
@@ -865,8 +881,9 @@ export default function GDPRChatbot() {
             onCancelDraftSession={onCancelDraftSession}
             onUpdateDraftSessionName={onUpdateDraftSessionName}
             onDeleteSession={deleteSession}
-            onMoveFolder={moveFolder}
             onMoveSession={moveSession}
+            draggingSessionId={draggingSessionId}
+            setDraggingSessionId={setDraggingSessionId}
           />
 
           {/* 
@@ -890,10 +907,14 @@ export default function GDPRChatbot() {
                 <div className="flex items-center space-x-3">
                   <div>
                     <h1 className="text-lg font-semibold">
-                      {t("header.title")}
+                      {activeSessionId
+                        ? sessions.find((s) => s.id === activeSessionId)?.title
+                        : t("header.title")}
                     </h1>
                     <p className="text-sm text-gray-600">
-                      {t("header.subtitle")}
+                      {activeSessionId
+                        ? ""
+                        : t("header.subtitle")}
                     </p>
                   </div>
                 </div>
@@ -940,91 +961,8 @@ export default function GDPRChatbot() {
                         {activeFolder.title}
                       </h2>
                     </div>
-
                     <div className="space-y-2">
                       <p className="text-sm text-gray-500">
-                        {t("folder.subfolderCount", {
-                          count: foldersinActiveFolder.length,
-                        })}
-                      </p>
-                      {/* Displays Subfolders for Active Folder */}
-                      {foldersinActiveFolder
-                        .sort((a, b) => {
-                          // Drafts on top
-                          if (a.isDraft && !b.isDraft) return -1;
-                          if (!a.isDraft && b.isDraft) return 1;
-                          return b.createdAt.getTime() - a.createdAt.getTime();
-                        })
-                        .map((folder) => (
-                          <Card
-                            key={folder.id}
-                            className="p-4 cursor-pointer bg-sidebar hover:bg-accent hover:text-black transition border-none"
-                            onClick={() => setActiveFolderId(folder.id)}
-                          >
-                            {folder.isDraft && editingFolderId === folder.id ? (
-                              <input
-                                autoFocus
-                                value={folder.title}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  onUpdateDraftFolderName(folder.id, value);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (
-                                    e.key === "Enter" &&
-                                    folder.title.trim()
-                                  ) {
-                                    confirmCreateFolder(
-                                      folder.id,
-                                      folder.title,
-                                      folder.parent_folder_id,
-                                    );
-                                  }
-                                  if (e.key === "Escape") {
-                                    onCancelDraftFolder(folder.id);
-                                    setEditingFolderId(null);
-                                    // setActiveFolderId(null);
-                                  }
-                                }}
-                                onBlur={() => {
-                                  if (folder.title.trim()) {
-                                    confirmCreateFolder(
-                                      folder.id,
-                                      folder.title,
-                                      folder.parent_folder_id,
-                                    );
-                                  } else {
-                                    onCancelDraftFolder(folder.id);
-                                  }
-                                  setEditingFolderId(null);
-                                }}
-                                className="w-full bg-transparent border-b border-accent outline-none px-1"
-                                placeholder={t("folder.placeholderFolder")}
-                              />
-                            ) : (
-                              <div className="flex justify-between items-center">
-                                <span className="flex font-medium">
-                                  <Folder className="w-4 h-4 mr-2 mt-1" />
-                                  {folder.title || t("folder.untitledChat")}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {folder.createdAt.toLocaleDateString()}
-                                </span>
-                              </div>
-                            )}
-                          </Card>
-                        ))}
-
-                      {foldersinActiveFolder.length === 0 && (
-                        <p className="text-center text-gray-500 py-4">
-                          {t("folder.emptyFolders")}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-500">
-                        {sessionsInActiveFolder.length}{" "}
                         {t("folder.chatCount", {
                           count: sessionsInActiveFolder.length,
                         })}
@@ -1032,6 +970,21 @@ export default function GDPRChatbot() {
                       {sessionsInActiveFolder.map((session) => (
                         <Card
                           key={session.id}
+                          draggable={!session.isDraft}
+                          onDragStart={(e) => {
+                            setDraggingSessionId(session.id);
+                            e.dataTransfer.effectAllowed = "move";
+                            //Custom Ghost Element
+                            const ghost = document.createElement("div");
+                            ghost.innerText = session.title;
+                            ghost.className = "bg-sidebar text-sm px-3 py-1 rounded shadow";
+                            ghost.style.position = "absolute";
+                            ghost.style.top = "-9999px";
+                            document.body.appendChild(ghost);
+                            e.dataTransfer.setDragImage(ghost, 0, 0);
+                            setTimeout(() => document.body.removeChild(ghost), 0);
+                          }}
+                          onDragEnd={() => setDraggingSessionId(null)}
                           className="p-4 cursor-pointer bg-sidebar hover:bg-accent hover:text-black transition border-none"
                           onClick={() => setActiveSessionId(session.id)}
                         >
@@ -1084,6 +1037,13 @@ export default function GDPRChatbot() {
                               <span className="text-xs text-gray-500">
                                 {session.createdAt.toLocaleDateString()}
                               </span>
+                                  <X
+                                    className="w-4 h-4 hover:text-red-500 cursor-pointer shrink-0"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteSession(session.id);
+                                    }}
+                                  />
                             </div>
                           )}
                         </Card>
@@ -1103,14 +1063,6 @@ export default function GDPRChatbot() {
                       >
                         <MessageSquare className="w-4 h-4 mr-2" />
                         {t("buttons.newChat")}
-                      </Button>
-
-                      <Button
-                        onClick={createNewFolder}
-                        className="w-full bg-sidebar hover:bg-accent border border-secondary text-black dark:text-white dark:hover:text-black dark:bg-primary dark:hover:bg-accent"
-                      >
-                        <Folder className="w-4 h-4 mr-2" />
-                        {t("buttons.newFolder")}
                       </Button>
                     </div>
                   </>
