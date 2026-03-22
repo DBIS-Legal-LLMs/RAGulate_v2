@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { X, Camera, Save, User } from "lucide-react";
 
+const BACKEND_URL = "http://134.60.71.197:8000";
+
 interface ProfileModalProps {
   username: string;
   onClose: () => void;
@@ -49,7 +51,24 @@ export function ProfileModal({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      onSaveUsername?.(name);
+      const token = localStorage.getItem("token");
+      const url = new URL(`${BACKEND_URL}/api/user/change-name`);
+      url.searchParams.append("new_username", name);
+
+      const res = await fetch(url.toString(), {
+        method: "PUT",
+        headers: {
+          accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error("Username konnte nicht geändert werden.");
+      }
+
+      const updated = await res.json();
+      onSaveUsername?.(updated.username);
       setToast({
         open: true,
         type: "success",
