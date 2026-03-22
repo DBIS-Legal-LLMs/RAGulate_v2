@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { X, Camera, Save, User } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const BACKEND_URL = "http://134.60.71.197:8000";
 
@@ -37,6 +38,8 @@ export function ProfileModal({
     message: "",
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { t } = useTranslation();
 
   useEffect(() => {
     setName(username);
@@ -72,13 +75,15 @@ export function ProfileModal({
       setToast({
         open: true,
         type: "success",
-        message: "Profile changes saved.",
+        message: t("profile.successMessage"),
       });
     } catch (e: any) {
       setToast({
         open: true,
         type: "error",
-        message: `Failed to save changes: ${e?.message || "Unknown error"}`,
+        message: t("profile.errorMessage", {
+          error: e?.message || t("profile.unknownError"),
+        }),
       });
     } finally {
       setIsSaving(false);
@@ -101,7 +106,7 @@ export function ProfileModal({
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center space-x-2">
               <User className="w-5 h-5" />
-              <span>Profile Settings</span>
+              <span>{t("profile.title")}</span>
             </CardTitle>
             <Button
               variant="ghost"
@@ -146,7 +151,7 @@ export function ProfileModal({
 
             {/* Profile Form: Only Name */}
             <div className="space-y-2">
-              <Label htmlFor="name">Username</Label>
+              <Label htmlFor="name">{t("profile.username")}</Label>
               <Input
                 id="name"
                 value={name}
@@ -164,7 +169,7 @@ export function ProfileModal({
                   disabled={isSaving}
                   className="hover:text-black border-sidebar-border bg-primary"
                 >
-                  Cancel
+                  {t("profile.cancel")}
                 </Button>
                 <Button
                   variant="outline"
@@ -175,12 +180,12 @@ export function ProfileModal({
                   {isSaving ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Saving...
+                      {t("profile.saving")}
                     </>
                   ) : (
                     <>
                       <Save className="w-4 h-4 mr-2" />
-                      Save Changes
+                      {t("profile.save")}
                     </>
                   )}
                 </Button>
@@ -208,7 +213,9 @@ export function ProfileModal({
             onClick={() => setToast((p) => ({ ...p, open: false }))}
           >
             <div className="sr-only">
-              {toast.type === "success" ? "Success" : "Error"}
+              {toast.type === "success"
+                ? t("profile.success")
+                : t("profile.error")}
             </div>
             <div className="flex-1 text-sm">{toast.message}</div>
             <button
