@@ -8,6 +8,7 @@ import {
   PanelLeftOpen,
   PanelLeftClose,
   Folder,
+  Pencil,
 } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
@@ -58,6 +59,12 @@ interface SidebarProps {
   onMoveSession: (sessionId: string, newFolderId: string | null) => void;
   draggingSessionId: string | null;
   setDraggingSessionId: (id: string | null) => void;
+  renamingId: string | null;
+  setRenamingId: (id: string | null) => void;
+  renameValue: string;
+  setRenameValue: (value: string) => void;
+  onRenameFolder: (id: string, newTitle: string) => void;
+  onRenameSession: (id: string, newTitle: string) => void;
 }
 
 export default function Sidebar({
@@ -85,7 +92,13 @@ export default function Sidebar({
   onCancelDraftSession,
   onMoveSession,
   draggingSessionId,
-  setDraggingSessionId
+  setDraggingSessionId,
+  renamingId,
+  setRenamingId,
+  renameValue,
+  setRenameValue,
+  onRenameFolder,
+  onRenameSession
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
@@ -108,6 +121,11 @@ export default function Sidebar({
   const renderSession = (session: UISession) => (
     <div
       key={session.id}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        setRenamingId(session.id);
+        setRenameValue(session.title);
+      }}
       draggable={!session.isDraft}
       onDragStart={(e) => {
         setDraggingSessionId(session.id);
@@ -134,6 +152,7 @@ export default function Sidebar({
     >
       <MessageSquare className="w-4 h-4 mr-2 shrink-0" />
       {session.isDraft && editingSessionId === session.id ? (
+        // Draft — neue Session wird erstellt
         <input
           autoFocus
           value={editedTitle}
@@ -163,17 +182,46 @@ export default function Sidebar({
           className="w-full bg-transparent border-b border-accent outline-none px-1"
           placeholder={t("sidebar.placeholderChat")}
         />
+      ) : renamingId === session.id ? (
+        // Rename — bestehende Session wird umbenannt
+        <input
+          autoFocus
+          value={renameValue}
+          onChange={(e) => setRenameValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && renameValue.trim())
+              onRenameSession(session.id, renameValue.trim());
+            if (e.key === "Escape") setRenamingId(null);
+          }}
+          onBlur={() => {
+            if (renameValue.trim()) onRenameSession(session.id, renameValue.trim());
+            else setRenamingId(null);
+          }}
+          className="w-full bg-transparent border-b border-accent outline-none px-1"
+          onClick={(e) => e.stopPropagation()}
+        />
       ) : (
+        // Normal
         <span className="flex-1 truncate">{session.title}</span>
       )}
       {activeSessionId === session.id && !session.isDraft && (
-        <X
-          className="w-5 h-5 hover:text-red-500 hover:text-red-700 cursor-pointer ml-auto shrink-0"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeleteSession(session.id);
-          }}
-        />
+        <div className="flex items-center gap-1 ml-auto">
+          <Pencil
+            className="w-4 h-4 hover:text-blue-500 cursor-pointer shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              setRenamingId(session.id);
+              setRenameValue(session.title);
+            }}
+          />
+          <X
+            className="w-4 h-4 hover:text-red-500 cursor-pointer shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteSession(session.id);
+            }}
+          />
+        </div>
       )}
     </div>
   );
@@ -252,6 +300,11 @@ export default function Sidebar({
             {sortedFolders.map((folder) => (
               <div
                 key={folder.id}
+                  onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setRenamingId(folder.id);
+                  setRenameValue(folder.title);
+                }}
                 onDragOver={(e) => {
                   e.preventDefault();
                   setDragOverFolderId(folder.id);
@@ -277,16 +330,14 @@ export default function Sidebar({
               >
                 <Folder className="w-4 h-4 mr-2 shrink-0" />
                 {folder.isDraft && editingFolderId === folder.id ? (
+                  // Draft — neuer Ordner wird erstellt
                   <input
                     autoFocus
                     value={folder.title}
-                    onChange={(e) =>
-                      onUpdateDraftFolderName(folder.id, e.target.value)
-                    }
+                    onChange={(e) => onUpdateDraftFolderName(folder.id, e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && folder.title.trim()) {
+                      if (e.key === "Enter" && folder.title.trim())
                         onConfirmCreateFolder(folder.id, folder.title);
-                      }
                       if (e.key === "Escape") {
                         onCancelDraftFolder(folder.id);
                         setEditingFolderId(null);
@@ -305,17 +356,50 @@ export default function Sidebar({
                     className="w-full bg-transparent border-b border-accent outline-none px-1"
                     placeholder={t("sidebar.placeholderFolder")}
                   />
+                ) : renamingId === folder.id ? (
+                  // Rename — bestehender Ordner wird umbenannt
+                  <input
+                    autoFocus
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && renameValue.trim() && renameValue.trim() !== folder.title)
+                        onRenameFolder(folder.id, renameValue.trim());
+                      if (e.key === "Enter") setRenamingId(null); // schließt auch ohne Änderung
+                      if (e.key === "Escape") setRenamingId(null);
+                    }}
+                    onBlur={() => {
+                      if (renameValue.trim() && renameValue.trim() !== folder.title) {
+                        onRenameFolder(folder.id, renameValue.trim());
+                      } else {
+                        setRenamingId(null);
+                      }
+                    }}
+                    className="w-full bg-transparent border-b border-accent outline-none px-1"
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 ) : (
+                  // Normal
                   <span className="flex-1">{folder.title}</span>
                 )}
                 {activeFolderId === folder.id && !folder.isDraft && (
-                  <X
-                    className="w-5 h-5 hover:text-red-500 cursor-pointer ml-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteFolder(folder.id);
-                    }}
-                  />
+                  <div className="flex items-center gap-1 ml-auto">
+                    <Pencil
+                      className="w-4 h-4 hover:text-blue-500 cursor-pointer shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRenamingId(folder.id);
+                        setRenameValue(folder.title);
+                      }}
+                    />
+                    <X
+                      className="w-4 h-4 hover:text-red-500 cursor-pointer shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteSession(folder.id);
+                      }}
+                    />
+                  </div>
                 )}
               </div>
             ))}

@@ -73,10 +73,21 @@
     "settings": "Einstellungen",
     "theme": "Design",
     "light": "Hell",
-    "dark": "Dunkel"
+    "dark": "Dunkel",
+    "title": "Profileinstellungen",
+    "username": "Benutzername",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "saving": "Wird gespeichert...",
+    "successMessage": "Änderungen gespeichert.",
+    "errorMessage": "Fehler beim Speichern: {{error}}",
+    "unknownError": "Unbekannter Fehler",
+    "success": "Erfolg",
+    "error": "Fehler"
   },
   "moveSession": {
-  "errorMove": "Chat konnte nicht verschoben werden.",
-  "errorGeneral": "Fehler beim Verschieben des Chats."
-}
+    "errorMove": "Chat konnte nicht verschoben werden.",
+    "errorGeneral": "Fehler beim Verschieben des Chats."
+  },
+  "rename": { "error": "Umbenennen fehlgeschlagen." }
 }

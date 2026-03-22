@@ -73,10 +73,21 @@
     "settings": "Settings",
     "theme": "Theme",
     "light": "Light",
-    "dark": "Dark"
+    "dark": "Dark",
+    "title": "Profile Settings",
+    "username": "Username",
+    "cancel": "Cancel",
+    "save": "Save Changes",
+    "saving": "Saving...",
+    "successMessage": "Profile changes saved.",
+    "errorMessage": "Failed to save changes: {{error}}",
+    "unknownError": "Unknown error",
+    "success": "Success",
+    "error": "Error"
   },
   "moveSession": {
-  "errorMove": "Chat could not be moved.",
-  "errorGeneral": "Error while moving the chat."
-}
+    "errorMove": "Chat could not be moved.",
+    "errorGeneral": "Error while moving the chat."
+  },
+  "rename": { "error": "Renaming failed." }
 }

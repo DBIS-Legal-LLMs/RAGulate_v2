@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Send, MessageSquare, Shield, X, Folder } from "lucide-react";
+import { Send, MessageSquare, Shield, X, Folder, Pencil } from "lucide-react";
 import { ChatMessage } from "./components/chat-message";
 import { ProfileDropdown } from "./components/profile-dropdown";
 import { ProfileModal } from "./components/profile-modal";
@@ -94,6 +94,9 @@ export default function GDPRChatbot() {
   const [draggingSessionId, setDraggingSessionId] = useState<string | null>(null);
 
   const [isSessionLoading, setIsSessionLoading] = useState(false);
+
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState<string>(""); 
 
   // UI References and state
   const messagesEndRef = useRef<HTMLDivElement>(null); // For auto-scrolling
@@ -730,8 +733,42 @@ export default function GDPRChatbot() {
     }
   };
 
-  const moveFolder = async (folderId: string, newFolderId: string | null) => {
-    console.log(folderId, newFolderId);
+  const renameFolder = async (folderId: string, newTitle: string) => {
+    const token = localStorage.getItem("token");
+    const url = new URL(`${BACKEND_URL}/api/folders/${folderId}/change-name`);
+    url.searchParams.append("new_title", newTitle);
+
+    const res = await fetch(url.toString(), {
+      method: "PUT",
+      headers: { accept: "application/json", Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) { alert(t("rename.error")); return; }
+
+    const updated = await res.json();
+    setFolders((prev) =>
+      prev.map((f) => (f.id === folderId ? { ...f, title: updated.title } : f))
+    );
+    setRenamingId(null);
+  };
+
+  const renameSession = async (sessionId: string, newTitle: string) => {
+    const token = localStorage.getItem("token");
+    const url = new URL(`${BACKEND_URL}/api/chat/${sessionId}/change-name`);
+    url.searchParams.append("new_title", newTitle);
+
+    const res = await fetch(url.toString(), {
+      method: "PUT",
+      headers: { accept: "application/json", Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) { alert(t("rename.error")); return; }
+
+    const updated = await res.json();
+    setSessions((prev) =>
+      prev.map((s) => (s.id === sessionId ? { ...s, title: updated.title } : s))
+    );
+    setRenamingId(null);
   };
 
 const moveSession = async (sessionId: string, newFolderId: string | null) => {
@@ -884,6 +921,12 @@ const moveSession = async (sessionId: string, newFolderId: string | null) => {
             onMoveSession={moveSession}
             draggingSessionId={draggingSessionId}
             setDraggingSessionId={setDraggingSessionId}
+            renamingId={renamingId}
+            setRenamingId={setRenamingId}
+            renameValue={renameValue}
+            setRenameValue={setRenameValue}
+            onRenameFolder={renameFolder}
+            onRenameSession={renameSession}
           />
 
           {/* 
@@ -968,85 +1011,97 @@ const moveSession = async (sessionId: string, newFolderId: string | null) => {
                         })}
                       </p>
                       {sessionsInActiveFolder.map((session) => (
-                        <Card
-                          key={session.id}
-                          draggable={!session.isDraft}
-                          onDragStart={(e) => {
-                            setDraggingSessionId(session.id);
-                            e.dataTransfer.effectAllowed = "move";
-                            //Custom Ghost Element
-                            const ghost = document.createElement("div");
-                            ghost.innerText = session.title;
-                            ghost.className = "bg-sidebar text-sm px-3 py-1 rounded shadow";
-                            ghost.style.position = "absolute";
-                            ghost.style.top = "-9999px";
-                            document.body.appendChild(ghost);
-                            e.dataTransfer.setDragImage(ghost, 0, 0);
-                            setTimeout(() => document.body.removeChild(ghost), 0);
-                          }}
-                          onDragEnd={() => setDraggingSessionId(null)}
-                          className="p-4 cursor-pointer bg-sidebar hover:bg-accent hover:text-black transition border-none"
-                          onClick={() => setActiveSessionId(session.id)}
-                        >
-                          {session.isDraft &&
-                          editingSessionId === session.id ? (
-                            <input
-                              autoFocus
-                              value={editedTitle}
-                              onChange={(e) => setEditedTitle(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && editedTitle.trim()) {
-                                  confirmCreateSession(
-                                    session.id,
-                                    editedTitle,
-                                    session.folderId,
-                                  );
-                                  setEditedTitle("");
-                                }
-
-                                if (e.key === "Escape") {
-                                  onCancelDraftSession(session.id);
-                                  setEditingSessionId(null);
-                                  setActiveSessionId(null);
-                                  setEditedTitle("");
-                                }
-                              }}
-                              onBlur={() => {
-                                if (editedTitle.trim()) {
-                                  confirmCreateSession(
-                                    session.id,
-                                    editedTitle,
-                                    session.folderId,
-                                  );
-                                } else {
-                                  onCancelDraftSession(session.id);
-                                  setActiveSessionId(null);
-                                }
-                                setEditingSessionId(null);
+                      <Card
+                        key={session.id}
+                        draggable={!session.isDraft}
+                        onDragStart={(e) => {
+                          setDraggingSessionId(session.id);
+                          e.dataTransfer.effectAllowed = "move";
+                        }}
+                        onDragEnd={() => setDraggingSessionId(null)}
+                        className="p-4 cursor-pointer bg-sidebar hover:bg-accent hover:text-black transition border-none"
+                        onClick={() => {
+                          if (renamingId !== session.id) setActiveSessionId(session.id);
+                        }}
+                      >
+                        {session.isDraft && editingSessionId === session.id ? (
+                          <input
+                            autoFocus
+                            value={editedTitle}
+                            onChange={(e) => setEditedTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && editedTitle.trim()) {
+                                confirmCreateSession(session.id, editedTitle, session.folderId);
                                 setEditedTitle("");
-                              }}
-                              className="w-full bg-transparent border-b border-accent outline-none px-1"
-                              placeholder={t("folder.placeholderChat")}
-                            />
-                          ) : (
-                            <div className="flex justify-between items-center">
-                              <span className="flex font-medium">
-                                <MessageSquare className="w-4 h-4 mr-2 mt-1" />
-                                {session.title || t("folder.untitledChat")}
-                              </span>
+                              }
+                              if (e.key === "Escape") {
+                                onCancelDraftSession(session.id);
+                                setEditingSessionId(null);
+                                setActiveSessionId(null);
+                                setEditedTitle("");
+                              }
+                            }}
+                            onBlur={() => {
+                              if (editedTitle.trim()) {
+                                confirmCreateSession(session.id, editedTitle, session.folderId);
+                              } else {
+                                onCancelDraftSession(session.id);
+                                setActiveSessionId(null);
+                              }
+                              setEditingSessionId(null);
+                              setEditedTitle("");
+                            }}
+                            className="w-full bg-transparent border-b border-accent outline-none px-1"
+                            placeholder={t("folder.placeholderChat")}
+                          />
+                        ) : renamingId === session.id ? (
+                          <input
+                            autoFocus
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && renameValue.trim() && renameValue.trim() !== session.title)
+                                renameSession(session.id, renameValue.trim());
+                              if (e.key === "Enter") setRenamingId(null);
+                              if (e.key === "Escape") setRenamingId(null);
+                            }}
+                            onBlur={() => {
+                              if (renameValue.trim() && renameValue.trim() !== session.title)
+                                renameSession(session.id, renameValue.trim());
+                              else setRenamingId(null);
+                            }}
+                            className="w-full bg-transparent border-b border-accent outline-none px-1"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : (
+                          <div className="flex justify-between items-center">
+                            <span className="flex font-medium">
+                              <MessageSquare className="w-4 h-4 mr-2 mt-1" />
+                              {session.title || t("folder.untitledChat")}
+                            </span>
+                            <div className="flex items-center gap-2">
                               <span className="text-xs text-gray-500">
                                 {session.createdAt.toLocaleDateString()}
                               </span>
-                                  <X
-                                    className="w-4 h-4 hover:text-red-500 cursor-pointer shrink-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      deleteSession(session.id);
-                                    }}
-                                  />
+                              <Pencil
+                                className="w-4 h-4 hover:text-blue-500 cursor-pointer shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRenamingId(session.id);
+                                  setRenameValue(session.title);
+                                }}
+                              />
+                              <X
+                                className="w-4 h-4 hover:text-red-500 cursor-pointer shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteSession(session.id);
+                                }}
+                              />
                             </div>
-                          )}
-                        </Card>
+                          </div>
+                        )}
+                      </Card>
                       ))}
 
                       {sessionsInActiveFolder.length === 0 && (
