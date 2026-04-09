@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { X, Camera, Save, User } from "lucide-react";
+import { X, Camera, Save, User, Eye, EyeOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 const BACKEND_URL = "http://134.60.71.197:8000";
@@ -16,6 +16,7 @@ interface ProfileModalProps {
   username: string;
   onClose: () => void;
   onSaveUsername?: (newUsername: string) => void;
+  onApiKeyChanged?: () => void;
 }
 
 type ToastState = {
@@ -28,6 +29,7 @@ export function ProfileModal({
   username,
   onClose,
   onSaveUsername,
+  onApiKeyChanged,
 }: ProfileModalProps) {
   const [name, setName] = useState<string>(username);
   const [avatar, setAvatar] = useState<string>("");
@@ -38,12 +40,19 @@ export function ProfileModal({
     message: "",
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [apiKey, setApiKey] = useState<string>("");
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const { t } = useTranslation();
 
   useEffect(() => {
     setName(username);
   }, [username]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("api_key") ?? "";
+    setApiKey(stored);
+  }, []);
 
   useEffect(() => {
     if (!toast.open) return;
@@ -54,24 +63,34 @@ export function ProfileModal({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const token = localStorage.getItem("token");
-      const url = new URL(`${BACKEND_URL}/api/user/change-name`);
-      url.searchParams.append("new_username", name);
+      // API-Key immer lokal speichern (unabhängig vom Username)
+      if (apiKey.trim()) {
+        localStorage.setItem("api_key", apiKey.trim());
+      } else {
+        localStorage.removeItem("api_key");
+      }
+      onApiKeyChanged?.();
 
-      const res = await fetch(url.toString(), {
-        method: "PUT",
-        headers: {
-          accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // Username-API-Call nur wenn er sich geändert hat
+      if (name.trim() && name.trim() !== username) {
+        const token = localStorage.getItem("token");
+        const url = new URL(`${BACKEND_URL}/api/user/change-name`);
+        url.searchParams.append("new_username", name);
 
-      if (!res.ok) {
-        throw new Error("Username konnte nicht geändert werden.");
+        const res = await fetch(url.toString(), {
+          method: "PUT",
+          headers: {
+            accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) throw new Error("Username konnte nicht geändert werden.");
+
+        const updated = await res.json();
+        onSaveUsername?.(updated.username);
       }
 
-      const updated = await res.json();
-      onSaveUsername?.(updated.username);
       setToast({
         open: true,
         type: "success",
@@ -158,6 +177,31 @@ export function ProfileModal({
                 onChange={(e) => setName(e.target.value)}
                 className="bg-primary border-sidebar-border"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="apiKey">{t("profile.apiKey")}</Label>
+              <div className="relative">
+                <Input
+                  id="apiKey"
+                  type={showApiKey ? "text" : "password"}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="sk-..."
+                  className="bg-primary border-sidebar-border pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                  onClick={() => setShowApiKey((v) => !v)}
+                >
+                  {showApiKey ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">{t("profile.apiKeyHint")}</p>
             </div>
 
             {/* Action Buttons */}

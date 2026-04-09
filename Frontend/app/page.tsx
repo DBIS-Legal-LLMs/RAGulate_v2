@@ -91,12 +91,16 @@ export default function GDPRChatbot() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
-  const [draggingSessionId, setDraggingSessionId] = useState<string | null>(null);
+  const [draggingSessionId, setDraggingSessionId] = useState<string | null>(
+    null,
+  );
 
   const [isSessionLoading, setIsSessionLoading] = useState(false);
 
   const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState<string>(""); 
+  const [renameValue, setRenameValue] = useState<string>("");
+  const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(!!localStorage.getItem("api_key"));
 
   // UI References and state
   const messagesEndRef = useRef<HTMLDivElement>(null); // For auto-scrolling
@@ -623,10 +627,7 @@ export default function GDPRChatbot() {
    * @param name name of Folder
    * @param parent_folder_id which folder it belongs to, none for root folder
    */
-  const confirmCreateFolder = async (
-    tempId: string,
-    title: string,
-  ) => {
+  const confirmCreateFolder = async (tempId: string, title: string) => {
     const token = localStorage.getItem("token");
 
     const res = await fetch(`${BACKEND_URL}/api/folders`, {
@@ -743,11 +744,14 @@ export default function GDPRChatbot() {
       headers: { accept: "application/json", Authorization: `Bearer ${token}` },
     });
 
-    if (!res.ok) { alert(t("rename.error")); return; }
+    if (!res.ok) {
+      alert(t("rename.error"));
+      return;
+    }
 
     const updated = await res.json();
     setFolders((prev) =>
-      prev.map((f) => (f.id === folderId ? { ...f, title: updated.title } : f))
+      prev.map((f) => (f.id === folderId ? { ...f, title: updated.title } : f)),
     );
     setRenamingId(null);
   };
@@ -762,51 +766,56 @@ export default function GDPRChatbot() {
       headers: { accept: "application/json", Authorization: `Bearer ${token}` },
     });
 
-    if (!res.ok) { alert(t("rename.error")); return; }
-
-    const updated = await res.json();
-    setSessions((prev) =>
-      prev.map((s) => (s.id === sessionId ? { ...s, title: updated.title } : s))
-    );
-    setRenamingId(null);
-  };
-
-const moveSession = async (sessionId: string, newFolderId: string | null) => {
-  const token = localStorage.getItem("token");
-
-  const url = new URL(`${BACKEND_URL}/api/chat/${sessionId}/move`);
-  if (newFolderId) url.searchParams.append("new_folder_id", newFolderId);
-
-  try {
-    const res = await fetch(url.toString(), {
-      method: "PUT",
-      headers: {
-        accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
     if (!res.ok) {
-      alert(t("moveSession.errorMove"));
+      alert(t("rename.error"));
       return;
     }
 
     const updated = await res.json();
-
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === sessionId
-          ? { ...s, folderId: updated.folder_id ?? null }
-          : s,
+        s.id === sessionId ? { ...s, title: updated.title } : s,
       ),
     );
-    setActiveFolderId(updated.folder_id ?? null);
-    setActiveSessionId(null);
-  } catch (error) {
-    console.error("Fehler beim Verschieben des Chats:", error);
-    alert(t("moveSession.errorGeneral"));
-  }
-};
+    setRenamingId(null);
+  };
+
+  const moveSession = async (sessionId: string, newFolderId: string | null) => {
+    const token = localStorage.getItem("token");
+
+    const url = new URL(`${BACKEND_URL}/api/chat/${sessionId}/move`);
+    if (newFolderId) url.searchParams.append("new_folder_id", newFolderId);
+
+    try {
+      const res = await fetch(url.toString(), {
+        method: "PUT",
+        headers: {
+          accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        alert(t("moveSession.errorMove"));
+        return;
+      }
+
+      const updated = await res.json();
+
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId
+            ? { ...s, folderId: updated.folder_id ?? null }
+            : s,
+        ),
+      );
+      setActiveFolderId(updated.folder_id ?? null);
+      setActiveSessionId(null);
+    } catch (error) {
+      console.error("Fehler beim Verschieben des Chats:", error);
+      alert(t("moveSession.errorGeneral"));
+    }
+  };
 
   /**
    * Loads Sidebar content. Contains Sessions and Folders
@@ -866,6 +875,10 @@ const moveSession = async (sessionId: string, newFolderId: string | null) => {
 
     setUsername(usernameFromAuth);
     setShowAuthModal(false);
+    const storedKey = localStorage.getItem("api_key");
+    if (!storedKey) {
+      setShowApiKeyPrompt(true);
+    }
   };
 
   const activeFolder = folders.find((f) => f.id === activeFolderId);
@@ -955,9 +968,7 @@ const moveSession = async (sessionId: string, newFolderId: string | null) => {
                         : t("header.title")}
                     </h1>
                     <p className="text-sm text-gray-600">
-                      {activeSessionId
-                        ? ""
-                        : t("header.subtitle")}
+                      {activeSessionId ? "" : t("header.subtitle")}
                     </p>
                   </div>
                 </div>
@@ -1011,97 +1022,114 @@ const moveSession = async (sessionId: string, newFolderId: string | null) => {
                         })}
                       </p>
                       {sessionsInActiveFolder.map((session) => (
-                      <Card
-                        key={session.id}
-                        draggable={!session.isDraft}
-                        onDragStart={(e) => {
-                          setDraggingSessionId(session.id);
-                          e.dataTransfer.effectAllowed = "move";
-                        }}
-                        onDragEnd={() => setDraggingSessionId(null)}
-                        className="p-4 cursor-pointer bg-sidebar hover:bg-accent hover:text-black transition border-none"
-                        onClick={() => {
-                          if (renamingId !== session.id) setActiveSessionId(session.id);
-                        }}
-                      >
-                        {session.isDraft && editingSessionId === session.id ? (
-                          <input
-                            autoFocus
-                            value={editedTitle}
-                            onChange={(e) => setEditedTitle(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && editedTitle.trim()) {
-                                confirmCreateSession(session.id, editedTitle, session.folderId);
-                                setEditedTitle("");
-                              }
-                              if (e.key === "Escape") {
-                                onCancelDraftSession(session.id);
+                        <Card
+                          key={session.id}
+                          draggable={!session.isDraft}
+                          onDragStart={(e) => {
+                            setDraggingSessionId(session.id);
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
+                          onDragEnd={() => setDraggingSessionId(null)}
+                          className="p-4 cursor-pointer bg-sidebar hover:bg-accent hover:text-black transition border-none"
+                          onClick={() => {
+                            if (renamingId !== session.id)
+                              setActiveSessionId(session.id);
+                          }}
+                        >
+                          {session.isDraft &&
+                          editingSessionId === session.id ? (
+                            <input
+                              autoFocus
+                              value={editedTitle}
+                              onChange={(e) => setEditedTitle(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && editedTitle.trim()) {
+                                  confirmCreateSession(
+                                    session.id,
+                                    editedTitle,
+                                    session.folderId,
+                                  );
+                                  setEditedTitle("");
+                                }
+                                if (e.key === "Escape") {
+                                  onCancelDraftSession(session.id);
+                                  setEditingSessionId(null);
+                                  setActiveSessionId(null);
+                                  setEditedTitle("");
+                                }
+                              }}
+                              onBlur={() => {
+                                if (editedTitle.trim()) {
+                                  confirmCreateSession(
+                                    session.id,
+                                    editedTitle,
+                                    session.folderId,
+                                  );
+                                } else {
+                                  onCancelDraftSession(session.id);
+                                  setActiveSessionId(null);
+                                }
                                 setEditingSessionId(null);
-                                setActiveSessionId(null);
                                 setEditedTitle("");
-                              }
-                            }}
-                            onBlur={() => {
-                              if (editedTitle.trim()) {
-                                confirmCreateSession(session.id, editedTitle, session.folderId);
-                              } else {
-                                onCancelDraftSession(session.id);
-                                setActiveSessionId(null);
-                              }
-                              setEditingSessionId(null);
-                              setEditedTitle("");
-                            }}
-                            className="w-full bg-transparent border-b border-accent outline-none px-1"
-                            placeholder={t("folder.placeholderChat")}
-                          />
-                        ) : renamingId === session.id ? (
-                          <input
-                            autoFocus
-                            value={renameValue}
-                            onChange={(e) => setRenameValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && renameValue.trim() && renameValue.trim() !== session.title)
-                                renameSession(session.id, renameValue.trim());
-                              if (e.key === "Enter") setRenamingId(null);
-                              if (e.key === "Escape") setRenamingId(null);
-                            }}
-                            onBlur={() => {
-                              if (renameValue.trim() && renameValue.trim() !== session.title)
-                                renameSession(session.id, renameValue.trim());
-                              else setRenamingId(null);
-                            }}
-                            className="w-full bg-transparent border-b border-accent outline-none px-1"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        ) : (
-                          <div className="flex justify-between items-center">
-                            <span className="flex font-medium">
-                              <MessageSquare className="w-4 h-4 mr-2 mt-1" />
-                              {session.title || t("folder.untitledChat")}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500">
-                                {session.createdAt.toLocaleDateString()}
+                              }}
+                              className="w-full bg-transparent border-b border-accent outline-none px-1"
+                              placeholder={t("folder.placeholderChat")}
+                            />
+                          ) : renamingId === session.id ? (
+                            <input
+                              autoFocus
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (
+                                  e.key === "Enter" &&
+                                  renameValue.trim() &&
+                                  renameValue.trim() !== session.title
+                                )
+                                  renameSession(session.id, renameValue.trim());
+                                if (e.key === "Enter") setRenamingId(null);
+                                if (e.key === "Escape") setRenamingId(null);
+                              }}
+                              onBlur={() => {
+                                if (
+                                  renameValue.trim() &&
+                                  renameValue.trim() !== session.title
+                                )
+                                  renameSession(session.id, renameValue.trim());
+                                else setRenamingId(null);
+                              }}
+                              className="w-full bg-transparent border-b border-accent outline-none px-1"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <div className="flex justify-between items-center">
+                              <span className="flex font-medium">
+                                <MessageSquare className="w-4 h-4 mr-2 mt-1" />
+                                {session.title || t("folder.untitledChat")}
                               </span>
-                              <Pencil
-                                className="w-4 h-4 hover:text-blue-500 cursor-pointer shrink-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setRenamingId(session.id);
-                                  setRenameValue(session.title);
-                                }}
-                              />
-                              <X
-                                className="w-4 h-4 hover:text-red-500 cursor-pointer shrink-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteSession(session.id);
-                                }}
-                              />
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500">
+                                  {session.createdAt.toLocaleDateString()}
+                                </span>
+                                <Pencil
+                                  className="w-4 h-4 hover:text-blue-500 cursor-pointer shrink-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRenamingId(session.id);
+                                    setRenameValue(session.title);
+                                  }}
+                                />
+                                <X
+                                  className="w-4 h-4 hover:text-red-500 cursor-pointer shrink-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteSession(session.id);
+                                  }}
+                                />
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </Card>
+                          )}
+                        </Card>
                       ))}
 
                       {sessionsInActiveFolder.length === 0 && (
@@ -1232,6 +1260,17 @@ const moveSession = async (sessionId: string, newFolderId: string | null) => {
             {activeSessionId && !editingSessionId && (
               <div className="bg-chat p-4">
                 <div className="max-w-4xl mx-auto mb-5">
+                  {!hasApiKey && (
+                    <div className="flex items-center justify-between gap-3 mb-3 px-4 py-2 rounded-lg bg-yellow-50 border border-yellow-300 text-yellow-800 text-sm">
+                      <span>{t("chat.noApiKey")}</span>
+                      <button
+                        className="underline font-medium hover:text-yellow-900 shrink-0"
+                        onClick={() => setShowProfileModal(true)}
+                      >
+                        {t("chat.noApiKeyLink")}
+                      </button>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 mb-3">
                     <button
                       type="button"
@@ -1258,15 +1297,19 @@ const moveSession = async (sessionId: string, newFolderId: string | null) => {
                       <Input
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder={t("chat.inputPlaceholder")}
+                        placeholder={
+                          hasApiKey
+                            ? t("chat.inputPlaceholder")
+                            : t("chat.inputPlaceholderNoKey")
+                        }
                         className="pr-12 min-h-[44px] resize-none bg-secondary dark:bg-primary border-sidebar-border"
-                        disabled={isLoading}
+                        disabled={isLoading || !hasApiKey}
                       />
 
                       {/* Button inside input */}
                       <button
                         type="submit"
-                        disabled={isLoading || !input.trim()}
+                        disabled={isLoading || !input.trim() || !hasApiKey}
                         className="
                         absolute right-2 top-1/2 -translate-y-1/2 
                         p-2 rounded-md 
@@ -1292,6 +1335,9 @@ const moveSession = async (sessionId: string, newFolderId: string | null) => {
               username={username}
               onSaveUsername={(newName) => setUsername(newName)}
               onClose={() => setShowProfileModal(false)}
+              onApiKeyChanged={() =>
+                setHasApiKey(!!localStorage.getItem("api_key"))
+              }
             />
           )}
 
@@ -1300,6 +1346,27 @@ const moveSession = async (sessionId: string, newFolderId: string | null) => {
               onClose={() => setShowSettingsModal(false)}
               username={username}
             />
+          )}
+          {showApiKeyPrompt && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1900] flex items-center gap-4 bg-sidebar border border-sidebar-border rounded-xl shadow-xl px-5 py-3 w-full max-w-xl">
+              <p className="text-sm flex-1">{t("apiKeyPrompt.description")}</p>
+              <Button
+                size="sm"
+                className="bg-accent hover:bg-accent/80 text-black shrink-0"
+                onClick={() => {
+                  setShowApiKeyPrompt(false);
+                  setShowProfileModal(true);
+                }}
+              >
+                {t("apiKeyPrompt.cta")}
+              </Button>
+              <button
+                onClick={() => setShowApiKeyPrompt(false)}
+                className="text-gray-400 hover:text-red-500 shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           )}
         </div>
       </div>
