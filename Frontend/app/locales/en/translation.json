@@ -29,7 +29,10 @@
     "inputHint": "Upload documents for GDPR compliance review or ask questions about data protection regulations",
     "streamingOn": "Streaming on",
     "streamingOff": "Streaming off",
-    "error": "Sorry, I couldn't send your message. Please try again."
+    "error": "Sorry, I couldn't send your message. Please try again.",
+    "noApiKey": "No API key has been saved – chat is disabled.",
+    "noApiKeyLink": "Deposit now",
+    "inputPlaceholderNoKey": "Please enter an API key first..."
   },
   "sidebar": {
     "newChat": "New Chat",
@@ -83,7 +86,15 @@
     "errorMessage": "Failed to save changes: {{error}}",
     "unknownError": "Unknown error",
     "success": "Success",
-    "error": "Error"
+    "error": "Error",
+    "apiKey": "API Key",
+    "apiKeyHint": "Is stored locally and used for queries to the LLM."
+  },
+  "apiKeyPrompt": {
+    "title": "Enter API key",
+    "description": "You haven't saved an API key yet. Please add it to your profile so the chatbot can work.",
+    "cta": "Enter your API key now",
+    "skip": "Do it later"
   },
   "moveSession": {
     "errorMove": "Chat could not be moved.",

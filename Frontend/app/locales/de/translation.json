@@ -29,7 +29,10 @@
     "inputHint": "Lade Dokumente zur DSGVO-Prüfung hoch oder stelle Fragen zu Datenschutzvorschriften",
     "streamingOn": "Streaming an",
     "streamingOff": "Streaming aus",
-    "error": "Sorry, ich konnte deine Nachricht nicht senden. Bitte versuche es erneut."
+    "error": "Sorry, ich konnte deine Nachricht nicht senden. Bitte versuche es erneut.",
+    "noApiKey": "Kein API-Key hinterlegt – Chatten ist deaktiviert.",
+    "noApiKeyLink": "Jetzt hinterlegen",
+    "inputPlaceholderNoKey": "Bitte zuerst einen API-Key hinterlegen..."
   },
   "sidebar": {
     "newChat": "Neuer Chat",
@@ -83,7 +86,15 @@
     "errorMessage": "Fehler beim Speichern: {{error}}",
     "unknownError": "Unbekannter Fehler",
     "success": "Erfolg",
-    "error": "Fehler"
+    "error": "Fehler",
+    "apiKey": "API Key",
+    "apiKeyHint": "Wird lokal gespeichert und für Anfragen an das LLM verwendet."
+  },
+  "apiKeyPrompt": {
+    "title": "API-Key hinterlegen",
+    "description": "Du hast noch keinen API-Key gespeichert. Hinterlege ihn in deinem Profil, damit der Chatbot funktioniert.",
+    "cta": "Jetzt API-Key hinterlegen",
+    "skip": "Später erledigen"
   },
   "moveSession": {
     "errorMove": "Chat konnte nicht verschoben werden.",
