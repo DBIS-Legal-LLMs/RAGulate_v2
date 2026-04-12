@@ -21,7 +21,16 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Send, MessageSquare, Shield, X, Folder, Pencil } from "lucide-react";
+import {
+  Send,
+  MessageSquare,
+  Shield,
+  X,
+  Folder,
+  Pencil,
+  FileText,
+  Paperclip,
+} from "lucide-react";
 import { ChatMessage } from "./components/chat-message";
 import { ProfileDropdown } from "./components/profile-dropdown";
 import { ProfileModal } from "./components/profile-modal";
@@ -32,6 +41,7 @@ import { GraphOverlay } from "../components/GraphOverlay";
 import { DocumentsModal } from "./components/documents-modal";
 import Sidebar from "./components/SideBar";
 import { useTranslation } from "react-i18next";
+import { FolderDocumentsPanel } from "./components/FolderDocumentsPanel";
 
 /**
  * Backend API endpoint configuration
@@ -109,6 +119,8 @@ export default function GDPRChatbot() {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null); // Session being edited
   const [editedTitle, setEditedTitle] = useState<string>(""); // New title for edited session
   const [showAuthModal, setShowAuthModal] = useState(true); // Auth modal visibility
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
 
   const [username, setUsername] = useState<string>(""); // Current user's username
 
@@ -232,15 +244,16 @@ export default function GDPRChatbot() {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input,
+      content: attachedFile ? `${input}\n\n📎 ${attachedFile.name}` : input,
       created_at: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    const fileToSend = attachedFile;
+    setAttachedFile(null);
     setIsLoading(true);
 
-    // Platzhalter für die streaming Antwort
     const placeholderId = Date.now().toString() + "-assistant";
     setMessages((prev) => [
       ...prev,
@@ -255,16 +268,28 @@ export default function GDPRChatbot() {
     abortRef.current = new AbortController();
 
     try {
+      let body: BodyInit;
+      let headers: Record<string, string> = {
+        Authorization: `Bearer ${token}`,
+        Accept: "text/event-stream",
+      };
+
+      if (fileToSend) {
+        const formData = new FormData();
+        formData.append("content", input);
+        formData.append("file", fileToSend);
+        body = formData;
+      } else {
+        headers["Content-Type"] = "application/json";
+        body = JSON.stringify({ content: input });
+      }
+
       const res = await fetch(
         `${BACKEND_URL}/api/chat/${activeSessionId}/messages`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            Accept: "text/event-stream",
-          },
-          body: JSON.stringify({ content: input }),
+          headers,
+          body,
           signal: abortRef.current.signal,
         },
       );
@@ -369,25 +394,35 @@ export default function GDPRChatbot() {
 
     const userMessage: Message = {
       id: Date.now().toString(),
+      content: attachedFile ? `${input}\n\n📎 ${attachedFile.name}` : input,
       role: "user",
-      content: input,
       created_at: new Date(),
     };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    const fileToSend = attachedFile;
+    setAttachedFile(null);
     setIsLoading(true);
 
     try {
+      let body: BodyInit;
+      let headers: Record<string, string> = {
+        Authorization: `Bearer ${token}`,
+      };
+
+      if (fileToSend) {
+        const formData = new FormData();
+        formData.append("content", input);
+        formData.append("file", fileToSend);
+        body = formData;
+      } else {
+        headers["Content-Type"] = "application/json";
+        body = JSON.stringify({ content: input });
+      }
+
       const res = await fetch(
         `${BACKEND_URL}/api/chat/${activeSessionId}/messages`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ content: input }),
-        },
+        { method: "POST", headers, body },
       );
 
       if (!res.ok) throw new Error("Failed to send message");
@@ -1148,6 +1183,7 @@ export default function GDPRChatbot() {
                         {t("buttons.newChat")}
                       </Button>
                     </div>
+                    <FolderDocumentsPanel folderId={activeFolderId} />
                   </>
                 )}
 
@@ -1292,8 +1328,43 @@ export default function GDPRChatbot() {
                     </span>
                   </div>
 
+                  {attachedFile && (
+                    <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg border border-sidebar-border bg-sidebar w-fit max-w-xs">
+                      <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                      <span className="text-xs text-gray-600 truncate">
+                        {attachedFile.name}
+                      </span>
+                      <button
+                        onClick={() => setAttachedFile(null)}
+                        className="text-gray-400 hover:text-red-500 shrink-0"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
                   <form onSubmit={handleSubmit} className="flex items-end">
                     <div className="flex-1 relative ">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.docx,.txt,.md"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) setAttachedFile(file);
+                          e.target.value = "";
+                        }}
+                      />
+                      <button
+                        type="button"
+                        title={t("chat.attachFile")}
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isLoading || !hasApiKey}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-accent/10 transition disabled:opacity-30"
+                      >
+                        <Paperclip className="w-4 h-4" />
+                      </button>
                       <Input
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
@@ -1302,7 +1373,7 @@ export default function GDPRChatbot() {
                             ? t("chat.inputPlaceholder")
                             : t("chat.inputPlaceholderNoKey")
                         }
-                        className="pr-12 min-h-[44px] resize-none bg-secondary dark:bg-primary border-sidebar-border"
+                        className="pl-10 pr-12 min-h-[44px] resize-none bg-secondary dark:bg-primary border-sidebar-border"
                         disabled={isLoading || !hasApiKey}
                       />
 
