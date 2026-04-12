@@ -32,7 +32,10 @@
     "error": "Sorry, I couldn't send your message. Please try again.",
     "noApiKey": "No API key has been saved – chat is disabled.",
     "noApiKeyLink": "Deposit now",
-    "inputPlaceholderNoKey": "Please enter an API key first..."
+    "inputPlaceholderNoKey": "Please enter an API key first...",
+    "attachedFile": "Attached file",
+    "removeFile": "Remove file",
+    "attachFile": "Attach file (PDF, DOCX, TXT, MD)"
   },
   "sidebar": {
     "newChat": "New Chat",
@@ -100,5 +103,16 @@
     "errorMove": "Chat could not be moved.",
     "errorGeneral": "Error while moving the chat."
   },
-  "rename": { "error": "Renaming failed." }
+  "rename": { "error": "Renaming failed." },
+  "documents": {
+    "title": "Documents",
+    "uploadButton": "Upload",
+    "uploading": "Uploading…",
+    "dropZone": "Drag files here or click to select",
+    "acceptedFormats": "PDF, DOCX, TXT, MD",
+    "uploadMore": "Upload another file",
+    "statusDone": "Indexed",
+    "statusIndexing": "Processing…",
+    "statusError": "Error"
+  }
 }
