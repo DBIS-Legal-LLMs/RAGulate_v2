@@ -42,6 +42,7 @@ import { DocumentsModal } from "./components/documents-modal";
 import Sidebar from "./components/SideBar";
 import { useTranslation } from "react-i18next";
 import { FolderDocumentsPanel } from "./components/FolderDocumentsPanel";
+import { GraphBackground } from "./components/GraphBackground";
 
 /**
  * Backend API endpoint configuration
@@ -110,7 +111,7 @@ export default function GDPRChatbot() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState<string>("");
   const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(!!localStorage.getItem("api_key"));
+  const [hasApiKey, setHasApiKey] = useState(false);
 
   // UI References and state
   const messagesEndRef = useRef<HTMLDivElement>(null); // For auto-scrolling
@@ -128,6 +129,7 @@ export default function GDPRChatbot() {
   const [showGraph, setShowGraph] = useState(false); // Knowledge graph visibility
   const [showDocuments, setShowDocuments] = useState(false); // Documents modal visibility
   const { t } = useTranslation();
+  const [showGraphBackground, setShowGraphBackground] = useState(true);
 
   /* Helper Functions */
   const onUpdateDraftFolderName = (id: string, title: string) => {
@@ -209,7 +211,6 @@ export default function GDPRChatbot() {
         },
       });
       const data = await res.json();
-      console.log(data.messages);
 
       setMessages((data.messages || []).map(transformMessage));
       setIsSessionLoading(false);
@@ -594,8 +595,6 @@ export default function GDPRChatbot() {
     name: string,
     parentId: string | null,
   ) => {
-    // console.log(name);
-    // console.log(parentId);
     const token = localStorage.getItem("token");
     const res = await fetch(`${BACKEND_URL}/api/chat/`, {
       method: "POST",
@@ -861,7 +860,6 @@ export default function GDPRChatbot() {
 
       /* 1. Folder */
       const rawFolders = await fetchFolders();
-      console.log(rawFolders);
       const uiFolders: UIFolder[] = rawFolders.map((f: any) => ({
         id: f.id,
         title: f.title,
@@ -870,7 +868,6 @@ export default function GDPRChatbot() {
 
       /* 2. Sessions */
       const rawSessions = await fetchSessions();
-      console.log(rawSessions);
       const uiSessions: UISession[] = rawSessions.map((s: any) => ({
         id: s.id,
         title: s.title,
@@ -910,8 +907,18 @@ export default function GDPRChatbot() {
 
     setUsername(usernameFromAuth);
     setShowAuthModal(false);
-    const storedKey = localStorage.getItem("api_key");
-    if (!storedKey) {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/user/api-key`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const hasKey = !!data.api_key;
+        setHasApiKey(hasKey);
+        if (!hasKey) setShowApiKeyPrompt(true);
+      }
+    } catch {
       setShowApiKeyPrompt(true);
     }
   };
@@ -924,6 +931,7 @@ export default function GDPRChatbot() {
 
   return (
     <ThemeProvider>
+      {/* {showGraphBackground && <GraphBackground />} */}
       {showAuthModal && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <AuthModal onLoginSuccess={handleLoginSuccess} />
@@ -976,7 +984,6 @@ export default function GDPRChatbot() {
             onRenameFolder={renameFolder}
             onRenameSession={renameSession}
           />
-
           {/* 
           Main Chat Area
           Contains:
@@ -1003,7 +1010,7 @@ export default function GDPRChatbot() {
                         : t("header.title")}
                     </h1>
                     <p className="text-sm text-gray-600">
-                      {activeSessionId ? "" : t("header.subtitle")}
+                      {activeSessionId ? "\u00A0" : t("header.subtitle")}
                     </p>
                   </div>
                 </div>
@@ -1040,8 +1047,29 @@ export default function GDPRChatbot() {
             - Loading indicators
             - Auto-scroll behavior
           */}
-            <ScrollArea className="flex-1 p-4 rounded-tl-2xl bg-chat">
-              <div className="max-w-4xl mx-auto space-y-6">
+            <ScrollArea className="flex-1 p-4 rounded-tl-2xl bg-chat relative">
+              {showGraphBackground && <GraphBackground />}
+              <div className="flex justify-end items-center gap-2 relative z-10">
+                <span className="text-xs text-gray-500">
+                  {showGraphBackground
+                    ? t("buttons.graphOn")
+                    : t("buttons.graphOff")}
+                </span>
+                <button
+                  onClick={() => setShowGraphBackground((prev) => !prev)}
+                  className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${
+                    showGraphBackground ? "bg-accent" : "bg-gray-300"
+                  }`}
+                  title="Toggle graph background"
+                >
+                  <span
+                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                      showGraphBackground ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+              <div className="max-w-4xl mx-auto space-y-6 relative z-10">
                 {/* ================= FOLDER VIEW ================= */}
                 {activeFolderId && !activeSessionId && activeFolder && (
                   <>
@@ -1406,9 +1434,16 @@ export default function GDPRChatbot() {
               username={username}
               onSaveUsername={(newName) => setUsername(newName)}
               onClose={() => setShowProfileModal(false)}
-              onApiKeyChanged={() =>
-                setHasApiKey(!!localStorage.getItem("api_key"))
-              }
+              onApiKeyChanged={async () => {
+                const token = localStorage.getItem("token");
+                const res = await fetch(`${BACKEND_URL}/api/user/api-key`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  setHasApiKey(!!data.api_key);
+                }
+              }}
             />
           )}
 

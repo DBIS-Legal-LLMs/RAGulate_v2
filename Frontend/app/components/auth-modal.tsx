@@ -111,13 +111,18 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
           const loginData = await loginRes.json();
           if (loginRes.ok) {
             localStorage.setItem("token", loginData.access_token);
-            onLoginSuccess(loginData.sessions, data.user.username);
+            onLoginSuccess(loginData.sessions, data.username);
           } else {
             setMode("login");
             setServerError(t("auth.errors.registerSuccessLoginFailed"));
           }
         } else {
-          setServerError(data.detail || t("auth.errors.registerFailed"));
+          const detail = data.detail;
+          if (Array.isArray(detail)) {
+            setServerError(detail.map((e: any) => e.msg).join(", "));
+          } else {
+            setServerError(detail || t("auth.errors.registerFailed"));
+          }
         }
       }
     } catch (err) {

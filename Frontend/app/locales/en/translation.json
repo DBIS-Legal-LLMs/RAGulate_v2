@@ -7,7 +7,9 @@
     "graph": "Graph",
     "documents": "Documents",
     "newChat": "New Chat",
-    "newFolder": "New Folder"
+    "newFolder": "New Folder",
+    "graphOn": "Graph On",
+    "graphOff": "Graph Off"
   },
   "folder": {
     "subfolderCount": "{{count}} folders in this folder",
@@ -114,5 +116,12 @@
     "statusDone": "Indexed",
     "statusIndexing": "Processing…",
     "statusError": "Error"
+  },
+  "graph": {
+    "title": "Graph Viewer",
+    "close": "Close",
+    "loading": "Loading graph…",
+    "error": "Couldn't load graph",
+    "nodeDetails": "Node details"
   }
 }

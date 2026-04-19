@@ -1,38 +1,44 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import dynamic from "next/dynamic"
-import { Button } from "@/components/ui/button"
-import { graphMLtoForceData } from "@/utils/graphml"
-import { useTheme } from "next-themes"
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { Button } from "@/components/ui/button";
+import { graphMLtoForceData } from "@/utils/graphml";
+import { useTheme } from "@/app/components/theme-provider";
+import { useTranslation } from "react-i18next";
 
-const BACKEND_URL = "http://134.60.71.197:8000"
+const BACKEND_URL = "http://134.60.71.197:8000";
 
 type GraphData = {
-  nodes: any[]
-  links: any[]
-}
+  nodes: any[];
+  links: any[];
+};
 
-const ForceGraph2D = dynamic(
-  () => import("react-force-graph-2d"),
-  { ssr: false }
-)
+const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
+  ssr: false,
+});
 
 export function GraphOverlay({
   open,
   onClose,
 }: {
-  open: boolean
-  onClose: () => void
+  open: boolean;
+  onClose: () => void;
 }) {
-  const { resolvedTheme } = useTheme()
+  const { theme } = useTheme();
+  const { t } = useTranslation();
 
-  const [data, setData] = useState<GraphData>({ nodes: [], links: [] })
-  const [linkColor, setLinkColor] = useState("#000000")
-  const [selectedNode, setSelectedNode] = useState<any | null>(null)
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
-  const [loading, setLoading] = useState(false)
-  const [graphError, setGraphError] = useState<string | null>(null)
+  const [data, setData] = useState<GraphData>({ nodes: [], links: [] });
+  const [linkColor, setLinkColor] = useState(() => {
+    if (typeof window === "undefined") return "#000000";
+    return document.documentElement.classList.contains("dark")
+      ? "#4b4b4b"
+      : "#505050";
+  });
+  const [selectedNode, setSelectedNode] = useState<any | null>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [loading, setLoading] = useState(false);
+  const [graphError, setGraphError] = useState<string | null>(null);
 
   /* -------------------- Dimensions -------------------- */
   useEffect(() => {
@@ -40,50 +46,56 @@ export function GraphOverlay({
       setDimensions({
         width: window.innerWidth * 0.95,
         height: window.innerHeight * 0.85,
-      })
-    }
+      });
+    };
 
-    update()
-    window.addEventListener("resize", update)
-    return () => window.removeEventListener("resize", update)
-  }, [])
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   /* -------------------- Theme -------------------- */
   useEffect(() => {
-    setLinkColor(resolvedTheme === "dark" ? "#ffffff" : "#000000")
-  }, [resolvedTheme])
+    if (!theme) return;
+    const isDark =
+      theme === "dark" ||
+      (theme === "system" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    setLinkColor(isDark ? "#4b4b4b" : "#cfcfcf");
+  }, [theme]);
 
   /* -------------------- Load Graph -------------------- */
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
 
     const loadGraph = async () => {
-      setLoading(true)
-      setGraphError(null)
-      setSelectedNode(null)
+      setLoading(true);
+      setGraphError(null);
+      setSelectedNode(null);
 
       try {
-        const res = await fetch(BACKEND_URL + "/api/graph")
+        // const res = await fetch(BACKEND_URL + "/api/graph") // TODO: Activate as soon as backend generates graph
+        const res = await fetch("/graph_chunk_entity_relation.graphml");
 
         if (!res.ok) {
-          throw new Error("Couldn't load graph")
+          throw new Error("Couldn't load graph");
         }
 
-        const xml = await res.text()
-        setData(graphMLtoForceData(xml))
+        const xml = await res.text();
+        setData(graphMLtoForceData(xml));
       } catch (err) {
-        console.error("Graph loading failed:", err)
-        setGraphError("Couldn't load graph")
-        setData({ nodes: [], links: [] })
+        console.error("Graph loading failed:", err);
+        setGraphError("Couldn't load graph");
+        setData({ nodes: [], links: [] });
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadGraph()
-  }, [open])
+    loadGraph();
+  }, [open]);
 
-  if (!open) return null
+  if (!open) return null;
 
   /* -------------------- Render -------------------- */
   return (
@@ -91,9 +103,13 @@ export function GraphOverlay({
       <div className="absolute left-[2.5vw] top-[2.5vh] h-[95vh] w-[95vw] bg-sidebar dark:bg-sidebar shadow-xl rounded-lg">
         {/* Header */}
         <div className="flex items-center justify-between px-6 h-14">
-          <div className="text-xl font-medium">Graph Viewer</div>
-          <Button variant="ghost" onClick={onClose} className="dark:hover:text-black">
-            Close
+          <div className="text-xl font-medium">{t("graph.title")}</div>
+          <Button
+            variant="ghost"
+            onClick={onClose}
+            className="dark:hover:text-black"
+          >
+            {t("graph.close")}
           </Button>
         </div>
 
@@ -122,7 +138,7 @@ export function GraphOverlay({
         <div className="h-[calc(100%-56px)] relative">
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-              Loading graph…
+              {t("graph.loading")}
             </div>
           )}
 
@@ -140,8 +156,8 @@ export function GraphOverlay({
               linkDirectionalParticleSpeed={0.005}
               width={dimensions.width}
               height={dimensions.height}
-              linkColor={linkColor}
-              linkDirectionalParticleColor={linkColor}
+              linkColor={() => linkColor}
+              linkDirectionalParticleColor={() => linkColor}
               onNodeClick={(node: any) => setSelectedNode(node)}
               onBackgroundClick={() => setSelectedNode(null)}
             />
@@ -149,5 +165,5 @@ export function GraphOverlay({
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -139,7 +139,7 @@ export function FolderDocumentsPanel({ folderId }: Props) {
         <button
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-sidebar-border hover:bg-accent hover:text-black transition disabled:opacity-50"
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-sidebar-border hover:bg-accent hover:text-black transition disabled:opacity-50 bg-chat/60"
         >
           <Upload className="w-3.5 h-3.5" />
           {t("documents.uploadButton")}
@@ -153,7 +153,7 @@ export function FolderDocumentsPanel({ folderId }: Props) {
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        className={`rounded-xl border transition-colors ${
+        className={`rounded-xl border transition-colors bg-chat/60 ${
           dragOver ? "border-accent bg-accent/10" : "border-sidebar-border"
         }`}
       >
@@ -165,7 +165,7 @@ export function FolderDocumentsPanel({ folderId }: Props) {
                 style={{ width: `${Math.min(progress, 100)}%` }}
               />
             </div>
-            <p className="text-xs text-gray-400">{t("documents.uploading")}</p>
+            <p className="text-xs text-gray-600">{t("documents.uploading")}</p>
           </div>
         )}
 
@@ -174,9 +174,11 @@ export function FolderDocumentsPanel({ folderId }: Props) {
             className="flex flex-col items-center justify-center py-10 gap-2 cursor-pointer"
             onClick={() => inputRef.current?.click()}
           >
-            <Upload className="w-6 h-6 text-gray-300" />
-            <p className="text-sm text-gray-400">{t("documents.dropZone")}</p>
-            <p className="text-xs text-gray-300">
+            <Upload className="w-6 h-6 text-gray-600" />
+            <p className="text-sm text-gray-800 dark:text-gray-600">
+              {t("documents.dropZone")}
+            </p>
+            <p className="text-xs text-gray-600">
               {t("documents.acceptedFormats")}
             </p>
           </div>
@@ -189,10 +191,10 @@ export function FolderDocumentsPanel({ folderId }: Props) {
                 key={file.id}
                 className="group flex items-center gap-3 px-4 py-3 hover:bg-accent/5 transition"
               >
-                <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                <FileText className="w-4 h-4 text-gray-600 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{file.name}</p>
-                  <p className="text-xs text-gray-400">{file.size}</p>
+                  <p className="text-xs text-gray-600">{file.size}</p>
                 </div>
                 <div className="flex items-center gap-1.5 text-xs shrink-0">
                   <span
@@ -200,11 +202,11 @@ export function FolderDocumentsPanel({ folderId }: Props) {
                       file.status === "done"
                         ? "bg-green-500"
                         : file.status === "error"
-                          ? "bg-red-400"
-                          : "bg-amber-400 animate-pulse"
+                          ? "bg-red-600"
+                          : "bg-amber-600 animate-pulse"
                     }`}
                   />
-                  <span className="text-gray-400 hidden sm:inline">
+                  <span className="text-gray-600 hidden sm:inline">
                     {file.status === "done"
                       ? t("documents.statusDone")
                       : file.status === "error"
@@ -214,7 +216,7 @@ export function FolderDocumentsPanel({ folderId }: Props) {
                 </div>
                 <button
                   onClick={() => deleteFile(file.id)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500 shrink-0"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-600 hover:text-red-500 shrink-0"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -223,7 +225,7 @@ export function FolderDocumentsPanel({ folderId }: Props) {
 
             {!uploading && (
               <div
-                className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-accent/5 text-gray-400 hover:text-gray-600 transition"
+                className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-accent/5 text-gray-600 hover:text-gray-600 transition"
                 onClick={() => inputRef.current?.click()}
               >
                 <Upload className="w-4 h-4" />

@@ -50,8 +50,21 @@ export function ProfileModal({
   }, [username]);
 
   useEffect(() => {
-    const stored = localStorage.getItem("api_key") ?? "";
-    setApiKey(stored);
+    const fetchApiKey = async () => {
+      const token = localStorage.getItem("token");
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/user/api-key`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setApiKey(data.api_key ?? "");
+        }
+      } catch (e) {
+        console.error("API-Key konnte nicht geladen werden", e);
+      }
+    };
+    fetchApiKey();
   }, []);
 
   useEffect(() => {
@@ -63,12 +76,15 @@ export function ProfileModal({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // API-Key immer lokal speichern (unabhängig vom Username)
-      if (apiKey.trim()) {
-        localStorage.setItem("api_key", apiKey.trim());
-      } else {
-        localStorage.removeItem("api_key");
-      }
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${BACKEND_URL}/api/user/api-key?api_key=${encodeURIComponent(apiKey.trim())}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (!res.ok) throw new Error("API-Key konnte nicht gesetzt werden.");
       onApiKeyChanged?.();
 
       // Username-API-Call nur wenn er sich geändert hat

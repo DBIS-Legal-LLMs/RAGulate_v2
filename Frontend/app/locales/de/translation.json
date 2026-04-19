@@ -7,7 +7,9 @@
     "graph": "Graph",
     "documents": "Dokumente",
     "newChat": "Neuer Chat",
-    "newFolder": "Neuer Ordner"
+    "newFolder": "Neuer Ordner",
+    "graphOn": "Graph An",
+    "graphOff": "Graph Aus"
   },
   "folder": {
     "subfolderCount": "{{count}} Ordner in diesem Ordner",
@@ -114,5 +116,12 @@
     "statusDone": "Indexiert",
     "statusIndexing": "Verarbeitung…",
     "statusError": "Fehler"
+  },
+  "graph": {
+    "title": "Graph Viewer",
+    "close": "Schließen",
+    "loading": "Graph wird geladen…",
+    "error": "Graph konnte nicht geladen werden",
+    "nodeDetails": "Node Details"
   }
 }

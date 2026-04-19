@@ -98,7 +98,7 @@ export default function Sidebar({
   renameValue,
   setRenameValue,
   onRenameFolder,
-  onRenameSession
+  onRenameSession,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
@@ -194,7 +194,8 @@ export default function Sidebar({
             if (e.key === "Escape") setRenamingId(null);
           }}
           onBlur={() => {
-            if (renameValue.trim()) onRenameSession(session.id, renameValue.trim());
+            if (renameValue.trim())
+              onRenameSession(session.id, renameValue.trim());
             else setRenamingId(null);
           }}
           className="w-full bg-transparent border-b border-accent outline-none px-1"
@@ -300,7 +301,7 @@ export default function Sidebar({
             {sortedFolders.map((folder) => (
               <div
                 key={folder.id}
-                  onDoubleClick={(e) => {
+                onDoubleClick={(e) => {
                   e.stopPropagation();
                   setRenamingId(folder.id);
                   setRenameValue(folder.title);
@@ -334,7 +335,9 @@ export default function Sidebar({
                   <input
                     autoFocus
                     value={folder.title}
-                    onChange={(e) => onUpdateDraftFolderName(folder.id, e.target.value)}
+                    onChange={(e) =>
+                      onUpdateDraftFolderName(folder.id, e.target.value)
+                    }
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && folder.title.trim())
                         onConfirmCreateFolder(folder.id, folder.title);
@@ -363,13 +366,20 @@ export default function Sidebar({
                     value={renameValue}
                     onChange={(e) => setRenameValue(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && renameValue.trim() && renameValue.trim() !== folder.title)
+                      if (
+                        e.key === "Enter" &&
+                        renameValue.trim() &&
+                        renameValue.trim() !== folder.title
+                      )
                         onRenameFolder(folder.id, renameValue.trim());
                       if (e.key === "Enter") setRenamingId(null); // schließt auch ohne Änderung
                       if (e.key === "Escape") setRenamingId(null);
                     }}
                     onBlur={() => {
-                      if (renameValue.trim() && renameValue.trim() !== folder.title) {
+                      if (
+                        renameValue.trim() &&
+                        renameValue.trim() !== folder.title
+                      ) {
                         onRenameFolder(folder.id, renameValue.trim());
                       } else {
                         setRenamingId(null);
