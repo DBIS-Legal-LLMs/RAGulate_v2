@@ -1,7 +1,7 @@
 # RAGulate_v2 - LegalQA Chatbot
 
 ## Overview
-RAGulate is a Masters project implementing a Legal Question-Answering chatbot using Retrieval-Augmented Generation (RAG) technology. The system provides a session-based chat interface backed by a modular FastAPI service that integrates with external LLM providers (OpenRouter, Ollama) and stores all data in MongoDB.
+RAGulate is a Masters project implementing a Legal Question-Answering chatbot using Retrieval-Augmented Generation (RAG) technology. The system provides a session-based chat interface backed by a modular FastAPI service that integrates with external LLM providers (OpenRouter) and stores all data in MongoDB.
 
 ## Tech Stack
 
@@ -23,15 +23,15 @@ RAGulate is a Masters project implementing a Legal Question-Answering chatbot us
    - Role-based access control.
 
 2. **Session & Folder Management**
-   - Organise chats in a nested folder hierarchy.
+   - Organise chats in a single folder layer; chats can belong to a folder or remain as top-level chats.
    - Create, rename, and delete folders and chat sessions.
 
 3. **Streaming Chat**
    - Messages are streamed token-by-token from the LLM for a responsive UX.
    - Full conversation history is passed to the LLM to maintain context.
 
-4. **Multiple LLM Providers**
-   - Switch between **OpenRouter** (cloud) and **Ollama** (local) per user preference.
+4. **LLM Provider**
+   - Uses **OpenRouter** (cloud) for LLM inference.
    - Provider and model are configurable via environment variables and user settings.
 
 5. **RAG Pipeline** *(in progress)*
@@ -71,7 +71,7 @@ RAGulate_v2/
 ### Prerequisites
 - [Docker](https://docs.docker.com/engine/install/) & [Docker Compose](https://docs.docker.com/compose/install/)
 - [Node.js](https://nodejs.org/) ≥ 18 and [pnpm](https://pnpm.io/)
-- An [OpenRouter API key](https://openrouter.ai/) **or** a running [Ollama](https://ollama.com/) instance
+- An [OpenRouter API key](https://openrouter.ai/)
 
 > **Detailed step-by-step guides** (Anaconda, Docker, Docker GPU support, MongoDB shell usage, deploying as a systemd service, and patching the backend) are available under [`Common/Backend/Setup/`](Common/Backend/Setup/).
 
@@ -99,12 +99,10 @@ Open `Backend/.env` and set:
 | `JWT_SECRET` | A long random string used to sign tokens |
 | `JWT_ALGORITHM` | `HS256` (default) |
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime in minutes (e.g. `60`) |
-| `OPENROUTER_API_KEY` | Your OpenRouter API key (optional if using Ollama) |
+| `OPENROUTER_API_KEY` | Your OpenRouter API key |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` |
 | `OPENROUTER_MODEL` | E.g. `mistralai/mistral-nemo` |
 | `OPENROUTER_EMBEDDINGS_MODEL` | Embeddings model on OpenRouter |
-| `OLLAMA_BASE_URL` | E.g. `http://localhost:11434` |
-| `OLLAMA_MODEL` | E.g. `llama3` |
 
 ### 3. Start the Backend (Docker)
 ```bash
