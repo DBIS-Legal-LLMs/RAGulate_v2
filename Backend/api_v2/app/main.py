@@ -10,11 +10,54 @@ from .api.routes.llm_models_routes import router as models_router
 from .api.routes.folders_routes import router as folder_router
 from .api.routes.user_routes import router as user_router
 
+import logging
 from contextlib import asynccontextmanager
 
-from .db.mongo import get_database
-
 from .config import get_settings
+from .db.mongo import get_database
+from .services.lightrag_service import initialize_lightrag
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # STARTUP
+    db = get_database()
+
+    # ---------- FOLDERS ----------
+    await db["folders"].create_index(
+        [("owner_id", 1), ("parent_id", 1), ("name", 1)],
+        unique=True,
+    )
+
+    await db["folders"].create_index(
+        [("owner_id", 1), ("parent_id", 1)]
+    )
+
+    # ---------- CHAT SESSIONS ----------
+    await db["chat_sessions"].create_index(
+        [("user_id", 1), ("folder_id", 1), ("updated_at", -1)]
+    )
+
+    # ---------- CHAT MESSAGES ----------
+    await db["chat_messages"].create_index(
+        [("session_id", 1), ("created_at", 1)]
+    )
+
+    # ---------- LIGHTRAG ----------
+    try:
+        await initialize_lightrag()
+    except Exception:
+        logger.exception(
+            "LightRAG initialization failed – RAG queries will be unavailable."
+        )
+
+    yield  # App runs from here
+
+    # SHUTDOWN (optional)
+    # terminate Mongo connections here
+
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -22,6 +65,7 @@ def create_app() -> FastAPI:
         version="0.1.0",
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=lifespan,
     )
 
     origins = [
@@ -52,36 +96,6 @@ def create_app() -> FastAPI:
     app.include_router(user_router, prefix="/api")
 
     return app
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # STARTUP
-    db = get_database()
-
-    # ---------- FOLDERS ----------
-    await db["folders"].create_index(
-        [("owner_id", 1), ("parent_id", 1), ("name", 1)],
-        unique=True,
-    )
-
-    await db["folders"].create_index(
-        [("owner_id", 1), ("parent_id", 1)]
-    )
-
-    # ---------- CHAT SESSIONS ----------
-    await db["chat_sessions"].create_index(
-        [("user_id", 1), ("folder_id", 1), ("updated_at", -1)]
-    )
-
-    # ---------- CHAT MESSAGES ----------
-    await db["chat_messages"].create_index(
-        [("session_id", 1), ("created_at", 1)]
-    )
-
-    yield  # App runs from here
-
-    # SHUTDOWN (optional)
-    # terminate Mongo connections here
 
 app = create_app()
 

@@ -25,6 +25,11 @@ class Settings(BaseModel):
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL")
     ollama_model: str    = os.getenv("OLLAMA_MODEL")
 
+    # LightRAG Settings
+    lightrag_working_dir:   str = os.getenv("LIGHTRAG_WORKING_DIR", "/tmp/lightrag")
+    lightrag_embedding_dim: int = int(os.getenv("LIGHTRAG_EMBEDDING_DIM", "1536"))
+    lightrag_rag_mode:      str = os.getenv("LIGHTRAG_RAG_MODE", "hybrid")
+
 
 @lru_cache
 def get_settings() -> Settings:
