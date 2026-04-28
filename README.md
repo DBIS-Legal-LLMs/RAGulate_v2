@@ -1,104 +1,171 @@
 # RAGulate_v2 - LegalQA Chatbot
 
-## Overview  
-RAGulate is a Masters project implementing a Legal Question-Answering chatbot using Retrieval-Augmented Generation (RAG) technology. This system combines the [LightRAG framework](https://github.com/HKUDS/LightRAG) with the Mistral LLMs to provide accurate, context-aware answers to legal questions.
+## Overview
+RAGulate is a Masters project implementing a Legal Question-Answering chatbot using Retrieval-Augmented Generation (RAG) technology. The system provides a session-based chat interface backed by a modular FastAPI service that integrates with external LLM providers (OpenRouter, Ollama) and stores all data in MongoDB.
 
 ## Tech Stack
 
 <p align="left">
-<img src="https://skillicons.dev/icons?i=next,react,tailwind,ts,mongodb,flask"/>
+<img src="https://skillicons.dev/icons?i=next,react,tailwind,ts,mongodb,fastapi,docker"/>
 </p>
 
-- [Next.js](https://nextjs.org/) (App Router)
-- [React](https://react.dev/)
+- [Next.js 15](https://nextjs.org/) (App Router)
+- [React 19](https://react.dev/)
 - [Tailwind CSS](https://tailwindcss.com/) (UI Styling)
 - [MongoDB](https://www.mongodb.com/) (Database)
-- [Flask](https://flask.palletsprojects.com/en/stable/) (Backend API)
+- [FastAPI](https://fastapi.tiangolo.com/) (Backend API)
+- [Docker](https://www.docker.com/) / [Docker Compose](https://docs.docker.com/compose/) (Deployment)
 
 ## Features
-1. Document Ingestion & Indexing
 
-    - Upload multiple file types (.pdf, .docx, .txt, .csv, .xlsx).
-    - Automatic text extraction using textract.
-    - Indexed into the LightRAG knowledge store for retrieval.
-    - Metadata tracked in kv_store_doc_status.json.
+1. **User Authentication**
+   - JWT-based login and registration.
+   - Role-based access control.
 
-2. Knowledge Graph
+2. **Session & Folder Management**
+   - Organise chats in a nested folder hierarchy.
+   - Create, rename, and delete folders and chat sessions.
 
-    - Visualizes the knowledge graph that LightRAG uses for generation. 
-    - Nodes can be clicked for further information.
+3. **Streaming Chat**
+   - Messages are streamed token-by-token from the LLM for a responsive UX.
+   - Full conversation history is passed to the LLM to maintain context.
 
-3. Session-based Chat Logging
+4. **Multiple LLM Providers**
+   - Switch between **OpenRouter** (cloud) and **Ollama** (local) per user preference.
+   - Provider and model are configurable via environment variables and user settings.
 
-    - Stores user prompts, assistant responses, and timestamps in MongoDB.
-    - Supports multiple sessions per user.
-    - Chat history can be enabled or disabled per user settings.
+5. **RAG Pipeline** *(in progress)*
+   - The `rag_service` layer is prepared for document retrieval augmentation.
+   - Currently acts as a plain LLM chat service; retrieval injection will be added without touching higher-level services.
 
-4. Configurable User Options
+6. **Persistent Storage (MongoDB)**
+   - Collections: `users`, `folders`, `chat_sessions`, `chat_messages`.
+   - Indexes are created automatically on startup for fast sorting and lookups.
 
-    - Users can configure the behaviour of LightRAG by adjusting [queryParam](https://github.com/HKUDS/LightRAG/tree/main?tab=readme-ov-file#query-param) options:
-        - Language (en, de, fr, es) (Does not have an Impact as of now, english only)
-        - Query mode
-        - Timeout per request
-        - Custom prompt instructions
-        - LLM provider selection (HF / OpenRouter)
-    - Settings are stored in the usermanagement collection.
+## Project Structure
 
-5. Token Usage Logging
-
-    - Logs prompt and response token counts.
-    - Optionally stores raw API responses for auditing.
-    - Useful for cost tracking and model performance evaluation.
-
-### TODOs:
-- Sessions all have the same name, different names could be implemented
-- The openrouter API allows streaming of information (you see progress while the prompt is processed) -> this could be implemented to improve user experience
-- BUG: Graceful shutdown in the Backend is not working as of now (Killing the process works but is obviously not optimal)
-- Use Rerank Function for better RAG performance
-- Implement better markdown rendering style for better User experience (bullet points and such)
+```
+RAGulate_v2/
+├── Backend/
+│   ├── api_v2/app/          # FastAPI application
+│   │   ├── api/routes/      # HTTP endpoints (auth, chat, folders, users, models)
+│   │   ├── core/            # Auth/JWT utilities, dependencies
+│   │   ├── db/              # MongoDB connection
+│   │   ├── models/          # Pydantic schemas
+│   │   └── services/        # Business logic (chat, folder, user, RAG, LLM)
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   ├── requirements.txt
+│   └── .env                 # (created from .env.example)
+├── Frontend/                # Next.js application
+├── Common/
+│   ├── Backend/
+│   │   ├── Setup/           # Step-by-step setup guides
+│   │   └── Architecture/    # Architecture & schema docs
+│   └── General/             # Meeting notes
+└── .env.example
+```
 
 ## Installation Guide
 
-- Clone repository
+### Prerequisites
+- [Docker](https://docs.docker.com/engine/install/) & [Docker Compose](https://docs.docker.com/compose/install/)
+- [Node.js](https://nodejs.org/) ≥ 18 and [pnpm](https://pnpm.io/)
+- An [OpenRouter API key](https://openrouter.ai/) **or** a running [Ollama](https://ollama.com/) instance
 
-### Frontend
-- Navigate to Frontend
-- pnpm install
+> **Detailed step-by-step guides** (Anaconda, Docker, Docker GPU support, MongoDB shell usage, deploying as a systemd service, and patching the backend) are available under [`Common/Backend/Setup/`](Common/Backend/Setup/).
 
-### Backend
+---
 
-- Navigate to Backend (Make sure you have a virtual environment set up)
-- Install requirements with `pip install -r requirements.txt`
-- Install [MongoDB](https://www.mongodb.com/docs/manual/administration/install-community/?linux-distribution=ubuntu&linux-package=default&operating-system=linux&search-linux=with-search-linux)
+### 1. Clone the repository
+```bash
+git clone <repo-url>
+cd RAGulate_v2
+```
 
-- Install [LightRAG](https://github.com/HKUDS/LightRAG/tree/main)
-    - RAGulate is built on the LightRAG framework.
-    - First install LightRAG by following the instructions from their GitHub repository:
+### 2. Configure environment variables
+Copy the example file and fill in the values:
+```bash
+cp .env.example Backend/.env
+```
+
+Open `Backend/.env` and set:
+
+| Variable | Description |
+|---|---|
+| `APP_ENV` | `local` (local machine) or `docker` (container) |
+| `MONGO_URL` | MongoDB connection string (default: `mongodb://mongodb:27017`) |
+| `MONGO_DB_NAME` | Name of the database |
+| `JWT_SECRET` | A long random string used to sign tokens |
+| `JWT_ALGORITHM` | `HS256` (default) |
+| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime in minutes (e.g. `60`) |
+| `OPENROUTER_API_KEY` | Your OpenRouter API key (optional if using Ollama) |
+| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` |
+| `OPENROUTER_MODEL` | E.g. `mistralai/mistral-nemo` |
+| `OPENROUTER_EMBEDDINGS_MODEL` | Embeddings model on OpenRouter |
+| `OLLAMA_BASE_URL` | E.g. `http://localhost:11434` |
+| `OLLAMA_MODEL` | E.g. `llama3` |
+
+### 3. Start the Backend (Docker)
+```bash
+cd Backend
+docker compose up --build
+```
+
+This starts:
+- **`ragulate_mongodb`** – MongoDB on port `27017`
+- **`ragulate_backend_v2`** – FastAPI on port `8000`
+
+The API docs are available at `http://localhost:8000/docs` once running.
+
+> **GPU support**: see [`Common/Backend/Setup/5_Docker_GPU_Support.md`](Common/Backend/Setup/5_Docker_GPU_Support.md).
+
+### 4. Start the Frontend
+```bash
+cd Frontend
+pnpm install
+pnpm dev
+```
+
+The frontend is available at `http://localhost:3000`.
+
+---
+
+## Useful Docker Commands
 
 ```bash
-git clone https://github.com/HKUDS/LightRAG.git
-cd LightRAG
-pip install -e .
-```
-Refer to the LightRAG repository for additional installation details or troubleshooting.
+# Show running containers
+docker ps
 
-#### Model Configuration
-RAGulate uses the following LLMs:
-mistralai/Mistral-7B-Instruct-v0.2 (Huggingface Model)
-mistralai/mistral-nemo (Openrouter Model)
+# Follow backend logs
+docker logs -f ragulate_backend_v2
 
-### How to start the Backend and Frontend on the DBIS Computer
-Start the Anaconda Virtual Environment LIGHTRAGENV before starting any python scripts
+# Open a shell inside the backend container
+docker exec -it ragulate_backend_v2 bash
+
+# Open a shell inside MongoDB
+docker exec -it ragulate_mongodb bash
 ```
-BACKEND!
-#activate conda environment
-conda activate LIGHTRAGENV
-#start backend (/home/dbis-ai/Desktop/ChristiansWorkspace/RAGulate-Project/Backend)
-python backend_api.py
+
+See [`Common/Backend/Setup/6_Docker_Service.md`](Common/Backend/Setup/6_Docker_Service.md) and [`Common/Backend/Setup/7_MongoDB_Tutorial.md`](Common/Backend/Setup/7_MongoDB_Tutorial.md) for more.
+
+---
+
+## Deploying updates (patch workflow)
+```bash
+sudo systemctl stop ragulate.service
+git pull
+sudo systemctl start ragulate.service
+docker logs -f ragulate_backend_v2
 ```
-```
-FRONTEND!
-#Navigate to Frontend Folder
-npm run dev
-```
-When the project is finished maybe the website will be hosted, to access this project.
+
+Full instructions: [`Common/Backend/Setup/8_Backend_Patchen.md`](Common/Backend/Setup/8_Backend_Patchen.md).
+
+---
+
+## TODOs
+- Complete the RAG retrieval pipeline in `rag_service.py`
+- Add reranking for better retrieval quality
+- Implement graceful backend shutdown
+- Allow custom session names
+- Improve markdown rendering in the chat UI (lists, code blocks)
