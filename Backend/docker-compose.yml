@@ -20,6 +20,8 @@ services:
       - "8000:8000"
     env_file:
       - ".env"
+    environment:
+      - RAGULATE_RAG_URL=http://ragulate-rag:8081
     volumes:
       - hf_cache:/root/.cache/huggingface
     deploy:
@@ -30,6 +32,40 @@ services:
               count: 1
               capabilities: ["gpu"]
 
+  ragulate-rag:
+    build:
+      context: ./ragulate-rag
+      dockerfile: Dockerfile
+    container_name: ragulate_rag
+    restart: unless-stopped
+    depends_on:
+      - ragulate-neo4j
+    ports:
+      - "8181:8081"
+    env_file:
+      - "./ragulate-rag/.env"
+    environment:
+      # Always the Docker service name — a NEO4J_URI from .env (meant for
+      # running this service outside Docker) must not leak into the container.
+      - NEO4J_URI=neo4j://ragulate-neo4j:7687
+    volumes:
+      - ragulate_rag_working_dir:/app/rag_working_dir
+      - ./ragulate-rag/data:/app/data
+
+  ragulate-neo4j:
+    image: neo4j:5-community
+    container_name: ragulate_neo4j
+    restart: unless-stopped
+    environment:
+      - NEO4J_AUTH=neo4j/ragulate-rag-2026
+    ports:
+      - "7475:7474"
+      - "7688:7687"
+    volumes:
+      - ragulate_neo4j_data:/data
+
 volumes:
   mongo_data:
   hf_cache:
+  ragulate_rag_working_dir:
+  ragulate_neo4j_data:

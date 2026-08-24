@@ -34,9 +34,10 @@ RAGulate is a Masters project implementing a Legal Question-Answering chatbot us
    - Uses **OpenRouter** (cloud) for LLM inference.
    - Provider and model are configurable via environment variables and user settings.
 
-5. **RAG Pipeline** *(in progress)*
-   - The `rag_service` layer is prepared for document retrieval augmentation.
-   - Currently acts as a plain LLM chat service; retrieval injection will be added without touching higher-level services.
+5. **RAG Pipeline**
+   - `rag_service.py` retrieves context from **`ragulate-rag`** (`Backend/ragulate-rag/`) — RAGulate's own FastAPI + LightRAG + Neo4j service, copied from GRIPL's `gripl-rag` pipeline and seeded with the same GDPR regulation + EDPB guidance documents as a starting corpus (own instance, own graph — not shared with GRIPL, since different projects want different knowledge; see that folder's own notes for why).
+   - Retrieval is single-turn (only the latest message is used as the query — LightRAG has no multi-turn concept) while the full conversation history still goes to the answer-generating LLM call as before.
+   - Optional: if `ragulate-rag` is unset or unreachable, chat still works as plain LLM output, just without retrieval.
 
 6. **Persistent Storage (MongoDB)**
    - Collections: `users`, `folders`, `chat_sessions`, `chat_messages`.
@@ -53,6 +54,10 @@ RAGulate_v2/
 │   │   ├── db/              # MongoDB connection
 │   │   ├── models/          # Pydantic schemas
 │   │   └── services/        # Business logic (chat, folder, user, RAG, LLM)
+│   ├── ragulate-rag/        # RAGulate's own RAG service (FastAPI + LightRAG + Neo4j)
+│   │   ├── data/             # GDPR PDFs + extracted text (starting corpus)
+│   │   ├── scripts/          # extract_pdfs.py, ingest.py (offline, no ingestion API)
+│   │   └── .env              # (created from ragulate-rag/.env.example)
 │   ├── Dockerfile
 │   ├── docker-compose.yml
 │   ├── requirements.txt
@@ -103,6 +108,9 @@ Open `Backend/.env` and set:
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` |
 | `OPENROUTER_MODEL` | E.g. `mistralai/mistral-nemo` |
 | `OPENROUTER_EMBEDDINGS_MODEL` | Embeddings model on OpenRouter |
+| `RAGULATE_RAG_URL` | Base URL of `ragulate-rag` (below). Optional — chat still works without it, just without retrieval |
+
+Also copy `ragulate-rag/.env.example` to `ragulate-rag/.env` and fill in an LLM/embedding API key (used for the RAG service's own entity extraction, separate from the chat LLM call above).
 
 ### 3. Start the Backend (Docker)
 ```bash
@@ -113,8 +121,16 @@ docker compose up --build
 This starts:
 - **`ragulate_mongodb`** – MongoDB on port `27017`
 - **`ragulate_backend_v2`** – FastAPI on port `8000`
+- **`ragulate_rag`** – RAGulate's own RAG service on port `8181` (see `Backend/ragulate-rag/`)
+- **`ragulate_neo4j`** – knowledge graph backing `ragulate_rag`, browser UI on port `7475`
 
 The API docs are available at `http://localhost:8000/docs` once running.
+
+The GDPR corpus (PDFs + extracted text) ships already checked in, but the knowledge graph itself has to be built once by running the ingestion script (makes real LLM calls for entity extraction — do this with your own key, not repeatedly):
+```bash
+cd Backend/ragulate-rag
+python scripts/ingest.py
+```
 
 > **GPU support**: see [`Common/Backend/Setup/5_Docker_GPU_Support.md`](Common/Backend/Setup/5_Docker_GPU_Support.md).
 
@@ -162,8 +178,9 @@ Full instructions: [`Common/Backend/Setup/8_Backend_Patchen.md`](Common/Backend/
 ---
 
 ## TODOs
-- Complete the RAG retrieval pipeline in `rag_service.py`
-- Add reranking for better retrieval quality
+- Add reranking for better retrieval quality (`ragulate-rag` supports it, off by default)
+- Show sources/citations for retrieved context in the chat UI (`ragulate-rag`'s responses already carry per-chunk source attribution — this is a frontend task)
 - Implement graceful backend shutdown
 - Allow custom session names
 - Improve markdown rendering in the chat UI (lists, code blocks)
+- Extract `ragulate-rag`'s pipeline into a standalone template repo, generalized beyond GDPR, once another project wants its own instance

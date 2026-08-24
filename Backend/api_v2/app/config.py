@@ -25,6 +25,11 @@ class Settings(BaseModel):
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL")
     ollama_model: str    = os.getenv("OLLAMA_MODEL")
 
+    # ragulate-rag (Backend/ragulate-rag/) — optional: chat still works
+    # without it, just without retrieval, if unset or unreachable.
+    ragulate_rag_url: str | None = os.getenv("RAGULATE_RAG_URL")
+    ragulate_rag_timeout: float  = float(os.getenv("RAGULATE_RAG_TIMEOUT", "30"))
+
 
 @lru_cache
 def get_settings() -> Settings:
