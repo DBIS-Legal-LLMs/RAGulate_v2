@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { User, Settings, Moon, Sun, Monitor, ChevronDown } from "lucide-react";
+import { User, Settings, LogOut, Moon, Sun, Monitor, ChevronDown } from "lucide-react";
 import { useTheme } from "./theme-provider";
 import { useTranslation } from "react-i18next";
 
@@ -12,12 +12,14 @@ interface ProfileDropdownProps {
   username: string;
   onProfileClick: () => void;
   onSettingsClick: () => void;
+  onLogoutClick: () => void;
 }
 
 export function ProfileDropdown({
   username,
   onProfileClick,
   onSettingsClick,
+  onLogoutClick,
 }: ProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -127,6 +129,18 @@ export function ProfileDropdown({
               >
                 <Settings className="w-4 h-4 mr-3" />
                 {t("profile.settings")}
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="w-full justify-start px-4 py-2 text-sm hover:bg-accent hover:text-black"
+                onClick={() => {
+                  onLogoutClick();
+                  setIsOpen(false);
+                }}
+              >
+                <LogOut className="w-4 h-4 mr-3" />
+                {t("profile.logout")}
               </Button>
 
               {/* Theme Selector */}

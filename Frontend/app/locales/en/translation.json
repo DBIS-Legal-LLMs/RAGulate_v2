@@ -79,6 +79,7 @@
   "profile": {
     "profile": "Profile",
     "settings": "Settings",
+    "logout": "Log out",
     "theme": "Theme",
     "light": "Light",
     "dark": "Dark",

@@ -43,6 +43,7 @@ import Sidebar from "./components/SideBar";
 import { useTranslation } from "react-i18next";
 import { FolderDocumentsPanel } from "./components/FolderDocumentsPanel";
 import { GraphBackground } from "./components/GraphBackground";
+import { AuthProvider, useAuth } from "./auth-context";
 
 /**
  * Backend API endpoint configuration
@@ -87,6 +88,17 @@ interface UISession {
  * @returns {JSX.Element} The rendered chatbot interface
  */
 export default function GDPRChatbot() {
+  return (
+    <AuthProvider>
+      <GDPRChatbotInner />
+    </AuthProvider>
+  );
+}
+
+function GDPRChatbotInner() {
+  const { token, username, isLoading: authLoading, logout } = useAuth();
+  const showAuthModal = !authLoading && !username;
+
   // Chat state management
   const [messages, setMessages] = useState<Message[]>([]); // Current conversation messages
   const [input, setInput] = useState(""); // User input field
@@ -119,11 +131,8 @@ export default function GDPRChatbot() {
   const [showSettingsModal, setShowSettingsModal] = useState(false); // Settings modal visibility
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null); // Session being edited
   const [editedTitle, setEditedTitle] = useState<string>(""); // New title for edited session
-  const [showAuthModal, setShowAuthModal] = useState(true); // Auth modal visibility
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
-
-  const [username, setUsername] = useState<string>(""); // Current user's username
 
   // Modal and overlay state
   const [showGraph, setShowGraph] = useState(false); // Knowledge graph visibility
@@ -882,19 +891,11 @@ export default function GDPRChatbot() {
   }, [username]);
 
   /**
-   * Handles successful user login
-   * Loads user's existing chat sessions and sets up the interface
-   *
-   * @param {any} sessions - Initial sessions data from auth
-   * @param {string} usernameFromAuth - Authenticated username
-   *
-   * @example
-   * handleLoginSuccess(userSessions, "john_doe")
+   * Handles successful user login/register.
+   * The auth context already has the token/username set — this just resets
+   * chat UI state left over from a previous session and checks for an API key.
    */
-  const handleLoginSuccess = async (
-    _sessions: any,
-    usernameFromAuth: string,
-  ) => {
+  const handleLoginSuccess = async () => {
     // RESET OLD USER STATE
     setFolders([]);
     setSessions([]);
@@ -905,9 +906,6 @@ export default function GDPRChatbot() {
     setEditingSessionId(null);
     setEditedTitle("");
 
-    setUsername(usernameFromAuth);
-    setShowAuthModal(false);
-    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${BACKEND_URL}/api/user/api-key`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -1030,9 +1028,10 @@ export default function GDPRChatbot() {
                     {t("buttons.documents")}
                   </Button>
                   <ProfileDropdown
-                    username={username}
+                    username={username ?? ""}
                     onProfileClick={() => setShowProfileModal(true)}
                     onSettingsClick={() => setShowSettingsModal(true)}
+                    onLogoutClick={logout}
                   />
                 </div>
               </div>
@@ -1431,8 +1430,7 @@ export default function GDPRChatbot() {
 
           {showProfileModal && (
             <ProfileModal
-              username={username}
-              onSaveUsername={(newName) => setUsername(newName)}
+              username={username ?? ""}
               onClose={() => setShowProfileModal(false)}
               onApiKeyChanged={async () => {
                 const token = localStorage.getItem("token");
@@ -1450,7 +1448,7 @@ export default function GDPRChatbot() {
           {showSettingsModal && (
             <SettingsModal
               onClose={() => setShowSettingsModal(false)}
-              username={username}
+              username={username ?? ""}
             />
           )}
           {showApiKeyPrompt && (
