@@ -112,18 +112,21 @@ When generating an LLM response:
 
 ### 6. LLM / RAG Processing
 
-Supported providers:
+Supported provider: **OpenRouter** (the only one actually wired into
+`llm_service.py` today, despite other providers being mentioned
+elsewhere as future/config-level options).
 
-- HuggingFace
-- OpenRouter
-- Ollama
-
-Optional RAG pipeline retrieves relevant documents and injects them into
-the prompt.
+Before calling the LLM, `rag_service.py` queries `ragulate-rag` — a
+separate FastAPI + LightRAG + Neo4j service (`Backend/ragulate-rag/`,
+copied from GRIPL's `gripl-rag` pipeline, own instance/corpus, see
+`Common/Backend/Architecture/rag_system.md`) — with just the latest
+message, and injects the retrieved, source-attributed context into the
+prompt. Falls back to plain LLM chat if that service is unset or
+unreachable.
 
 Implementation:
 
-services/rag_service.py
+services/rag_service.py (retrieval + prompt assembly), services/llm_service.py (the LLM call itself)
 
 ### 7. Storing the Response
 

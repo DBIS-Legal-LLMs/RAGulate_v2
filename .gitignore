@@ -20,6 +20,9 @@ build/
 # Environment variables
 .env
 
+# ragulate-rag's LightRAG working directory (vector/KV storage, rebuilt by ingestion)
+Backend/ragulate-rag/rag_working_dir/
+
 # OS files
 .DS_Store
 Thumbs.db

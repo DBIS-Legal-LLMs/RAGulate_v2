@@ -1,0 +1,44 @@
+# ===========================================
+# ragulate-rag Service Dependencies
+# (copied from gripl-rag's requirements — same pipeline, own data/instance)
+# ===========================================
+
+# --- PDF extraction ---
+pymupdf>=1.27.0
+rapidfuzz>=3.0.0
+
+# --- LightRAG core ---
+lightrag-hku>=1.4.0
+
+# --- Google Gemini SDK ---
+google-genai>=1.0.0
+
+# --- Local embeddings + reranking (SentenceTransformer / CrossEncoder) ---
+sentence-transformers>=3.0.0
+
+# --- Neo4j Python driver ---
+neo4j>=5.0.0
+
+# --- FastAPI + server ---
+fastapi>=0.115.0
+uvicorn>=0.30.0
+
+# --- Settings management ---
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+
+# --- RAG evaluation (Ragas + LangChain wrappers) ---
+# ragas 0.2.x hard-imports langchain_community.chat_models.vertexai at module
+# load time. That module was removed in langchain-community 0.3.0 (moved to
+# langchain-google-vertexai). All four packages must stay on the langchain-core
+# 0.2.x era so their transitive langchain-core bounds don't conflict:
+#   langchain-community 0.2.x → langchain-core >=0.2, <0.3
+#   langchain-openai    0.1.x → langchain-core >=0.2, <0.3
+#   langchain-google-genai 1.x → langchain-core >=0.2, <0.3
+#   langchain-google-vertexai 1.x → langchain-core >=0.2
+langchain-core>=0.2.0,<0.3.0
+langchain-community>=0.2.0,<0.3.0
+langchain-openai>=0.1.0,<0.2.0
+langchain-google-genai>=1.0.0,<2.0.0
+langchain-google-vertexai>=1.0.0,<2.0.0
+ragas>=0.2.12,<0.3.0
