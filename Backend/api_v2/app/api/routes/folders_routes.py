@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from ...core.deps import get_current_user, get_db
 from ...core import errors
-from ...models.user_models import UserInDB
+from ...models.auth_models import AuthenticatedUser
 from ...models.folder_models import FolderCreate, FolderPublic
 from ...services.folder_service import FolderService
 from ...services.chat_service import ChatService
@@ -29,7 +29,7 @@ def get_folder_service(db = Depends(get_db)) -> FolderService:
         )
 async def create_folder(
     data: FolderCreate,
-    current_user: UserInDB = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     folder_service: FolderService = Depends(get_folder_service),
 ):
     try:
@@ -58,7 +58,7 @@ async def create_folder(
         status_code=status.HTTP_200_OK
         )
 async def list_folders(
-    current_user: UserInDB = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     folder_service: FolderService = Depends(get_folder_service),
 ):
     try:
@@ -83,7 +83,7 @@ async def list_folders(
 async def change_name(
     folder_id: str,
     new_title: str,
-    current_user: UserInDB = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     folder_service: FolderService = Depends(get_folder_service),
 ):
     try:
@@ -106,7 +106,7 @@ async def change_name(
 @router.delete("/{folder_id}", status_code=status.HTTP_200_OK)
 async def delete_folder(
     folder_id: str,
-    current_user: UserInDB = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     folder_service: FolderService = Depends(get_folder_service),
     chat_service: ChatService = Depends(get_chat_service)
 ):

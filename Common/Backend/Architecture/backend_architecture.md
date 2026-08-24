@@ -9,6 +9,13 @@ The backend is built using **FastAPI**, **MongoDB**, and a modular
 Models (LLMs)** and a **RAG (Retrieval Augmented
 Generation)** pipeline.
 
+**Authentication is not part of this backend.** User accounts, password
+hashing, and JWT issuance live in a separate, standalone service —
+[`auth-service`](https://github.com/DBIS-Legal-LLMs/auth-service), shared
+with GRIPL and future DBIS tools. This backend only verifies tokens
+against that service's published JWKS (`core/jwt_verification.py`); it
+never stores credentials and no longer has a `users` collection.
+
 ---
 
 # System Overview
@@ -68,8 +75,8 @@ core/deps.py
 
 Responsibilities:
 
-- decode JWT tokens
-- retrieve the current user
+- verify the JWT against auth-service's JWKS (core/jwt_verification.py) —
+  no local user lookup, the verified token's subject *is* the user id
 - inject database connection
 
 ### 4. Service Layer
@@ -80,10 +87,12 @@ services/
 
 Main services:
 
-- UserService
 - ChatService
 - FolderService
 - RAGService
+
+(`UserService` used to live here — it moved to `auth-service` along with
+the rest of authentication.)
 
 Responsibilities include:
 

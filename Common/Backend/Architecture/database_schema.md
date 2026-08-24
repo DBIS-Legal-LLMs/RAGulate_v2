@@ -6,23 +6,13 @@ Connection logic:
 
 Backend/api_v2/app/db/mongo.py
 
+This backend does **not** have a `users` collection anymore — user accounts
+live in [`auth-service`](https://github.com/DBIS-Legal-LLMs/auth-service)'s
+own MongoDB. Collections below reference a `user_id`/`owner_id` that's
+just the `sub` claim of a JWT verified against that service; there's no
+local join, only a loosely-coupled reference by id.
+
 ## Collections
-
-### users
-
-Stores user accounts.
-
-Fields include:
-
-- email
-- username
-- password_hash
-- role
-- preferred_llm_provider
-- preferred_model
-- created_at
-
----
 
 ### folders
 

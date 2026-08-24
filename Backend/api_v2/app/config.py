@@ -11,10 +11,8 @@ class Settings(BaseModel):
     mongo_url: str     = os.getenv("MONGO_URL")
     mongo_db_name: str = os.getenv("MONGO_DB_NAME")
 
-    # JWT Settings
-    jwt_secret: str                      = os.getenv("JWT_SECRET")
-    jwt_algorithm: str                   = os.getenv("JWT_ALGORITHM")
-    jwt_access_token_expire_minutes: int = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES"))
+    # auth-service (issues tokens, we only verify them against its JWKS)
+    auth_service_url: str = os.getenv("AUTH_SERVICE_URL", "http://localhost:8100")
 
     # LLM Provider Settings
     openrouter_api_key: str | None   = os.getenv("OPENROUTER_API_KEY")

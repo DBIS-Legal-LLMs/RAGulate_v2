@@ -22,6 +22,12 @@ services:
       - ".env"
     volumes:
       - hf_cache:/root/.cache/huggingface
+    # Lets AUTH_SERVICE_URL=http://host.docker.internal:<port> reach
+    # auth-service's own docker-compose stack running on the same host,
+    # since the two are separate compose projects/networks. Works out of
+    # the box on Docker Desktop; needed explicitly on Linux.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     deploy:
       resources:
         reservations:
