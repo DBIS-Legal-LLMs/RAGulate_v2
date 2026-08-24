@@ -9,7 +9,7 @@ from bson import ObjectId
 from pymongo.asynchronous.database import AsyncDatabase
 
 from ..core import errors
-from ..models.user_models import UserInDB
+from ..models.auth_models import AuthenticatedUser
 from ..models.chat_models import (
     ChatSessionCreate,
     ChatSessionInDB,
@@ -43,7 +43,7 @@ class ChatService:
     
     async def list_chats(
             self,
-            user: UserInDB,
+            user: AuthenticatedUser,
             folder_id: Optional[str] = None,
     ) -> List[ChatSessionInDB]:
         try:
@@ -63,7 +63,7 @@ class ChatService:
 
     async def create_chat(
             self,
-            user: UserInDB,
+            user: AuthenticatedUser,
             data: ChatSessionCreate,
     ) -> ChatSessionInDB:
         now = datetime.now(timezone.utc)
@@ -81,7 +81,7 @@ class ChatService:
 
     async def get_chat_for_user(
             self,
-            user: UserInDB,
+            user: AuthenticatedUser,
             chat_id: str,
     ) -> ChatSessionInDB:
         doc = await self.chats.find_one(
@@ -95,7 +95,7 @@ class ChatService:
 
     async def move_chat(
             self,
-            user: UserInDB,
+            user: AuthenticatedUser,
             chat_id: str,
             new_folder_id: Optional[str],
     ) -> ChatSessionInDB:
@@ -115,7 +115,7 @@ class ChatService:
 
     async def change_name(
             self,
-            user: UserInDB,
+            user: AuthenticatedUser,
             chat_id: str,
             new_title: str,
     ) -> ChatSessionInDB:
@@ -137,7 +137,7 @@ class ChatService:
     
     async def delete_chat(
             self, 
-            user: UserInDB,
+            user: AuthenticatedUser,
             chat_id: str
     ) -> None:
         # ensure chat exists & belongs to user
@@ -152,7 +152,7 @@ class ChatService:
 
     async def list_messages_in_chat(
             self,
-            user: UserInDB,
+            user: AuthenticatedUser,
             chat_id: str,
     ) -> List[MessageInDB]:
         await self.get_chat_for_user(user, chat_id)
@@ -170,7 +170,7 @@ class ChatService:
 
     async def get_chat_with_messages(
             self,
-            user: UserInDB,
+            user: AuthenticatedUser,
             chat_id: str,
     ) -> ChatSessionWithMessages:
         chat = await self.get_chat_for_user(user, chat_id)
@@ -202,7 +202,7 @@ class ChatService:
 
     async def chat_echo(
             self,
-            user: UserInDB,
+            user: AuthenticatedUser,
             chat_id: str,
             data: MessageCreate,
     ) -> ChatTurnPublic:
@@ -259,7 +259,7 @@ class ChatService:
 
     async def _run_llm_and_persist(
             self,
-            user: UserInDB,
+            user: AuthenticatedUser,
             chat_id: str,
             data: MessageCreate,
             chunk_queue: asyncio.Queue,
@@ -339,7 +339,7 @@ class ChatService:
 
     async def _stream_generator(
             self,
-            user: UserInDB,
+            user: AuthenticatedUser,
             chat_id: str,
             data: MessageCreate,
     ) -> AsyncGenerator[str, None]:

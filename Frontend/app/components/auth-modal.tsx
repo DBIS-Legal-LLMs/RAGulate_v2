@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { FocusScope } from "@radix-ui/react-focus-scope";
 import { useTranslation } from "react-i18next";
-
-const BACKEND_URL = "http://134.60.71.197:8000";
+import { useAuth, AUTH_SERVICE_URL } from "../auth-context";
 
 interface AuthModalProps {
-  onLoginSuccess: (sessions: any, username: string) => void;
+  onLoginSuccess: () => void;
 }
 
 export function AuthModal({ onLoginSuccess }: AuthModalProps) {
+  const { login, register } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -63,70 +63,21 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
 
     try {
       if (mode === "login") {
-        const params = new URLSearchParams();
-        params.append("grant_type", "password");
-        params.append("username", email);
-        params.append("password", password);
-        const res = await fetch(BACKEND_URL + "/api/auth/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: params,
-        });
-        const data = await res.json();
-        if (res.ok) {
-          localStorage.setItem("token", data.access_token);
-          onLoginSuccess(data.sessions, data.user.username);
-        } else {
-          setServerError(data.detail || t("auth.errors.loginFailed"));
-        }
+        await login(email, password);
+        onLoginSuccess();
       } else {
-        const res = await fetch(BACKEND_URL + "/api/auth/register", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            email: email,
-            username: username,
-            password: password,
-          }),
-        });
-        const data = await res.json();
-        if (res.ok) {
-          // Optional: direkt einloggen
-          const params = new URLSearchParams();
-          params.append("grant_type", "password");
-          params.append("username", email);
-          params.append("password", password);
-          const loginRes = await fetch(BACKEND_URL + "/api/auth/login", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: params,
-          });
-          const loginData = await loginRes.json();
-          if (loginRes.ok) {
-            localStorage.setItem("token", loginData.access_token);
-            onLoginSuccess(loginData.sessions, data.username);
-          } else {
-            setMode("login");
-            setServerError(t("auth.errors.registerSuccessLoginFailed"));
-          }
-        } else {
-          const detail = data.detail;
-          if (Array.isArray(detail)) {
-            setServerError(detail.map((e: any) => e.msg).join(", "));
-          } else {
-            setServerError(detail || t("auth.errors.registerFailed"));
-          }
+        try {
+          await register(email, username, password);
+          onLoginSuccess();
+        } catch (registerErr) {
+          setMode("login");
+          setServerError(
+            registerErr instanceof Error ? registerErr.message : t("auth.errors.registerFailed"),
+          );
         }
       }
     } catch (err) {
-      setServerError(t("auth.errors.networkError"));
+      setServerError(err instanceof Error ? err.message : t("auth.errors.networkError"));
     } finally {
       setLoading(false);
     }
@@ -170,7 +121,7 @@ export function AuthModal({ onLoginSuccess }: AuthModalProps) {
 
   const fetchGeneratedUsername = async () => {
     try {
-      const res = await fetch(BACKEND_URL + "/api/auth/register/genuser", {
+      const res = await fetch(AUTH_SERVICE_URL + "/auth/register/genuser", {
         method: "GET",
         headers: {
           Accept: "application/json",
