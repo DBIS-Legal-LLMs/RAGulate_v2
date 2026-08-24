@@ -16,11 +16,20 @@ RAGulate is a Masters project implementing a Legal Question-Answering chatbot us
 - [FastAPI](https://fastapi.tiangolo.com/) (Backend API)
 - [Docker](https://www.docker.com/) / [Docker Compose](https://docs.docker.com/compose/) (Deployment)
 
+## Authentication
+
+User accounts, login/registration, and JWT issuance are **not** handled by this repository anymore — they live in [`auth-service`](https://github.com/DBIS-Legal-LLMs/auth-service), a standalone identity service shared with GRIPL and future DBIS tools. This backend only *verifies* tokens: it fetches `auth-service`'s public signing key from its JWKS endpoint (`core/jwt_verification.py`) and trusts any request bearing a validly-signed, unexpired token — it never sees a password and no longer stores a `users` collection of its own.
+
+Practically, this means:
+- `auth-service` must be running and reachable (see its own README) before login/register work anywhere against this backend.
+- The `AUTH_SERVICE_URL` env var (below) points this backend at it.
+- Endpoints that used to live here (`/api/auth/*`, username changes) have moved to `auth-service` and its future `/users/me` — nothing to configure on this side beyond the URL.
+
 ## Features
 
 1. **User Authentication**
-   - JWT-based login and registration.
-   - Role-based access control.
+   - Delegated to `auth-service` (see [Authentication](#authentication) above) — this backend only verifies.
+   - Role-based access control *(planned — `auth-service` carries a per-app role claim once implemented; not yet enforced anywhere)*.
 
 2. **Session & Folder Management**
    - Organise chats in a single folder layer; chats can belong to a folder or remain as top-level chats.
@@ -39,7 +48,7 @@ RAGulate is a Masters project implementing a Legal Question-Answering chatbot us
    - Currently acts as a plain LLM chat service; retrieval injection will be added without touching higher-level services.
 
 6. **Persistent Storage (MongoDB)**
-   - Collections: `users`, `folders`, `chat_sessions`, `chat_messages`.
+   - Collections: `folders`, `chat_sessions`, `chat_messages` — all reference a `user_id` issued by `auth-service`, not a local `users` collection (that moved out along with authentication, see [Authentication](#authentication)).
    - Indexes are created automatically on startup for fast sorting and lookups.
 
 ## Project Structure
@@ -48,11 +57,11 @@ RAGulate is a Masters project implementing a Legal Question-Answering chatbot us
 RAGulate_v2/
 ├── Backend/
 │   ├── api_v2/app/          # FastAPI application
-│   │   ├── api/routes/      # HTTP endpoints (auth, chat, folders, users, models)
-│   │   ├── core/            # Auth/JWT utilities, dependencies
+│   │   ├── api/routes/      # HTTP endpoints (chat, folders, models)
+│   │   ├── core/            # JWT verification against auth-service's JWKS, dependencies
 │   │   ├── db/              # MongoDB connection
 │   │   ├── models/          # Pydantic schemas
-│   │   └── services/        # Business logic (chat, folder, user, RAG, LLM)
+│   │   └── services/        # Business logic (chat, folder, RAG, LLM)
 │   ├── Dockerfile
 │   ├── docker-compose.yml
 │   ├── requirements.txt
@@ -72,6 +81,7 @@ RAGulate_v2/
 - [Docker](https://docs.docker.com/engine/install/) & [Docker Compose](https://docs.docker.com/compose/install/)
 - [Node.js](https://nodejs.org/) ≥ 18 and [pnpm](https://pnpm.io/)
 - An [OpenRouter API key](https://openrouter.ai/)
+- A running instance of [`auth-service`](https://github.com/DBIS-Legal-LLMs/auth-service) — login/register won't work without it. See that repo's README to set it up; by default this backend expects it at `http://localhost:8100`.
 
 > **Detailed step-by-step guides** (Anaconda, Docker, Docker GPU support, MongoDB shell usage, deploying as a systemd service, and patching the backend) are available under [`Common/Backend/Setup/`](Common/Backend/Setup/).
 
@@ -96,9 +106,7 @@ Open `Backend/.env` and set:
 | `APP_ENV` | `local` (local machine) or `docker` (container) |
 | `MONGO_URL` | MongoDB connection string (default: `mongodb://mongodb:27017`) |
 | `MONGO_DB_NAME` | Name of the database |
-| `JWT_SECRET` | A long random string used to sign tokens |
-| `JWT_ALGORITHM` | `HS256` (default) |
-| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime in minutes (e.g. `60`) |
+| `AUTH_SERVICE_URL` | Base URL of `auth-service` — this backend fetches its JWKS from `{AUTH_SERVICE_URL}/.well-known/jwks.json` to verify tokens. Running locally: `http://localhost:8100`. Running this backend via Docker while `auth-service` also runs in Docker on the same host: `http://host.docker.internal:8100`. |
 | `OPENROUTER_API_KEY` | Your OpenRouter API key |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` |
 | `OPENROUTER_MODEL` | E.g. `mistralai/mistral-nemo` |
@@ -167,3 +175,4 @@ Full instructions: [`Common/Backend/Setup/8_Backend_Patchen.md`](Common/Backend/
 - Implement graceful backend shutdown
 - Allow custom session names
 - Improve markdown rendering in the chat UI (lists, code blocks)
+- Username changes and OpenRouter API key management are currently unwired (their old endpoints were removed along with local auth) — waiting on `auth-service`'s `/users/me` to come back properly, see its repo
