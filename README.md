@@ -129,11 +129,12 @@ The API docs are available at `http://localhost:8000/docs` once running.
 ### 4. Start the Frontend
 ```bash
 cd Frontend
+cp .env.example .env.local
 pnpm install
 pnpm dev
 ```
 
-The frontend is available at `http://localhost:3000`.
+The frontend is available at `http://localhost:3000`. Login and registration are called directly against `auth-service` from the browser (`NEXT_PUBLIC_AUTH_SERVICE_URL` in `Frontend/.env.example`, default `http://localhost:8100`) — the session (token + username) persists in `localStorage` across a page reload, and Log out lives in the profile dropdown beneath Settings.
 
 ---
 
