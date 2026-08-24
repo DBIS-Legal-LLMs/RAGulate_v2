@@ -4,11 +4,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api.routes.health import router as health_router
-from .api.routes.auth_routes import router as auth_router
 from .api.routes.chat_routes import router as chat_router
 from .api.routes.llm_models_routes import router as models_router
 from .api.routes.folders_routes import router as folder_router
-from .api.routes.user_routes import router as user_router
 
 from contextlib import asynccontextmanager
 
@@ -40,16 +38,12 @@ def create_app() -> FastAPI:
 
     # Check Health Router
     app.include_router(health_router, prefix="/api")
-    # Authenticator Router
-    app.include_router(auth_router, prefix="/api")
     # Chat Router
     app.include_router(chat_router, prefix="/api")
     # LLM Router
     app.include_router(models_router, prefix="/api")
     # Folder Router
     app.include_router(folder_router, prefix="/api")
-    # User Router
-    app.include_router(user_router, prefix="/api")
 
     return app
 

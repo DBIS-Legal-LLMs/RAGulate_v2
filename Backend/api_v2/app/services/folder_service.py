@@ -9,7 +9,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 from .chat_service import ChatService
 
 from ..core import errors
-from ..models.user_models import UserInDB
+from ..models.auth_models import AuthenticatedUser
 from ..models.folder_models import (
     FolderCreate, 
     FolderInDB,
@@ -36,7 +36,7 @@ class FolderService:
     
     async def list_folders(
             self, 
-            user: UserInDB,
+            user: AuthenticatedUser,
     ) -> List[FolderInDB]:
         try:
             query = {"owner_id": user.id}
@@ -54,7 +54,7 @@ class FolderService:
 
     async def get_by_id(
             self, 
-            user: UserInDB,
+            user: AuthenticatedUser,
             folder_id: str
     ) -> FolderInDB:
         doc = await self.folders.find_one(
@@ -69,7 +69,7 @@ class FolderService:
     
     async def get_by_title(
             self,
-            user: UserInDB,
+            user: AuthenticatedUser,
             folder_title: str,
     ) -> FolderInDB:
         doc = await self.folders.find_one(
@@ -84,7 +84,7 @@ class FolderService:
 
     async def create_folder(
             self, 
-            user: UserInDB, 
+            user: AuthenticatedUser, 
             folder_in: FolderCreate
     ) -> FolderInDB:
         now = datetime.now(timezone.utc)
@@ -105,7 +105,7 @@ class FolderService:
 
     async def change_name(
             self,
-            user: UserInDB,
+            user: AuthenticatedUser,
             folder_id: str,
             new_title: str,
     ) -> FolderInDB:
@@ -130,7 +130,7 @@ class FolderService:
 
     async def delete_folder(
             self, 
-            user: UserInDB, 
+            user: AuthenticatedUser, 
             folder_id: str,
             chat_service: ChatService
     ) -> None:

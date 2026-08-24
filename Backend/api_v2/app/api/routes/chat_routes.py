@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 
 from ...core.deps import get_current_user, get_db
 from ...core import errors
-from ...models.user_models import UserInDB
+from ...models.auth_models import AuthenticatedUser
 from ...models.chat_models import (
     ChatSessionCreate,
     ChatSessionPublic,
@@ -28,7 +28,7 @@ def get_chat_service(db = Depends(get_db)) -> ChatService:
 @router.post("", response_model=ChatSessionPublic, status_code=status.HTTP_201_CREATED)
 async def create_chat(
     data: ChatSessionCreate,
-    current_user: UserInDB = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
     try:
@@ -47,7 +47,7 @@ async def create_chat(
 @router.get("/list", response_model=list[ChatSessionPublic], status_code=status.HTTP_200_OK)
 async def list_chats(
     parent_id: Optional[str] = None,
-    current_user: UserInDB = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
     try:
@@ -69,7 +69,7 @@ async def list_chats(
 @router.get("/{chat_id}", response_model=ChatSessionWithMessages, status_code=status.HTTP_200_OK)
 async def get_chat(
     chat_id: str,
-    current_user: UserInDB = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
     try:
@@ -84,7 +84,7 @@ async def get_chat(
 async def move_chat(
     chat_id: str,
     new_folder_id: Optional[str] = None,
-    current_user: UserInDB = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
     """
@@ -114,7 +114,7 @@ async def move_chat(
 async def change_name(
     chat_id: str,
     new_title: str,
-    current_user: UserInDB = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
     try:
@@ -139,7 +139,7 @@ async def change_name(
 @router.delete("/{chat_id}", status_code=status.HTTP_200_OK)
 async def delete_chat(
     chat_id: str,
-    current_user: UserInDB = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
     try:
@@ -157,7 +157,7 @@ async def delete_chat(
 async def post_message(
     chat_id: str,
     data: MessageCreate,
-    current_user: UserInDB = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
 ):
     """
