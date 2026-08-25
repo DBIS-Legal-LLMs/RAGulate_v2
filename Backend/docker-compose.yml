@@ -30,13 +30,6 @@ services:
     # the box on Docker Desktop; needed explicitly on Linux.
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: ["gpu"]
 
   ragulate-rag:
     build:
