@@ -22,13 +22,11 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
     )
 
-    origins = [
-        "http://localhost:3000",
-    ]
+    settings = get_settings()
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins,
+        allow_origins=settings.cors_allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -84,7 +82,6 @@ def debug_config():
     settings = get_settings()
     return {
         "openrouter": bool(settings.openrouter_api_key),
-        "key": settings.openrouter_api_key,
         "ollama_base_url": bool(settings.ollama_base_url),
         "mongo_url": settings.mongo_url,
         "mongo_db": settings.mongo_db_name
