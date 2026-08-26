@@ -36,6 +36,17 @@ its own copy rather than sharing one running instance. See
 6. If `ragulate-rag` is unset or unreachable, this degrades gracefully
    to plain LLM chat rather than failing the request
 
+## Cold start
+
+`ragulate-rag` warms up its LightRAG engine (embeddings, Neo4j
+connection, and the local reranker model, `BAAI/bge-reranker-v2-m3`) in
+its own FastAPI lifespan on startup, not lazily on the first
+`/api/query` call — that first initialisation can take over a minute,
+which used to exceed `api_v2`'s `RAGULATE_RAG_TIMEOUT` and silently drop
+retrieval for whoever sent the first chat message after the container
+started. `RAGULATE_RAG_TIMEOUT` (default 60s) still exists as a safety
+margin for slower hosts.
+
 ## Implementation
 
 `Backend/api_v2/app/services/rag_service.py` — calls out to
