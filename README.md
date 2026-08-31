@@ -134,11 +134,11 @@ This starts:
 
 The API docs are available at `http://localhost:8000/docs` once running.
 
-The GDPR corpus (PDFs + extracted text) ships already checked in, but the knowledge graph itself has to be built once by running the ingestion script (makes real LLM calls for entity extraction — do this with your own key, not repeatedly):
+The GDPR corpus (PDFs + extracted text) ships already checked in, but the knowledge graph itself has to be built once by running the ingestion script (makes real LLM calls for entity extraction — do this with your own key, not repeatedly). Run it **inside the running container**, not on the host — `ragulate-rag`'s LightRAG storage (`RAG_WORKING_DIR`) lives in a Docker volume mounted into the container; a host-side `python scripts/ingest.py` writes to a plain folder on your machine instead and the query service will never see that data:
 ```bash
-cd Backend/ragulate-rag
-python scripts/ingest.py
+docker compose exec ragulate-rag python scripts/ingest.py
 ```
+(Running `ragulate-rag` directly, not via Docker Compose? Then `cd Backend/ragulate-rag && python scripts/ingest.py` on the host is correct — it's the same process reading `./rag_working_dir` either way.)
 
 > **GPU support**: see [`Common/Backend/Setup/5_Docker_GPU_Support.md`](Common/Backend/Setup/5_Docker_GPU_Support.md).
 
