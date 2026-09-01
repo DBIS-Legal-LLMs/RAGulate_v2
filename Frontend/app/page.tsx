@@ -861,11 +861,31 @@ function GDPRChatbotInner() {
   };
 
   /**
+   * Clears chat/folder UI state left over from a previous session — used
+   * both when a new user logs in (replacing the old user's data) and when
+   * the user logs out (so the previous user's folders/chats don't stay
+   * rendered underneath the blurred login overlay).
+   */
+  const clearUserState = () => {
+    setFolders([]);
+    setSessions([]);
+    setMessages([]);
+    setActiveFolderId(null);
+    setActiveSessionId(null);
+    setEditingFolderId(null);
+    setEditingSessionId(null);
+    setEditedTitle("");
+  };
+
+  /**
    * Loads Sidebar content. Contains Sessions and Folders
    */
   useEffect(() => {
     const loadSidebarData = async () => {
-      if (!username) return;
+      if (!username) {
+        clearUserState();
+        return;
+      }
 
       /* 1. Folder */
       const rawFolders = await fetchFolders();
@@ -896,15 +916,7 @@ function GDPRChatbotInner() {
    * chat UI state left over from a previous session and checks for an API key.
    */
   const handleLoginSuccess = async () => {
-    // RESET OLD USER STATE
-    setFolders([]);
-    setSessions([]);
-    setMessages([]);
-    setActiveFolderId(null);
-    setActiveSessionId(null);
-    setEditingFolderId(null);
-    setEditingSessionId(null);
-    setEditedTitle("");
+    clearUserState();
 
     try {
       const res = await fetch(`${BACKEND_URL}/api/user/api-key`, {
