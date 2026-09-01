@@ -112,6 +112,7 @@ Open `Backend/.env` and set:
 | `MONGO_URL` | MongoDB connection string (default: `mongodb://mongodb:27017`) |
 | `MONGO_DB_NAME` | Name of the database |
 | `AUTH_SERVICE_URL` | Base URL of `auth-service` — this backend fetches its JWKS from `{AUTH_SERVICE_URL}/.well-known/jwks.json` to verify tokens. Running locally: `http://localhost:8100`. Running this backend via Docker while `auth-service` also runs in Docker on the same host: `http://host.docker.internal:8100`. |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated browser origins allowed to call this API. Default (`http://localhost:3000`) matches the frontend's default port — only change this if your frontend runs on a different port/host, otherwise login fails with a CORS error in the browser console. |
 | `OPENROUTER_API_KEY` | Your OpenRouter API key |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` |
 | `OPENROUTER_MODEL` | E.g. `mistralai/mistral-nemo` |
@@ -135,7 +136,11 @@ This starts:
 
 The API docs are available at `http://localhost:8000/docs` once running.
 
-The GDPR corpus (PDFs + extracted text) ships already checked in, but the knowledge graph itself has to be built once by running the ingestion script (makes real LLM calls for entity extraction — do this with your own key, not repeatedly). Run it **inside the running container**, not on the host — `ragulate-rag`'s LightRAG storage (`RAG_WORKING_DIR`) lives in a Docker volume mounted into the container; a host-side `python scripts/ingest.py` writes to a plain folder on your machine instead and the query service will never see that data:
+> **Chat works fine without this step** — RAG retrieval is optional; without it, chat just falls back to plain LLM output with no GDPR context injected. Skip this entirely for basic testing (login, folders, chat UI) and only come back to it once you actually need retrieval to work.
+
+The GDPR corpus (PDFs + extracted text) ships already checked in, but the knowledge graph itself has to be built once by running the ingestion script. **This is slow and costs real API usage** — a full run of all 37 documents took ~6 hours in testing (entity/relationship extraction makes an LLM call per chunk). Do this once, with your own key, not repeatedly — see [Ingestion storage](Common/Backend/Architecture/rag_system.md#ingestion-storage) for why the ingested data survives container restarts and rebuilds, so a one-time run is all you should ever need for local testing.
+
+Run it **inside the running container**, not on the host — `ragulate-rag`'s LightRAG storage (`RAG_WORKING_DIR`) lives in a Docker volume mounted into the container; a host-side `python scripts/ingest.py` writes to a plain folder on your machine instead and the query service will never see that data:
 ```bash
 docker compose exec ragulate-rag python scripts/ingest.py
 ```
