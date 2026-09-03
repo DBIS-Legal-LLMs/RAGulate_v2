@@ -36,6 +36,21 @@ its own copy rather than sharing one running instance. See
 6. If `ragulate-rag` is unset or unreachable, this degrades gracefully
    to plain LLM chat rather than failing the request
 
+## Timeouts (`RAGULATE_RAG_TIMEOUT`, default 180s)
+
+Two separate reasons a query can take a while, both covered by the same
+timeout budget:
+- **Cold start**: `ragulate-rag` warms up its LightRAG engine (embeddings,
+  Neo4j, the local reranker model) in its own FastAPI lifespan on
+  startup, not lazily on the first query — but a slow/GPU-less host can
+  still make that startup itself take a while.
+- **Steady-state query time**: even once fully warm, a real `hybrid`-mode
+  query against a populated corpus does graph traversal + reranking
+  across potentially hundreds of entities/relations — verified taking
+  48-110s+ against the real 37-document GDPR corpus in testing. This
+  isn't a one-time cost like cold start; it's the normal cost of a
+  `hybrid`-mode query at this corpus size, every time.
+
 ## Implementation
 
 `Backend/api_v2/app/services/rag_service.py` — calls out to
