@@ -79,9 +79,10 @@ docker compose exec ragulate-rag python scripts/ingest.py
 Run this **inside the container**, not on the host — see
 [`Architecture/rag_system.md`](../Architecture/rag_system.md#ingestion-storage)
 for why a host-side run silently writes to the wrong place. This makes
-real LLM calls for entity extraction across the whole corpus and can take
-a long time (hours, depending on corpus size and the model) — let it run
-to completion. You'll see:
+real LLM calls for entity extraction across the whole corpus — a full run
+of all 37 documents took **~6 hours** in testing. Kick it off, let it run
+in the background, and don't repeat it unnecessarily; it's a one-time
+cost per volume (see above). You'll see:
 ```
 ============================================================
 INGESTION COMPLETE
