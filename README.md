@@ -84,11 +84,11 @@ RAGulate_v2/
 
 ### Prerequisites
 - [Docker](https://docs.docker.com/engine/install/) & [Docker Compose](https://docs.docker.com/compose/install/)
-- [Node.js](https://nodejs.org/) ≥ 18 and [pnpm](https://pnpm.io/)
+- [Node.js](https://nodejs.org/) **≥ 20.10** — `Frontend/next.config.mjs` uses import-attributes syntax (`import ... with { type: 'json' }`) that older Node can't parse. Use [nvm](https://github.com/nvm-sh/nvm) if your system Node is older than that. [pnpm](https://pnpm.io/) is what's committed (`pnpm-lock.yaml`), but plain `npm install --legacy-peer-deps` / `npm run dev` work fine too if you don't have pnpm installed — see step 4 below.
 - An [OpenRouter API key](https://openrouter.ai/)
 - A running instance of [`auth-service`](https://github.com/DBIS-Legal-LLMs/auth-service) — login/register won't work without it. See that repo's README to set it up; by default this backend expects it at `http://localhost:8100`.
 
-> **Detailed step-by-step guides** (Anaconda, Docker, Docker GPU support, MongoDB shell usage, deploying as a systemd service, and patching the backend) are available under [`Common/Backend/Setup/`](Common/Backend/Setup/).
+> **Detailed step-by-step guides** (Anaconda, Docker, Docker GPU support, MongoDB shell usage, deploying as a systemd service, patching the backend, and a [full local dev/testing walkthrough](Common/Backend/Setup/9_Full_Local_Testing_Walkthrough.md) covering per-service logs, inspecting MongoDB/Neo4j directly, and resetting the RAG corpus) are available under [`Common/Backend/Setup/`](Common/Backend/Setup/).
 
 ---
 
@@ -117,6 +117,7 @@ Open `Backend/.env` and set:
 | `OPENROUTER_MODEL` | E.g. `mistralai/mistral-nemo` |
 | `OPENROUTER_EMBEDDINGS_MODEL` | Embeddings model on OpenRouter |
 | `RAGULATE_RAG_URL` | Base URL of `ragulate-rag` (below). Optional — chat still works without it, just without retrieval |
+| `RAGULATE_RAG_TIMEOUT` | Seconds to wait for a `ragulate-rag` response before falling back to plain chat (default 60) |
 
 Also copy `ragulate-rag/.env.example` to `ragulate-rag/.env` and fill in an LLM/embedding API key (used for the RAG service's own entity extraction, separate from the chat LLM call above).
 
@@ -149,6 +150,7 @@ cp .env.example .env.local
 pnpm install
 pnpm dev
 ```
+No `pnpm`? `npm install --legacy-peer-deps && npm run dev` works too (the `--legacy-peer-deps` flag works around a pre-existing `date-fns`/`react-day-picker` version conflict; without it, plain `npm install` fails). You'll see harmless `pnpm: not found` warnings from a lockfile-patch step Next.js runs — the dev server still starts fine.
 
 The frontend is available at `http://localhost:3000`. Login and registration are called directly against `auth-service` from the browser (`NEXT_PUBLIC_AUTH_SERVICE_URL` in `Frontend/.env.example`, default `http://localhost:8100`) — the session (token + username) persists in `localStorage` across a page reload, and Log out lives in the profile dropdown beneath Settings.
 
@@ -160,17 +162,20 @@ The frontend is available at `http://localhost:3000`. Login and registration are
 # Show running containers
 docker ps
 
-# Follow backend logs
-docker logs -f ragulate_backend_v2
+# Follow logs for each backend piece
+docker logs -f ragulate_backend_v2   # chat/folder API, LLM calls, RAG fallback traces
+docker logs -f ragulate_rag          # retrieval queries, ingestion progress
+docker logs -f ragulate_neo4j        # graph DB
+docker logs -f auth-service          # register/login, JWT issuance (separate compose project)
 
-# Open a shell inside the backend container
+# Open a shell inside a container
 docker exec -it ragulate_backend_v2 bash
 
-# Open a shell inside MongoDB
-docker exec -it ragulate_mongodb bash
+# Open a MongoDB shell
+docker exec -it ragulate_mongodb mongosh
 ```
 
-See [`Common/Backend/Setup/6_Docker_Service.md`](Common/Backend/Setup/6_Docker_Service.md) and [`Common/Backend/Setup/7_MongoDB_Tutorial.md`](Common/Backend/Setup/7_MongoDB_Tutorial.md) for more.
+See [`Common/Backend/Setup/6_Docker_Service.md`](Common/Backend/Setup/6_Docker_Service.md), [`Common/Backend/Setup/7_MongoDB_Tutorial.md`](Common/Backend/Setup/7_MongoDB_Tutorial.md), and — for the full loop including Neo4j inspection and resetting the RAG corpus — [`Common/Backend/Setup/9_Full_Local_Testing_Walkthrough.md`](Common/Backend/Setup/9_Full_Local_Testing_Walkthrough.md).
 
 ---
 
