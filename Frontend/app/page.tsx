@@ -49,7 +49,7 @@ import { AuthProvider, useAuth } from "./auth-context";
  * Backend API endpoint configuration
  * @constant {string}
  */
-const BACKEND_URL = "http://134.60.71.197:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_BACKEND || "http://134.60.71.197:8000";
 
 /**
  * Represents a single chat message in the conversation

@@ -30,7 +30,7 @@ interface PendingFile {
   error?: string
 }
 
-const API_BASE = "http://134.60.71.197:8000"
+const API_BASE = process.env.NEXT_PUBLIC_API_BACKEND || "http://134.60.71.197:8000"
 
 export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
   const [documents, setDocuments] = useState<Document[]>([])
