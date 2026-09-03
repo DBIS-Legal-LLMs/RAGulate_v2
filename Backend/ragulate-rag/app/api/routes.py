@@ -31,8 +31,13 @@ _rag_init_lock = asyncio.Lock()
 
 
 
-async def _get_rag():
-    """Return (and cache) the LightRAG instance."""
+async def get_rag_instance():
+    """Return (and cache) the LightRAG instance.
+
+    Also called from the app lifespan on startup, so the cold-start cost
+    (reranker model load, Neo4j index setup) happens during container boot
+    instead of on a real user's first query.
+    """
     global _rag_instance
     if _rag_instance is not None:
         return _rag_instance
@@ -58,7 +63,7 @@ async def query_rag(request: QueryRequest):
     logger.info("Received query: %.120s …  [mode=%s]", request.query, request.mode)
 
     try:
-        rag = await _get_rag()
+        rag = await get_rag_instance()
 
         # Map enum value
         mode = request.mode.value

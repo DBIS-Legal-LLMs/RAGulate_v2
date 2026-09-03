@@ -62,6 +62,17 @@ wrapper (`rag/engine.py`), ingestion (`rag/ingestion.py`,
 `scripts/ingest.py`, offline/batch only — no ingestion API), and the
 query/PDF-source/evaluation routes (`api/`).
 
+**Ingestion storage**: LightRAG's KV/vector store (`RAG_WORKING_DIR`)
+is a relative path, resolved against wherever the process actually
+runs. Under `Backend/docker-compose.yml`, that storage lives in a
+Docker volume (`ragulate_rag_working_dir`) mounted at
+`/app/rag_working_dir` *inside* the container — so `scripts/ingest.py`
+must be run inside that same container (`docker compose exec
+ragulate-rag python scripts/ingest.py`), not on the host. A host-side
+run writes to an unrelated folder on disk that the query service never
+reads, so ingestion appears to succeed while every subsequent query
+still returns zero results (see #133).
+
 ## Supported LLM Providers (chat)
 
 - OpenRouter API

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { FileText, Upload, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-const BACKEND_URL = "http://134.60.71.197:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_BACKEND || "http://134.60.71.197:8000";
 
 interface UploadedFile {
   id: string;

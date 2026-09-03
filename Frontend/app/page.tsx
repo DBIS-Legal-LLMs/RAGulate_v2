@@ -49,7 +49,7 @@ import { AuthProvider, useAuth } from "./auth-context";
  * Backend API endpoint configuration
  * @constant {string}
  */
-const BACKEND_URL = "http://134.60.71.197:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_BACKEND || "http://134.60.71.197:8000";
 
 /**
  * Represents a single chat message in the conversation
@@ -123,7 +123,11 @@ function GDPRChatbotInner() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState<string>("");
   const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(false);
+  // Chat uses this backend's own server-side OPENROUTER_API_KEY (Backend/.env),
+  // not a per-user key — there's no working endpoint to check for one (see
+  // RAGulate_v2#113), so this must default to true or chat is permanently
+  // blocked. Flip this back to false-by-default once #113 actually lands.
+  const [hasApiKey, setHasApiKey] = useState(true);
 
   // UI References and state
   const messagesEndRef = useRef<HTMLDivElement>(null); // For auto-scrolling
@@ -861,11 +865,31 @@ function GDPRChatbotInner() {
   };
 
   /**
+   * Clears chat/folder UI state left over from a previous session — used
+   * both when a new user logs in (replacing the old user's data) and when
+   * the user logs out (so the previous user's folders/chats don't stay
+   * rendered underneath the blurred login overlay).
+   */
+  const clearUserState = () => {
+    setFolders([]);
+    setSessions([]);
+    setMessages([]);
+    setActiveFolderId(null);
+    setActiveSessionId(null);
+    setEditingFolderId(null);
+    setEditingSessionId(null);
+    setEditedTitle("");
+  };
+
+  /**
    * Loads Sidebar content. Contains Sessions and Folders
    */
   useEffect(() => {
     const loadSidebarData = async () => {
-      if (!username) return;
+      if (!username) {
+        clearUserState();
+        return;
+      }
 
       /* 1. Folder */
       const rawFolders = await fetchFolders();
@@ -896,15 +920,7 @@ function GDPRChatbotInner() {
    * chat UI state left over from a previous session and checks for an API key.
    */
   const handleLoginSuccess = async () => {
-    // RESET OLD USER STATE
-    setFolders([]);
-    setSessions([]);
-    setMessages([]);
-    setActiveFolderId(null);
-    setActiveSessionId(null);
-    setEditingFolderId(null);
-    setEditingSessionId(null);
-    setEditedTitle("");
+    clearUserState();
 
     try {
       const res = await fetch(`${BACKEND_URL}/api/user/api-key`, {

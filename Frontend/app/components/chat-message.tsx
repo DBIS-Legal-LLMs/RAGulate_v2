@@ -27,7 +27,7 @@ interface ChatMessageProps {
   message: Message;
 }
 
-const BACKEND_URL = "http://134.60.71.197:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_BACKEND || "http://134.60.71.197:8000";
 
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === "user";

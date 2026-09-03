@@ -14,6 +14,13 @@ class Settings(BaseModel):
     # auth-service (issues tokens, we only verify them against its JWKS)
     auth_service_url: str = os.getenv("AUTH_SERVICE_URL", "http://localhost:8100")
 
+    # Comma-separated list of allowed browser origins for this API's CORS policy
+    cors_allowed_origins: list[str] = [
+        origin.strip()
+        for origin in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+        if origin.strip()
+    ]
+
     # LLM Provider Settings
     openrouter_api_key: str | None   = os.getenv("OPENROUTER_API_KEY")
     openrouter_base_url: str         = os.getenv("OPENROUTER_BASE_URL")
