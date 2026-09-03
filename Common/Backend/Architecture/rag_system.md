@@ -36,16 +36,20 @@ its own copy rather than sharing one running instance. See
 6. If `ragulate-rag` is unset or unreachable, this degrades gracefully
    to plain LLM chat rather than failing the request
 
-## Cold start
+## Timeouts (`RAGULATE_RAG_TIMEOUT`, default 180s)
 
-`ragulate-rag` warms up its LightRAG engine (embeddings, Neo4j
-connection, and the local reranker model, `BAAI/bge-reranker-v2-m3`) in
-its own FastAPI lifespan on startup, not lazily on the first
-`/api/query` call — that first initialisation can take over a minute,
-which used to exceed `api_v2`'s `RAGULATE_RAG_TIMEOUT` and silently drop
-retrieval for whoever sent the first chat message after the container
-started. `RAGULATE_RAG_TIMEOUT` (default 60s) still exists as a safety
-margin for slower hosts.
+Two separate reasons a query can take a while, both covered by the same
+timeout budget:
+- **Cold start**: `ragulate-rag` warms up its LightRAG engine (embeddings,
+  Neo4j, the local reranker model) in its own FastAPI lifespan on
+  startup, not lazily on the first query — but a slow/GPU-less host can
+  still make that startup itself take a while.
+- **Steady-state query time**: even once fully warm, a real `hybrid`-mode
+  query against a populated corpus does graph traversal + reranking
+  across potentially hundreds of entities/relations — verified taking
+  48-110s+ against the real 37-document GDPR corpus in testing. This
+  isn't a one-time cost like cold start; it's the normal cost of a
+  `hybrid`-mode query at this corpus size, every time.
 
 ## Implementation
 
