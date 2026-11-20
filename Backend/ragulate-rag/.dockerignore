@@ -1,0 +1,5 @@
+# The image only needs app/ and scripts/ (see Dockerfile); the corpus is mounted at runtime.
+.env
+data
+**/__pycache__
+**/*.pyc
