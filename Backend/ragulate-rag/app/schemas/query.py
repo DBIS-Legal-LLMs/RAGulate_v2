@@ -4,6 +4,7 @@ Request and response schemas for the RAG query API.
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
+import os
 from enum import Enum
 from typing import Any
 
@@ -89,3 +90,4 @@ class HealthResponse(BaseModel):
     """Health check response."""
     status: str = "ok"
     service: str = "ragulate-rag"
+    version: str = os.getenv("APP_VERSION", "local")

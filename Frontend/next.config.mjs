@@ -12,7 +12,8 @@ const nextConfig = {
     unoptimized: true,
   },
   env: {
-    NEXT_PUBLIC_APP_VERSION: packageJson.version,
+    // the build label from CI (APP_VERSION), else the package.json version
+    NEXT_PUBLIC_APP_VERSION: process.env.APP_VERSION || packageJson.version,
   },
 }
 
