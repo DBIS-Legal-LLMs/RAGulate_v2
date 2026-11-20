@@ -8,7 +8,7 @@ FastAPI service, OpenRouter for LLM inference, and MongoDB for storage.
 <img src="https://skillicons.dev/icons?i=next,react,tailwind,ts,mongodb,fastapi,docker"/>
 </p>
 
-**[Features](#features) · [Project Structure](#project-structure) · [Authentication](#authentication) · [Installation Guide](#installation-guide) · [Quick Start (Already Installed)](#quick-start-already-installed) · [Useful Docker Commands](#useful-docker-commands) · [TODOs](#todos)**
+**[Features](#features) · [Project Structure](#project-structure) · [Authentication](#authentication) · [Installation Guide](#installation-guide) · [Quick Start (Already Installed)](#quick-start-already-installed) · [Useful Docker Commands](#useful-docker-commands) · [Releases and versioning](#releases-and-versioning) · [TODOs](#todos)**
 
 ---
 
@@ -180,6 +180,33 @@ docker exec -it ragulate_mongodb mongosh
 ```
 
 See [`Common/Backend/Setup/6_Docker_Service.md`](Common/Backend/Setup/6_Docker_Service.md), [`Common/Backend/Setup/7_MongoDB_Tutorial.md`](Common/Backend/Setup/7_MongoDB_Tutorial.md), and — for the full loop including Neo4j inspection and resetting the RAG corpus — [`Common/Backend/Setup/9_Full_Local_Testing_Walkthrough.md`](Common/Backend/Setup/9_Full_Local_Testing_Walkthrough.md).
+
+## Releases and versioning
+
+Versions follow [Conventional Commits](https://www.conventionalcommits.org) and are computed by CI; nothing is versioned by hand.
+
+- Work on a feature branch and open a pull request into **`dev`**. CI builds all three images (nothing is published from a pull request). The PR title is checked and must be a conventional commit.
+- Merge feature PRs into `dev` with **Squash and merge**: the PR title becomes the commit the version is computed from.
+- Merge `dev` into `main` with **Create a merge commit**, never a squash. `main` only ever receives `dev`.
+
+| Prefix | Meaning | Version |
+|---|---|---|
+| `fix:` / `perf:` | bug fix, performance | patch (1.2.3 -> 1.2.4) |
+| `feat:` | new feature | minor (1.2.3 -> 1.3.0) |
+| `feat!:` (any type with `!`) or a `BREAKING CHANGE:` line | incompatible change | major (-> 2.0.0) |
+| `chore:` `docs:` `refactor:` `test:` `ci:` `build:` | everything else | no release |
+
+**Environments.** The server runs only a **prod** stack; there is no dev stack. Testing happens locally (see [Installation Guide](#installation-guide)). The branch `dev` is where changes are collected and released, not an environment, and no image is tagged `:dev`.
+
+A merge into `dev` publishes the images `ragulate-backend`, `ragulate-rag` and `ragulate-frontend` to `ghcr.io/dbis-legal-llms/` as `:sha-<commit>`. If the merge contains a releasing commit they are also published as `:X.Y.Z` (never overwritten), and the git tag `vX.Y.Z` and a GitHub Release marked as pre-release are created.
+
+**Promoting to prod.** A push to `main` (the merged `dev` -> `main` pull request, titled e.g. `chore: promote dev to main`) runs the *Promote* workflow, which points `:prod` at the newest release's images without rebuilding and marks that release as the normal, latest one. To roll prod back or forward, run *Promote* by hand from `main` ("Run workflow") and enter a version such as `1.1.0`.
+
+**Where to see the version.** GitHub Releases, `GET /api/health` of the backend and of `ragulate-rag` (field `version`, e.g. `1.2.3`), and the sidebar footer of the frontend (`v1.2.3`). The version has no environment name. A local build shows `local` in the health endpoints and the `package.json` version in the footer.
+
+Implemented in: `.github/workflows/ci.yml`, `promote.yml`, `pr-title.yml`, `.github/scripts/next-version.sh`; the label is passed to the Dockerfiles as the build argument `APP_VERSION`. The images are built from `Backend/Dockerfile`, `Backend/ragulate-rag/Dockerfile` and `Frontend/Dockerfile`; the frontend image bakes in `NEXT_PUBLIC_AUTH_SERVICE_URL` and `NEXT_PUBLIC_API_BACKEND` at build time (build arguments).
+
+There are no automated tests yet, so a pull request is checked by building the images. Running RAGulate on the server is not set up yet; when it is, it will be a prod stack only.
 
 ## TODOs
 - Add reranking for better retrieval quality (`ragulate-rag` supports it, off by default)
