@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { X, Camera, Save, User, Eye, EyeOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_BACKEND || "http://134.60.71.197:8000";
 
@@ -53,7 +54,7 @@ export function ProfileModal({
     const fetchApiKey = async () => {
       const token = localStorage.getItem("token");
       try {
-        const res = await fetch(`${BACKEND_URL}/api/user/api-key`, {
+        const res = await authenticatedFetch(`${BACKEND_URL}/api/user/api-key`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -77,7 +78,7 @@ export function ProfileModal({
     setIsSaving(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(
+      const res = await authenticatedFetch(
         `${BACKEND_URL}/api/user/api-key?api_key=${encodeURIComponent(apiKey.trim())}`,
         {
           method: "POST",
@@ -93,7 +94,7 @@ export function ProfileModal({
         const url = new URL(`${BACKEND_URL}/api/user/change-name`);
         url.searchParams.append("new_username", name);
 
-        const res = await fetch(url.toString(), {
+        const res = await authenticatedFetch(url.toString(), {
           method: "PUT",
           headers: {
             accept: "application/json",

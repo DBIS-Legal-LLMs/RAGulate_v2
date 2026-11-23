@@ -62,8 +62,11 @@ validly-signed, unexpired token. It never sees a password and holds no
 - `auth-service` must be running and reachable before login/register work
   anywhere against this backend (see its own README).
 - `AUTH_SERVICE_URL` (below) points this backend at it.
-- The frontend talks to `auth-service` directly for login/register
-  (`NEXT_PUBLIC_AUTH_SERVICE_URL`) — not through this backend.
+- The frontend's own server (the `/api/session/*` routes) talks to `auth-service` for login, token refresh and logout, and the browser calls it directly for registration — not through this backend.
+
+**Sessions.** A login returns a short-lived access token and a refresh token. The access token is short-lived, kept in `localStorage` and sent to this backend as a bearer token, so page scripts can read it, as they could before. Only the refresh token is protected: it is stored in the `ragulate_refresh` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` over https, 30 days), which page scripts cannot read. The frontend renews the access token shortly before it expires, again after a `401`, and on page load when the stored one has expired; if `auth-service` rejects the refresh token the user is logged out and sees the login dialog, and if `auth-service` is only unreachable the session is kept. Logging out revokes the session at `auth-service` and clears the cookie. This backend is unchanged: it only verifies access tokens.
+
+Implemented in: `Frontend/app/auth-context.tsx`, `Frontend/lib/authenticated-fetch.ts`, `Frontend/lib/client-session.ts`, `Frontend/lib/session.ts`, `Frontend/app/api/session/*/route.ts`.
 
 ## Installation Guide
 
@@ -101,7 +104,8 @@ And in `Frontend/.env.local` (copy from `Frontend/.env.example`):
 
 | Variable | Description |
 |---|---|
-| `NEXT_PUBLIC_AUTH_SERVICE_URL` | Where the browser calls `auth-service` directly for login/register/logout (default `http://localhost:8100`) |
+| `NEXT_PUBLIC_AUTH_SERVICE_URL` | Where the browser calls `auth-service` directly for registration (default `http://localhost:8100`; compiled in at build time) |
+| `AUTH_SERVICE_URL` (frontend) | Where the frontend's own server calls `auth-service` for login, refresh and logout; read at runtime, defaults to `NEXT_PUBLIC_AUTH_SERVICE_URL` |
 | `NEXT_PUBLIC_API_BACKEND` | This backend's own URL (default `http://localhost:8000`) |
 
 ### 2. Start the Backend
@@ -140,8 +144,9 @@ No `pnpm`? `npm install --legacy-peer-deps && npm run dev` works too (the
 flag works around a `date-fns`/`react-day-picker` version conflict).
 
 → **http://localhost:3000**. Login/registration go straight to `auth-service`
-from the browser; the session persists in `localStorage` across reloads; Log
-out lives in the profile dropdown beneath Settings.
+from the browser; the session persists across reloads and is renewed
+automatically (see [Authentication](#authentication)); Log out lives in the
+profile dropdown beneath Settings.
 
 ## Quick Start (Already Installed)
 
