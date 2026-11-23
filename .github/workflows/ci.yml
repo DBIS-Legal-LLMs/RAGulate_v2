@@ -1,0 +1,141 @@
+# CI for RAGulate: build the three container images and publish them to GitHub's container
+# registry from dev. The server runs only prod (there is no dev stack; testing happens locally), so
+# there is no `:dev` tag: an image is addressed by its version or its commit. Prod is never built
+# here: the promote workflow sets `:prod` on an image that was already published as :X.Y.Z.
+#
+# Versions: every merge into dev that contains a fix:/feat:/... commit is a release. The next
+# version is computed from the conventional commits since the last tag (.github/scripts/next-version.sh),
+# built into the images (build argument APP_VERSION), published as :1.2.3, and after the images are
+# published the git tag v1.2.3 and a GitHub Release are created. Commits like chore: and docs: make
+# no release. Prod is promoted from an existing version, see promote.yml.
+#
+# There are no automated tests yet (issue "Unit Tests"); until then a pull request is checked by
+# building every image.
+#
+#   push to dev   -> ghcr.io/dbis-legal-llms/<image>:sha-<commit>, and :X.Y.Z for a release
+#   pull request  -> a build of every image, nothing is published
+#
+# Third-party actions are pinned to a commit (the comment names the release) so that a
+# changed or hijacked tag cannot change what runs here.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # a newer push to a pull request replaces the older run; never cancel a publish
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  IMAGE_PREFIX: ghcr.io/dbis-legal-llms   # must be lower case
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      next: ${{ steps.v.outputs.next }}
+      release: ${{ steps.v.outputs.release }}
+      label: ${{ steps.label.outputs.value }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0   # all history and tags
+      - name: Next version
+        id: v
+        run: .github/scripts/next-version.sh | tee -a "$GITHUB_OUTPUT"
+      - name: Version label shown by the app
+        id: label
+        # The plain version, e.g. 1.0.1 (the frontend adds the leading v itself); no environment name,
+        # because the image is the same one that is later promoted to prod. On a pull request the
+        # branch it comes from is in front, e.g. feat-x-1.1.0.
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            branch="$GITHUB_HEAD_REF"; echo "value=${branch//\//-}-${{ steps.v.outputs.next }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ steps.v.outputs.next }}" >> "$GITHUB_OUTPUT"
+          fi
+
+  images:
+    name: Image ${{ matrix.image }}
+    needs: [version]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write   # publish to ghcr.io (only used on pushes to dev)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: ragulate-backend
+            context: Backend
+          - image: ragulate-rag
+            context: Backend/ragulate-rag
+          - image: ragulate-frontend
+            context: Frontend
+    env:
+      PUBLISH: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/dev' }}
+      IMAGE: ghcr.io/dbis-legal-llms/${{ matrix.image }}   # must be lower case
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Log in to ghcr.io
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tags and labels
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=sha,prefix=sha-,format=short,enable=${{ env.PUBLISH == 'true' }}
+            # a version tag is set once, by the release build, and never moves afterwards
+            type=raw,value=${{ needs.version.outputs.next }},enable=${{ github.ref == 'refs/heads/dev' && needs.version.outputs.release == 'true' }}
+      - name: Build${{ env.PUBLISH == 'true' && ' and publish' || '' }}
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ matrix.context }}
+          push: ${{ env.PUBLISH == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ needs.version.outputs.label }}
+          provenance: false
+          sbom: false
+          cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
+          cache-to: ${{ env.PUBLISH == 'true' && format('type=registry,ref={0}:buildcache,mode=max', env.IMAGE) || '' }}
+
+  release:
+    name: Release v${{ needs.version.outputs.next }}
+    # only after the images of this version are published
+    needs: [version, images]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev' && needs.version.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write   # the tag and the GitHub Release
+    steps:
+      - name: Tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ needs.version.outputs.next }}" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "v${{ needs.version.outputs.next }}" --generate-notes \
+            --prerelease   # a pre-release until it is promoted to prod (promote.yml)

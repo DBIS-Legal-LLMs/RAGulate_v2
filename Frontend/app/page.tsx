@@ -44,6 +44,7 @@ import { useTranslation } from "react-i18next";
 import { FolderDocumentsPanel } from "./components/FolderDocumentsPanel";
 import { GraphBackground } from "./components/GraphBackground";
 import { AuthProvider, useAuth } from "./auth-context";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 /**
  * Backend API endpoint configuration
@@ -218,7 +219,7 @@ function GDPRChatbotInner() {
     const loadMessages = async () => {
       setIsSessionLoading(true);
       const token = localStorage.getItem("token");
-      const res = await fetch(`${BACKEND_URL}/api/chat/${activeSessionId}`, {
+      const res = await authenticatedFetch(`${BACKEND_URL}/api/chat/${activeSessionId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -298,7 +299,7 @@ function GDPRChatbotInner() {
         body = JSON.stringify({ content: input });
       }
 
-      const res = await fetch(
+      const res = await authenticatedFetch(
         `${BACKEND_URL}/api/chat/${activeSessionId}/messages`,
         {
           method: "POST",
@@ -434,7 +435,7 @@ function GDPRChatbotInner() {
         body = JSON.stringify({ content: input });
       }
 
-      const res = await fetch(
+      const res = await authenticatedFetch(
         `${BACKEND_URL}/api/chat/${activeSessionId}/messages`,
         { method: "POST", headers, body },
       );
@@ -506,7 +507,7 @@ function GDPRChatbotInner() {
     if (parent_id) {
       url.searchParams.append("parent_folder_id", parent_id);
     }
-    const res = await fetch(url.toString(), {
+    const res = await authenticatedFetch(url.toString(), {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -534,7 +535,7 @@ function GDPRChatbotInner() {
     const folderUrl = new URL(`${BACKEND_URL}/api/folderslist`);
     if (folderId) folderUrl.searchParams.append("parent_folder_id", folderId);
 
-    const folderRes = await fetch(folderUrl.toString(), {
+    const folderRes = await authenticatedFetch(folderUrl.toString(), {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -550,7 +551,7 @@ function GDPRChatbotInner() {
     const sessionUrl = new URL(`${BACKEND_URL}/api/chat/list/`);
     if (folderId) sessionUrl.searchParams.append("folder_id", folderId);
 
-    const sessionRes = await fetch(sessionUrl.toString(), {
+    const sessionRes = await authenticatedFetch(sessionUrl.toString(), {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -572,7 +573,7 @@ function GDPRChatbotInner() {
   const fetchSessions = async () => {
     const token = localStorage.getItem("token");
 
-    const res = await fetch(`${BACKEND_URL}/api/chat/list/`, {
+    const res = await authenticatedFetch(`${BACKEND_URL}/api/chat/list/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -609,7 +610,7 @@ function GDPRChatbotInner() {
     parentId: string | null,
   ) => {
     const token = localStorage.getItem("token");
-    const res = await fetch(`${BACKEND_URL}/api/chat/`, {
+    const res = await authenticatedFetch(`${BACKEND_URL}/api/chat/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -677,7 +678,7 @@ function GDPRChatbotInner() {
   const confirmCreateFolder = async (tempId: string, title: string) => {
     const token = localStorage.getItem("token");
 
-    const res = await fetch(`${BACKEND_URL}/api/folders`, {
+    const res = await authenticatedFetch(`${BACKEND_URL}/api/folders`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -725,7 +726,7 @@ function GDPRChatbotInner() {
     if (!confirm("Willst du diesen Ordner wirklich löschen?")) return;
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/folders/${folderId}`, {
+      const res = await authenticatedFetch(`${BACKEND_URL}/api/folders/${folderId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -760,7 +761,7 @@ function GDPRChatbotInner() {
     if (!confirm("Willst du diesen Chat wirklich löschen?")) return;
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/chat/${sessionID}`, {
+      const res = await authenticatedFetch(`${BACKEND_URL}/api/chat/${sessionID}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -786,7 +787,7 @@ function GDPRChatbotInner() {
     const url = new URL(`${BACKEND_URL}/api/folders/${folderId}/change-name`);
     url.searchParams.append("new_title", newTitle);
 
-    const res = await fetch(url.toString(), {
+    const res = await authenticatedFetch(url.toString(), {
       method: "PUT",
       headers: { accept: "application/json", Authorization: `Bearer ${token}` },
     });
@@ -808,7 +809,7 @@ function GDPRChatbotInner() {
     const url = new URL(`${BACKEND_URL}/api/chat/${sessionId}/change-name`);
     url.searchParams.append("new_title", newTitle);
 
-    const res = await fetch(url.toString(), {
+    const res = await authenticatedFetch(url.toString(), {
       method: "PUT",
       headers: { accept: "application/json", Authorization: `Bearer ${token}` },
     });
@@ -834,7 +835,7 @@ function GDPRChatbotInner() {
     if (newFolderId) url.searchParams.append("new_folder_id", newFolderId);
 
     try {
-      const res = await fetch(url.toString(), {
+      const res = await authenticatedFetch(url.toString(), {
         method: "PUT",
         headers: {
           accept: "application/json",
@@ -923,7 +924,7 @@ function GDPRChatbotInner() {
     clearUserState();
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/user/api-key`, {
+      const res = await authenticatedFetch(`${BACKEND_URL}/api/user/api-key`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -1450,7 +1451,7 @@ function GDPRChatbotInner() {
               onClose={() => setShowProfileModal(false)}
               onApiKeyChanged={async () => {
                 const token = localStorage.getItem("token");
-                const res = await fetch(`${BACKEND_URL}/api/user/api-key`, {
+                const res = await authenticatedFetch(`${BACKEND_URL}/api/user/api-key`, {
                   headers: { Authorization: `Bearer ${token}` },
                 });
                 if (res.ok) {

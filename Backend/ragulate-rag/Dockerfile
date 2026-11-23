@@ -38,6 +38,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY app/ ./app/
 COPY scripts/ ./scripts/
 
+# Version set by CI (e.g. 1.2.3), returned by GET /api/health
+ARG APP_VERSION=local
+ENV APP_VERSION=$APP_VERSION
+
 # Expose the port uvicorn will listen on
 EXPOSE 8081
 

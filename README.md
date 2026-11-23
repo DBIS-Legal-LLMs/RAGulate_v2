@@ -8,7 +8,7 @@ FastAPI service, OpenRouter for LLM inference, and MongoDB for storage.
 <img src="https://skillicons.dev/icons?i=next,react,tailwind,ts,mongodb,fastapi,docker"/>
 </p>
 
-**[Features](#features) · [Project Structure](#project-structure) · [Authentication](#authentication) · [Installation Guide](#installation-guide) · [Quick Start (Already Installed)](#quick-start-already-installed) · [Useful Docker Commands](#useful-docker-commands) · [TODOs](#todos)**
+**[Features](#features) · [Project Structure](#project-structure) · [Authentication](#authentication) · [Installation Guide](#installation-guide) · [Quick Start (Already Installed)](#quick-start-already-installed) · [Useful Docker Commands](#useful-docker-commands) · [Releases and versioning](#releases-and-versioning) · [TODOs](#todos)**
 
 ---
 
@@ -62,8 +62,11 @@ validly-signed, unexpired token. It never sees a password and holds no
 - `auth-service` must be running and reachable before login/register work
   anywhere against this backend (see its own README).
 - `AUTH_SERVICE_URL` (below) points this backend at it.
-- The frontend talks to `auth-service` directly for login/register
-  (`NEXT_PUBLIC_AUTH_SERVICE_URL`) — not through this backend.
+- The frontend's own server (the `/api/session/*` routes) talks to `auth-service` for login, token refresh and logout, and the browser calls it directly for registration — not through this backend.
+
+**Sessions.** A login returns a short-lived access token and a refresh token. The access token is short-lived, kept in `localStorage` and sent to this backend as a bearer token, so page scripts can read it, as they could before. Only the refresh token is protected: it is stored in the `ragulate_refresh` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` over https, 30 days), which page scripts cannot read. The frontend renews the access token shortly before it expires, again after a `401`, and on page load when the stored one has expired; if `auth-service` rejects the refresh token the user is logged out and sees the login dialog, and if `auth-service` is only unreachable the session is kept. Logging out revokes the session at `auth-service` and clears the cookie. This backend is unchanged: it only verifies access tokens.
+
+Implemented in: `Frontend/app/auth-context.tsx`, `Frontend/lib/authenticated-fetch.ts`, `Frontend/lib/client-session.ts`, `Frontend/lib/session.ts`, `Frontend/app/api/session/*/route.ts`.
 
 ## Installation Guide
 
@@ -101,7 +104,8 @@ And in `Frontend/.env.local` (copy from `Frontend/.env.example`):
 
 | Variable | Description |
 |---|---|
-| `NEXT_PUBLIC_AUTH_SERVICE_URL` | Where the browser calls `auth-service` directly for login/register/logout (default `http://localhost:8100`) |
+| `NEXT_PUBLIC_AUTH_SERVICE_URL` | Where the browser calls `auth-service` directly for registration (default `http://localhost:8100`; compiled in at build time) |
+| `AUTH_SERVICE_URL` (frontend) | Where the frontend's own server calls `auth-service` for login, refresh and logout; read at runtime, defaults to `NEXT_PUBLIC_AUTH_SERVICE_URL` |
 | `NEXT_PUBLIC_API_BACKEND` | This backend's own URL (default `http://localhost:8000`) |
 
 ### 2. Start the Backend
@@ -140,8 +144,9 @@ No `pnpm`? `npm install --legacy-peer-deps && npm run dev` works too (the
 flag works around a `date-fns`/`react-day-picker` version conflict).
 
 → **http://localhost:3000**. Login/registration go straight to `auth-service`
-from the browser; the session persists in `localStorage` across reloads; Log
-out lives in the profile dropdown beneath Settings.
+from the browser; the session persists across reloads and is renewed
+automatically (see [Authentication](#authentication)); Log out lives in the
+profile dropdown beneath Settings.
 
 ## Quick Start (Already Installed)
 
@@ -180,6 +185,33 @@ docker exec -it ragulate_mongodb mongosh
 ```
 
 See [`Common/Backend/Setup/6_Docker_Service.md`](Common/Backend/Setup/6_Docker_Service.md), [`Common/Backend/Setup/7_MongoDB_Tutorial.md`](Common/Backend/Setup/7_MongoDB_Tutorial.md), and — for the full loop including Neo4j inspection and resetting the RAG corpus — [`Common/Backend/Setup/9_Full_Local_Testing_Walkthrough.md`](Common/Backend/Setup/9_Full_Local_Testing_Walkthrough.md).
+
+## Releases and versioning
+
+Versions follow [Conventional Commits](https://www.conventionalcommits.org) and are computed by CI; nothing is versioned by hand.
+
+- Work on a feature branch and open a pull request into **`dev`**. CI builds all three images (nothing is published from a pull request). The PR title is checked and must be a conventional commit.
+- Merge feature PRs into `dev` with **Squash and merge**: the PR title becomes the commit the version is computed from.
+- Merge `dev` into `main` with **Create a merge commit**, never a squash. `main` only ever receives `dev`.
+
+| Prefix | Meaning | Version |
+|---|---|---|
+| `fix:` / `perf:` | bug fix, performance | patch (1.2.3 -> 1.2.4) |
+| `feat:` | new feature | minor (1.2.3 -> 1.3.0) |
+| `feat!:` (any type with `!`) or a `BREAKING CHANGE:` line | incompatible change | major (-> 2.0.0) |
+| `chore:` `docs:` `refactor:` `test:` `ci:` `build:` | everything else | no release |
+
+**Environments.** The server runs only a **prod** stack; there is no dev stack. Testing happens locally (see [Installation Guide](#installation-guide)). The branch `dev` is where changes are collected and released, not an environment, and no image is tagged `:dev`.
+
+A merge into `dev` publishes the images `ragulate-backend`, `ragulate-rag` and `ragulate-frontend` to `ghcr.io/dbis-legal-llms/` as `:sha-<commit>`. If the merge contains a releasing commit they are also published as `:X.Y.Z` (never overwritten), and the git tag `vX.Y.Z` and a GitHub Release marked as pre-release are created.
+
+**Promoting to prod.** A push to `main` (the merged `dev` -> `main` pull request, titled e.g. `chore: promote dev to main`) runs the *Promote* workflow, which points `:prod` at the newest release's images without rebuilding and marks that release as the normal, latest one. To roll prod back or forward, run *Promote* by hand from `main` ("Run workflow") and enter a version such as `1.1.0`.
+
+**Where to see the version.** GitHub Releases, `GET /api/health` of the backend and of `ragulate-rag` (field `version`, e.g. `1.2.3`), and the sidebar footer of the frontend (`v1.2.3`). The version has no environment name. A local build shows `local` in the health endpoints and the `package.json` version in the footer.
+
+Implemented in: `.github/workflows/ci.yml`, `promote.yml`, `pr-title.yml`, `.github/scripts/next-version.sh`; the label is passed to the Dockerfiles as the build argument `APP_VERSION`. The images are built from `Backend/Dockerfile`, `Backend/ragulate-rag/Dockerfile` and `Frontend/Dockerfile`; the frontend image bakes in `NEXT_PUBLIC_AUTH_SERVICE_URL` and `NEXT_PUBLIC_API_BACKEND` at build time (build arguments).
+
+There are no automated tests yet, so a pull request is checked by building the images. Running RAGulate on the server is not set up yet; when it is, it will be a prod stack only.
 
 ## TODOs
 - Add reranking for better retrieval quality (`ragulate-rag` supports it, off by default)

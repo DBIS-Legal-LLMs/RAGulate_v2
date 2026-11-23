@@ -1,0 +1,7 @@
+# The api image is built from this folder (see Dockerfile); keep secrets and the
+# separately built ragulate-rag service out of it.
+.env
+.env.*
+ragulate-rag
+**/__pycache__
+**/*.pyc

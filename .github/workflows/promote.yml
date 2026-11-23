@@ -1,0 +1,112 @@
+# Promote a version to prod: nothing is built here. A push to main (the merged dev -> main pull
+# request, i.e. the approval) points `:prod` at the images of the newest release, which were
+# built by CI as :X.Y.Z. The prod server's updater
+# then pulls `:prod`.
+#
+# Run it by hand ("Run workflow", enter a version such as 1.1.0) to roll prod back or forward to
+# any published version.
+#
+# Third-party actions are pinned to a commit (the comment names the release).
+name: Promote
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to put on prod, e.g. 1.1.0 (leave empty: newest release on this branch)"
+        required: false
+
+permissions:
+  contents: write    # mark the GitHub Release as the one running on prod
+  packages: write    # move the :prod tag
+
+# never two promotions at once, and never cancel one that is running
+concurrency:
+  group: promote
+  cancel-in-progress: false
+
+env:
+  IMAGE_PREFIX: ghcr.io/dbis-legal-llms   # must be lower case
+  IMAGES: ragulate-backend ragulate-rag ragulate-frontend
+
+jobs:
+  promote:
+    name: Promote to prod
+    # "Run workflow" offers every branch; only main may move :prod
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0   # all history and tags
+      - name: Version to promote
+        id: v
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            ver="${INPUT_VERSION#v}"
+            [[ $ver =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::'$INPUT_VERSION' is not a version like 1.1.0"; exit 1; }
+            git rev-parse -q --verify "refs/tags/v$ver" >/dev/null \
+              || { echo "::error::There is no release v$ver"; exit 1; }
+          else
+            tag=$(git tag --merged HEAD --list 'v[0-9]*' --sort=-v:refname | head -n 1)
+            [ -n "$tag" ] || { echo "::error::No release tag in the history of this commit"; exit 1; }
+            ver="${tag#v}"
+            # a fix:/feat: commit after the newest tag means a release is still being built
+            if .github/scripts/next-version.sh | grep -q '^release=true$'; then
+              echo "::error::This commit has fix:/feat: changes newer than v$ver without a release. Wait until the CI run on the dev branch has finished, then re-run this workflow."
+              exit 1
+            fi
+          fi
+          # commits after the tag that make no release (chore:, docs:, non-conventional) are not in the images
+          n=$(git rev-list --no-merges --count "v$ver..HEAD")
+          [ "$n" -eq 0 ] || echo "::warning::$n commits after v$ver are NOT in the promoted images (chore:/docs:/non-conventional). Check that you really approved this version."
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: The images of this version exist
+        run: |
+          for img in $IMAGES; do
+            docker buildx imagetools inspect "$IMAGE_PREFIX/$img:${{ steps.v.outputs.version }}" >/dev/null \
+              || { echo "::error::$IMAGE_PREFIX/$img:${{ steps.v.outputs.version }} does not exist, nothing was changed"; exit 1; }
+          done
+      - name: Point :prod at it
+        # copies the manifest, so prod runs exactly the image that CI published as that version (same digest)
+        run: |
+          for img in $IMAGES; do
+            docker buildx imagetools create --tag "$IMAGE_PREFIX/$img:prod" "$IMAGE_PREFIX/$img:${{ steps.v.outputs.version }}"
+          done
+      - name: Mark the release as the one on prod
+        # The promoted version becomes a normal release and the Latest one. Every older version that is still a
+        # pre-release is part of what prod now runs, so it becomes a normal release too (not Latest).
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          gh release edit "v$VERSION" --repo "$GITHUB_REPOSITORY" --prerelease=false --latest
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName,isPrerelease \
+            --jq '.[] | select(.isPrerelease) | .tagName' |
+          while read -r tag; do
+            v=${tag#v}
+            [ "$v" != "$VERSION" ] && [ "$(printf '%s\n%s\n' "$v" "$VERSION" | sort -V | head -n1)" = "$v" ] || continue
+            echo "v$v is older than v$VERSION: no longer a pre-release"
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --prerelease=false --latest=false
+          done
+      - name: Summary
+        run: |
+          {
+            echo "### Prod now runs v${{ steps.v.outputs.version }}"
+            echo
+            for img in $IMAGES; do
+              echo "- \`$img:prod\` = \`$(docker buildx imagetools inspect "$IMAGE_PREFIX/$img:prod" --format '{{ .Manifest.Digest }}')\`"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
